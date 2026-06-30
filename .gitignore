@@ -1,0 +1,30 @@
+/node_modules
+/.next
+/out
+/build
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+npm-debug.log*
+.env*
+
+# python sidecar
+.venv/
+__pycache__/
+*.pyc
+sidecar/**/*.db
+revive.db
+.revive/
+
+# deck / video build artifacts (keep the .pptx and .mp4, ignore the rest)
+deck/node_modules/
+deck/*.pdf
+deck/slide-*.jpg
+video/frames/
+video/check_*.jpg
+
+video/product_frames/
+video/prev_*.jpg
+video/vcheck*.jpg
+video/pconcat.txt
+video/total.txt

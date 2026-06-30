@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper-base: #f5f7fa;
+  --ink: #151922;
+}
+
+html,
+body {
+  background: var(--paper-base);
+  color: var(--ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Very light texture keeps large marketing surfaces from feeling sterile. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.018;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.app-console {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  letter-spacing: -0.008em;
+}
+
+.marketing-shell {
+  min-height: 100vh;
+  overflow: clip;
+  background: #f5f7fa;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  letter-spacing: -0.008em;
+}
+
+.marketing-shell .display {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-variation-settings: normal;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.marketing-shell .eyebrow {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+}
+
+.marketing-grid {
+  background-image:
+    linear-gradient(rgba(75, 87, 110, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(75, 87, 110, 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 20%, transparent 92%);
+  mask-image: linear-gradient(to bottom, #000 20%, transparent 92%);
+}
+
+.marketing-grid-dark {
+  background-image:
+    linear-gradient(rgba(255,255,255,.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.10) 1px, transparent 1px);
+  background-size: 36px 36px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 65%);
+  mask-image: linear-gradient(90deg, transparent, #000 65%);
+}
+
+.app-console .display {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-variation-settings: normal;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.app-console .display-italic {
+  font-style: normal;
+}
+
+.app-console .eyebrow {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+}
+
+::selection {
+  background: #cdd6f5;
+  color: #173aa6;
+}
+
+/* --- typographic roles ---------------------------------------------------- */
+
+.display {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-variation-settings: normal;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.display-italic {
+  font-style: normal;
+}
+
+/* Mono eyebrow — the "instrument voice" carries all-caps duty, never serif */
+.eyebrow {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.mono {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- surfaces & rules ----------------------------------------------------- */
+
+.rule-broadsheet {
+  border-color: var(--ink);
+}
+
+.leader {
+  flex: 1;
+  border-bottom: 1px dotted #c7bca8;
+  margin: 0 8px;
+  transform: translateY(-3px);
+}
+
+/* zebra ruling for the event-log galley proof */
+.zebra > *:nth-child(even) {
+  background: rgba(33, 28, 22, 0.025);
+}
+
+/* --- scrollbars ----------------------------------------------------------- */
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(33, 28, 22, 0.16);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(33, 28, 22, 0.28);
+  background-clip: padding-box;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* top fade mask for the streaming log */
+.fade-top {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22px);
+  mask-image: linear-gradient(to bottom, transparent, #000 22px);
+}
+
+/* native select reset so our chevron shows */
+select.appearance-none {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

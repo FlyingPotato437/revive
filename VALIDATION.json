@@ -1,0 +1,571 @@
+{
+  "verdict": {
+    "uniqueness": "emerging \u2014 strong unbuilt wedge",
+    "refuted": "0/3 adversarial skeptics found a full-splice product",
+    "fundability": "fundable \u2014 adjacent thesis actively funded"
+  },
+  "facets": [
+    {
+      "facet": "VC / Funding Landscape for Agent Infrastructure & Agent Auth (2024\u20132026)",
+      "summary": "\"Agent auth / agent reliability infrastructure\" is a clearly funded VC thesis in 2024\u20132026, but the capital has flowed to two adjacent categories that bracket Revive's \"splice\" rather than land on it. (A) Agent-auth / OAuth-lifecycle vendors: Arcade.dev raised a $60M Series A (June 2026, led by SYN Ventures, w/ Morgan Stanley + Wipro; $72M total incl. a $12M 2025 seed) to be \"the secure action layer behind every production AI agent\"; Scalekit raised a $5.5M seed (Sept 2025, Together Fund + Z47) explicitly for an \"authentication stack for AI agents\" (MCP Auth, Agent Actions w/ consent + revocation); Nango raised $7.5M (led by Gradient, ~2026) on top of a $2M YC seed and is the closest on auth-lifecycle (managed OAuth + automatic token refresh + re-auth webhooks across 800+ APIs, plus MCP Auth); Stytch ($90M Series B at $1B, 2021) was acquired by Twilio (agreed Oct 30, 2025, closed ~Nov 14, 2025; price undisclosed) explicitly to build an \"intelligent identity layer for AI agents\"; WorkOS (~$198M raised, ~$2B valuation) and Composio ($25M Series A July 2025 led by Lightspeed; $29M total) round out the category. (B) Durable-execution vendors: Temporal raised a $146M Series C at $1.72B (Mar 2025, Tiger Global), then $300M Series D at $5B (2026), explicitly pitching \"durable, production agentic workloads\"; Inngest raised a ~$21M Series A (2025, Altimeter; $34M total) on an AI-workflow thesis; Trigger.dev raised a $16M Series A (Dec 2025, Standard Capital; notably WorkOS's Michael Grinich invested) positioning as \"core infrastructure for the internet of AI agents.\" HumanLayer (the closest \"agent reliability + human-in-the-loop\" name) is, by contrast, tiny on the cap table \u2014 Crunchbase shows only a ~$500K pre-seed/seed \u2014 so the human-in-the-loop/consent-gating slice is NOT yet a big-check category. Macro signals: IAM saw ~$990M of 2025 funding but concentrated in ~6 companies (Saviynt's $700M Series B dominating); \"Agent Execution Infrastructure\" captured ~20.7% of 2026 YTD agent deals; NIST/NCCoE launched an AI Agent Identity & Authorization standards initiative (Feb 2026). Net: the thesis is well-funded and the buyers (Twilio/Stytch) are consolidating, but NO funded player ships the full packaged run-level dead-refresh-token \u2192 checkpoint \u2192 re-consent \u2192 hot-splice \u2192 resume-the-same-run. A Revive-shaped company could plausibly raise a seed in the $3\u20138M range (the Scalekit/Nango band) by framing itself as the neutral sidecar owning the splice that neither category's roadmap reaches \u2014 but it must show shipped product because the adjacent categories are crowded and well-capitalized, and the natural exit is acquisition by exactly these players (cf. Twilio\u2192Stytch).",
+      "players": [
+        {
+          "name": "Arcade.dev",
+          "whatTheyDo": "Secure 'action layer' / authorization + tool-calling for production AI agents; SSO-for-agents, proving which agent took which action on behalf of a user; governance.",
+          "overlapWithRevive": "partial",
+          "evidence": "$60M Series A (June 15, 2026, led by SYN Ventures, strategic from Morgan Stanley + Wipro; $72M total after a $12M 2025 seed). Operates at the CONNECTION/authorization + audit level ('which agent performed which action'). Handles OAuth/consent for agents but the funding/marketing describes authorization, reliability and governance \u2014 NOT durable run-level checkpointing of an in-flight step, NOT dead-refresh-token classification, NOT hot-splicing a fresh token into a live parked run to resume the exact step. No evidence of resume-the-same-run after refresh-token death.",
+          "url": "https://www.businesswire.com/news/home/20260615229631/en/Arcade-Raises-$60M-to-Become-the-Secure-Action-Layer-Behind-Every-Production-AI-Agent"
+        },
+        {
+          "name": "Nango",
+          "whatTheyDo": "Open-source unified API / integrations platform: managed OAuth, API keys, automatic access-token refresh across 800+ APIs, re-auth webhooks, MCP Auth. Closest player to the auth-lifecycle piece.",
+          "overlapWithRevive": "partial",
+          "evidence": "$7.5M (led by Gradient, w/ Horizon, YC; reported ~2026) on top of a ~$2M YC W23 seed; several $M ARR, cashflow positive. Manages full auth lifecycle incl. automatic refresh and 'periodically detects invalid API keys / expired OAuth tokens' firing Slack/webhook notifications 'so your user can reconnect.' This is exactly the CONNECTION-level retry model Revive's thesis names: it detects broken credentials and assumes a LATER reconnect/retry \u2014 it does NOT durably checkpoint the in-flight agent step, does NOT hot-splice the new token into the same live run, does NOT resume that exact parked step. Even blogs about Jira/Microsoft invalid_grant refresh-token errors, but the remedy is 'user reconnects,' not run-level splice.",
+          "url": "https://nango.dev/blog/best-ai-agent-authentication/"
+        },
+        {
+          "name": "Scalekit",
+          "whatTheyDo": "Authentication stack for AI agents/apps: MCP Auth for agentic servers, Agent Actions (secure API calls with consent + revocation), plus human SSO/SCIM.",
+          "overlapWithRevive": "partial",
+          "evidence": "$5.5M seed (Sept 2025; Together Fund + Z47; founded by ex-Freshworks engineers). Ships consent + revocation primitives at the CONNECTION level \u2014 overlaps with the re-consent piece conceptually \u2014 but no evidence of run-level dead-refresh-token classification, durable checkpoint of an in-flight step, or hot-splice/resume-same-run. Assumes the calling app handles retry.",
+          "url": "https://www.thesaasnews.com/news/scalekit-raises-5-5-million-in-seed-round"
+        },
+        {
+          "name": "Stytch (acquired by Twilio)",
+          "whatTheyDo": "Developer auth/identity platform; pivoted to 'identity platform for AI agents' (identify humans, trusted agents, rogue agents; delegated experiences).",
+          "overlapWithRevive": "no",
+          "evidence": "$90M Series B at $1B valuation (Nov 2021, Coatue). Acquired by Twilio \u2014 definitive agreement Oct 30, 2025, closed ~Nov 14, 2025 (price undisclosed) \u2014 explicitly to build 'the intelligent identity layer' for agentic AI. Identity/auth issuance and fraud, not run-state. No checkpoint/splice/resume of a live agent run. (Strategically important as proof that incumbents are buying agent-identity, signaling acquisition exits.)",
+          "url": "https://stytch.com/blog/stytch-joins-twilio/"
+        },
+        {
+          "name": "WorkOS",
+          "whatTheyDo": "Enterprise auth (SSO/SCIM/Directory Sync) and increasingly agent-facing auth (AuthKit, MCP). Connection/identity layer for B2B apps.",
+          "overlapWithRevive": "no",
+          "evidence": "$80M Series B (June 2022, Greenoaks) + later Series C; ~$198M total, ~$2B reported valuation. Identity/SSO issuance and management \u2014 no run-level auth-death trigger, no checkpoint, no hot-splice/resume. (Founder Michael Grinich personally invested in Trigger.dev, linking the two camps.)",
+          "url": "https://workos.com/blog/series-b"
+        },
+        {
+          "name": "Composio",
+          "whatTheyDo": "Tool/integration + 'learning/skill layer' for AI agents; managed auth + tool calls across many providers.",
+          "overlapWithRevive": "no",
+          "evidence": "$25M Series A (July 22, 2025, led by Lightspeed; $29M total) \u2014 recently repositioned around a 'learning layer / skills that improve over time.' Operates at tool/connection level; no run-level refresh-token-death checkpoint or hot-splice/resume.",
+          "url": "https://www.finsmes.com/2025/07/composio-raises-25m-in-series-a-funding.html"
+        },
+        {
+          "name": "Temporal",
+          "whatTheyDo": "Durable-execution platform (workflows survive crashes/restarts via event-sourced replay). Pitched heavily for durable agentic workloads.",
+          "overlapWithRevive": "partial",
+          "evidence": "$146M Series C at $1.72B (Mar 31, 2025, Tiger Global; $350M total), then $300M Series D at $5B valuation (2026). Operates at the GRAPH/run-STATE level \u2014 it CAN checkpoint and resume a workflow \u2014 but has NO auth-death trigger: nothing classifies a dead refresh token, fires re-consent, or hot-splices a freshly minted token. The user must build that activity themselves. Exactly the 'durable-execution has no auth-death trigger or re-consent' gap Revive's thesis names.",
+          "url": "https://temporal.io/blog/temporal-series-c-announcement"
+        },
+        {
+          "name": "Inngest",
+          "whatTheyDo": "Durable workflow / step-function engine for serverless backends and AI workflows.",
+          "overlapWithRevive": "no",
+          "evidence": "$3M seed (2023, GGV) + $6.1M (Jan 2024, a16z) + ~$21M Series A (2025, Altimeter; ~$34M total). Durable step execution at the GRAPH level; no OAuth-refresh-death classification, no re-consent elicitation, no token hot-splice. Same structural gap as Temporal.",
+          "url": "https://www.inngest.com/blog/announcing-inngest-series-a"
+        },
+        {
+          "name": "Trigger.dev",
+          "whatTheyDo": "Open-source background-jobs / durable task framework, positioning as infrastructure for the 'internet of AI agents.'",
+          "overlapWithRevive": "no",
+          "evidence": "$3M seed + $16M Series A (Dec 2025, led by Standard Capital; WorkOS's Michael Grinich + CTO Fund invested; YC W23). Durable task execution at the GRAPH level \u2014 no auth-death trigger, re-consent, or token splice. Resumes tasks on its own failures, not on OAuth refresh-token expiry.",
+          "url": "https://trigger.dev/blog/series-a"
+        },
+        {
+          "name": "HumanLayer",
+          "whatTheyDo": "Human-in-the-loop / approval API & SDK for agents (and an agent-orchestration IDE); author of the '12-factor agents' reliability methodology.",
+          "overlapWithRevive": "partial",
+          "evidence": "Per Crunchbase only ~$500K pre-seed/seed (YC; founder Dexter Horthy). Ships the human-approval/elicitation primitive that overlaps with Revive's re-consent step, but has NO OAuth refresh-token-death classification, NO durable checkpoint of the in-flight step, NO token hot-splice/resume-same-run. Notably the 'agent reliability + human approval' slice is NOT yet a large-check category \u2014 relevant as a comp for how Revive might be perceived (small) vs. the connection/durable-exec giants.",
+          "url": "https://www.humanlayer.dev/"
+        }
+      ],
+      "keyFacts": [
+        {
+          "fact": "Arcade.dev raised a $60M Series A on June 15, 2026, led by SYN Ventures with strategic investment from Morgan Stanley and Wipro, bringing total funding to $72M after a $12M 2025 seed; positioning as 'the secure action layer behind every production AI agent.'",
+          "source": "https://www.businesswire.com/news/home/20260615229631/en/Arcade-Raises-$60M-to-Become-the-Secure-Action-Layer-Behind-Every-Production-AI-Agent"
+        },
+        {
+          "fact": "Scalekit raised $5.5M seed (Sept 2025, Together Fund + Z47) explicitly to build an 'authentication stack for AI agents' \u2014 MCP Auth, Agent Actions with consent + revocation.",
+          "source": "https://www.thesaasnews.com/news/scalekit-raises-5-5-million-in-seed-round"
+        },
+        {
+          "fact": "Nango raised $7.5M led by Gradient (w/ Horizon, YC; reported 2026) on top of a ~$2M YC W23 seed; it manages full OAuth lifecycle incl. automatic token refresh and re-auth webhooks across 800+ APIs \u2014 but the model is 'detect broken credential \u2192 notify \u2192 user reconnects later' (connection-level retry, not run-level splice).",
+          "source": "https://nango.dev/blog/nango-raises-7-5m-led-by-gradient/"
+        },
+        {
+          "fact": "Twilio agreed to acquire Stytch (definitive agreement Oct 30, 2025; closed ~Nov 14, 2025; price undisclosed) explicitly to build an 'intelligent identity layer for AI agents' \u2014 incumbent consolidation of agent-identity.",
+          "source": "https://stytch.com/blog/stytch-joins-twilio/"
+        },
+        {
+          "fact": "Composio raised a $25M Series A on July 22, 2025, led by Lightspeed ($29M total), with angels incl. Guillermo Rauch and Dharmesh Shah; recently repositioned around a 'learning/skill layer' for agents.",
+          "source": "https://www.finsmes.com/2025/07/composio-raises-25m-in-series-a-funding.html"
+        },
+        {
+          "fact": "Temporal raised a $146M Series C at $1.72B valuation (Mar 31, 2025, led by Tiger Global; $350M total) and later a $300M Series D at a $5B valuation (2026), pitching 'durable, production agentic workloads' \u2014 durable-execution explicitly chasing the agent market.",
+          "source": "https://temporal.io/blog/temporal-series-c-announcement"
+        },
+        {
+          "fact": "Inngest raised ~$21M Series A (2025, led by Altimeter; ~$34M total after $3M GGV seed and $6.1M a16z round) on an AI-workflow durability thesis.",
+          "source": "https://www.inngest.com/blog/announcing-inngest-series-a"
+        },
+        {
+          "fact": "Trigger.dev raised a $16M Series A (Dec 2025, led by Standard Capital; investors include WorkOS's Michael Grinich), positioning as 'core infrastructure for the internet of AI agents.'",
+          "source": "https://trigger.dev/blog/series-a"
+        },
+        {
+          "fact": "HumanLayer (human-in-the-loop / approval API, author of '12-factor agents') shows only ~$500K pre-seed/seed on Crunchbase \u2014 the 'agent reliability + consent-gating' slice is not yet a large-check category.",
+          "source": "https://www.crunchbase.com/organization/humanlayer"
+        },
+        {
+          "fact": "Macro: IAM drew ~$990M of 2025 funding concentrated in ~6 companies (Saviynt's $700M Series B dominating); 'Agent Execution Infrastructure' captured ~20.7% of 2026 YTD agent deals; NIST/NCCoE launched an AI Agent Identity & Authorization standards initiative (Feb 2026), validating the category at the standards level.",
+          "source": "https://newmarketpitch.com/blogs/news/agentic-ai-funding-trends"
+        },
+        {
+          "fact": "WorkOS has raised ~$198M total ($80M Series B in 2022 led by Greenoaks, plus a Series C), reported ~$2B valuation, and is moving into agent-facing auth (AuthKit/MCP).",
+          "source": "https://workos.com/blog/series-b"
+        }
+      ],
+      "implicationForRevive": "The thesis Revive sits inside is unambiguously funded \u2014 but the money has gone to the two categories that BRACKET the splice, not to the splice itself, which is exactly the white-space Revive claims. Connection-level agent-auth is hot (Arcade $60M/$72M, Scalekit $5.5M, Nango $7.5M, Composio $29M, plus Twilio's acquisition of Stytch) and durable-execution is hot (Temporal $1.72B\u2192$5B, Inngest $34M, Trigger.dev $16M) \u2014 yet NONE ships run-level dead-refresh-token detect\u2192checkpoint\u2192re-consent\u2192hot-splice\u2192resume-same-run. Nango is the single closest (it detects expired refresh tokens and even blogs about invalid_grant) but stops at 'notify, user reconnects later' \u2014 confirming Revive's framing that connection vendors assume a retry. Funding read for a Revive-shaped company: a $3\u20138M seed is realistic (matches the Scalekit/Nango/HumanLayer band) IF it can demo the shipped splice across at least one durable framework + one provider error class \u2014 narrative-only won't clear the bar because the neighborhood is crowded and well-capitalized. Three cautions: (1) it's a feature-shaped wedge, so the hardest VC question is 'why isn't this a Temporal SDK or a Nango feature?' \u2014 Revive must lean on NEUTRALITY (cross-framework sidecar) and the fact that neither incumbent's roadmap reaches the middle. (2) The natural exit is acquisition by exactly these players \u2014 Twilio\u2192Stytch is the template \u2014 so positioning as the splice layer that all of them lack is also positioning as an acquisition target. (3) HumanLayer's small cap table is a yellow flag that 'reliability/consent' alone hasn't commanded big checks; Revive needs to attach to the AUTH-DEATH pain (lost multi-day-run cost) to be a money-saver, not just a reliability nicety."
+    },
+    {
+      "facet": "FACET 1: OAuth / Token-Lifecycle & Agent-Auth Vendors",
+      "summary": "Every vendor in this category operates strictly at the CONNECTION/TOKEN level, not the RUN level. The universal pattern: (a) automatic ACCESS-token refresh in the background; (b) when the REFRESH token is dead (invalid_grant / revoked / expired-by-inactivity), they detect it and surface a \"needs re-auth / reconnect\" signal plus a re-consent flow (magic link, Connect/Link modal, OAuth interrupt, or CIBA push); (c) the in-flight run is NOT their concern \u2014 they leave it to fail and assume the application/agent will RETRY LATER with the freshly minted token. None of them durably checkpoint the exact in-flight step the instant the token dies, and none hot-splice a new token into the SAME parked run to resume that step without a restart. This is confirmed verbatim by Scalekit (\"automated recovery is not possible... must be reauthorized... handled through your own retry logic\") and is the same gap a March 2026 industry essay (\"The Agentic Auth Problem Nobody Is Actually Solving\") names directly. The closest adjacent capability is Auth0's CIBA async authorization, but it is step-up approval for a sensitive action or first-time authorization that BLOCKS a single tool call and polls \u2014 not dead-refresh-token detection, durable checkpoint, and resume of a multi-day parked run. Net: this entire category strongly VALIDATES Revive's thesis that connection-level vendors assume a later retry and do not own the splice. Revive's differentiator (CLASSIFY dead-vs-refreshable, durable CHECKPOINT, URL-mode RE-CONSENT, hot-SPLICE into the same run, resume the exact step) is NOT shipped by anyone here.",
+      "players": [
+        {
+          "name": "Scalekit (agent auth / token vault)",
+          "whatTheyDo": "Delegated OAuth, connected-accounts token vault, background access-token refresh, consent orchestrator, magic_link re-auth for revoked/dead refresh tokens.",
+          "overlapWithRevive": "no",
+          "evidence": "Strongest disconfirming evidence in the category. Scalekit explicitly distinguishes dead refresh tokens (inspects provider errors like token_revoked) but states: 'If credentials are revoked or refresh tokens become invalid, automated recovery is not possible because the original authorization has been withdrawn' and recovery is via magic_link re-consent, after which the 'automation workflow would need to be manually restarted or handled through your own retry logic.' NO checkpoint of in-flight step, NO hot-splice, NO resume-same-run. Pure connection-level + retry-later.",
+          "url": "https://www.scalekit.com/blog/how-handle-token-refresh-ai-agents"
+        },
+        {
+          "name": "Nango",
+          "whatTheyDo": "Open-source unified-auth layer; OAuth lifecycle, automatic access-token refresh, single-flight/atomic token writes, rotating-refresh-token handling; 'Reconnect' flow + clear 'connection needs re-auth' signals.",
+          "overlapWithRevive": "no",
+          "evidence": "Has the best public writing on detecting dead refresh tokens (per-provider invalid_grant guides for Microsoft AADSTS, Google, Salesforce, etc.) and recommends marking the connection 're-auth required' then sending the user through OAuth again. But explicitly only at the refresh PIPELINE level. Page review confirmed Nango is 'silent on whether re-authentication automatically resumes failed background jobs' and on 'step-level state preservation' \u2014 it manages token lifecycle, not execution state. Connection-level detect + reconnect, retry is the app's job.",
+          "url": "https://nango.dev/blog/microsoft-oauth-refresh-token-invalid-grant/"
+        },
+        {
+          "name": "Stytch (Connected Apps / Connected Accounts)",
+          "whatTheyDo": "Turns your app into an OAuth2/OIDC provider for agents; issues/validates/revokes access+refresh+ID tokens, consent UX, dynamic client registration (DCR), silent access-token refresh.",
+          "overlapWithRevive": "no",
+          "evidence": "All capabilities are token issuance/validation/refresh/revocation at the IdP/connection layer. Silent access-token refresh 'without user interaction' when a refresh token exists; users/admins can revoke. No mention anywhere of run-level checkpointing, dead-refresh-token-triggered re-consent tied to a parked run, or resuming an in-flight agent task. Connection-level only.",
+          "url": "https://stytch.com/blog/stytch-connected-apps/"
+        },
+        {
+          "name": "WorkOS (AuthKit / Pipes / Pipes MCP)",
+          "whatTheyDo": "Session JWTs + single-use refresh tokens (AuthKit); Pipes managed OAuth connection layer + token vault; Pipes MCP adds session-scoped, human-approved authorization for the duration of a task session.",
+          "overlapWithRevive": "no",
+          "evidence": "Token vault refreshes outside agent logic; Pipes MCP grants access for a session that ENDS when it expires (access ends, not resumes). Documented known failure: when a token expires the MCP server is marked 'Logged out' and requires MANUAL reauthentication \u2014 the opposite of hot-splice/resume. Session-scoped + manual reconnect, no run resumption.",
+          "url": "https://workos.com/blog/ai-agent-secrets-management"
+        },
+        {
+          "name": "Arcade.dev",
+          "whatTheyDo": "MCP runtime for agents; per-user OAuth, remembers user tokens, raises an authorization interrupt when scopes aren't satisfied; injects token into tool Context on the NEXT invocation.",
+          "overlapWithRevive": "partial",
+          "evidence": "Has an auth-interrupt primitive closest in shape to a re-consent trigger: on missing/expired/revoked auth it interrupts and runs the OAuth flow, then 'the tool will need to be RE-INVOKED' and the token is injected 'on its next invocation.' This is re-invoke-from-tool-boundary, NOT durable checkpoint of an arbitrary in-flight step nor resume of a long parked multi-day run; resumption/state is the agent framework's responsibility. Docs reviewed did not address token-death detection, checkpointing, or same-run resumption. Mechanism overlaps the RE-CONSENT piece only; misses checkpoint + hot-splice + resume-exact-step.",
+          "url": "https://docs.arcade.dev/en/home/oai-agents/user-auth-interrupts"
+        },
+        {
+          "name": "Composio",
+          "whatTheyDo": "Connected-accounts toolkit; auto-refreshes OAuth tokens before expiry, marks connection EXPIRED only after refresh attempts fail, exposes a manual /refresh endpoint that initiates a new auth flow / new auth URL for dead OAuth.",
+          "overlapWithRevive": "no",
+          "evidence": "Distinguishes refreshable vs EXPIRED (failed-refresh) and offers a re-auth endpoint generating a new OAuth URL \u2014 but this is purely connection state. No checkpointing of in-flight runs, no hot-splice into a parked run, no resume-same-step. Session helpers 'handle authentication automatically' for the NEXT call, not recovery of a died-mid-run task. Known issue: ~30-60s window after OAuth completes where action calls still fail, requiring app-side retry \u2014 confirms retry-later model.",
+          "url": "https://docs.composio.dev/docs/auth-configuration/connected-accounts"
+        },
+        {
+          "name": "Pipedream Connect / MCP",
+          "whatTheyDo": "Managed OAuth flow, secure token storage, automatic token refresh via SDK iframe across 2,700+ APIs; tokens proxied, never exposed to model.",
+          "overlapWithRevive": "no",
+          "evidence": "Pure managed-auth + automatic refresh abstraction. 'Abstracts away the complexity of managing tokens, refresh flows' so agents act without auth plumbing \u2014 but nothing about dead-refresh-token-triggered run checkpoint/resume. Connection-level; on hard re-auth the user re-runs the Connect modal. Retry-later by design.",
+          "url": "https://pipedream.com/docs/connect/managed-auth/quickstart"
+        },
+        {
+          "name": "Paragon (ActionKit)",
+          "whatTheyDo": "Managed auth via Connect; OAuth flows, token refresh, credential storage for 1000+ integrations; paragon.connect() modal for (re)authentication; agent never touches raw tokens.",
+          "overlapWithRevive": "no",
+          "evidence": "Maintains per-provider error-solution pages for Salesforce invalid_grant / HubSpot expired token, and refreshes tokens 'as necessary' so agents 'continue operating without interruption' \u2014 but interruption avoidance is via background refresh, and hard re-auth = user re-runs the Connect modal. No in-flight run state, checkpoint, or same-run resumption. Connection-level.",
+          "url": "https://www.useparagon.com/actionkit"
+        },
+        {
+          "name": "Merge.dev",
+          "whatTheyDo": "Unified API; account_token per Linked Account; surfaces relink prompts when a linked account's auth breaks; improved expired delta-token handling during syncs.",
+          "overlapWithRevive": "no",
+          "evidence": "Classic integration-platform model: on broken auth it raises a RELINK prompt to the end user and the developer re-runs Merge Link. Explicitly retry/relink-later; no notion of an agent run, in-flight checkpoint, or token hot-splice into a live task. Connection-level only.",
+          "url": "https://docs.merge.dev/get-started/link/"
+        },
+        {
+          "name": "Klavis AI",
+          "whatTheyDo": "Hosted/managed MCP servers (600+ tools) + open-source Strata; built-in OAuth, multi-tenant auth, handles token refresh 'dance' so the agent doesn't.",
+          "overlapWithRevive": "no",
+          "evidence": "Markets that it handles 'refreshing tokens and managing secure credentials' inside hosted MCP infra \u2014 connection-level OAuth abstraction. No public claim of dead-refresh-token classification feeding a durable run checkpoint, re-consent-bound-to-run, or resume-same-run. No run-level splice.",
+          "url": "https://github.com/Klavis-AI/klavis"
+        },
+        {
+          "name": "Descope (Outbound/Inbound Apps, Agentic Identity Hub)",
+          "whatTheyDo": "Token vault for OAuth tokens + static keys per user/tenant; manages consent, automatic refresh, scope mgmt for agents/MCP; MCP Auth SDKs + Agentic Identity Control Plane.",
+          "overlapWithRevive": "no",
+          "evidence": "Manages full OAuth lifecycle incl. consent and automatic refresh at the vault level; token-management UI shows access-token expiry and whether a refresh token exists. Page review confirmed docs are silent on whether failed tokens pause/checkpoint active runs or whether re-consent resumes operations \u2014 i.e., no run-level recovery beyond token management. Connection-level.",
+          "url": "https://www.descope.com/blog/post/outbound-apps"
+        },
+        {
+          "name": "Auth0 for AI Agents (Token Vault + CIBA async authorization)",
+          "whatTheyDo": "Token Vault stores third-party tokens for 30+ apps and manages full token lifecycle; on connection invalidation, future token-exchange requests fail until the user RE-CONSENTS. CIBA (client-initiated backchannel auth) pushes an approval to the user's trusted device and pauses a tool call until approved, then injects credentials.",
+          "overlapWithRevive": "partial",
+          "evidence": "Most adjacent player. Token Vault distinguishes invalidated connections and forces re-consent (the CLASSIFY+RE-CONSENT pieces in spirit). CIBA pauses execution and resumes with injected creds \u2014 BUT it is step-up / human-in-the-loop approval for a sensitive action or first-time async authorization, BLOCKING a single tool call (docs say blocking mode is 'only useful during development' due to timeouts; production uses an interrupt the developer re-enters). It is NOT triggered by a dead refresh token mid-run, does NOT durably checkpoint an arbitrary in-flight step, and does NOT hot-splice into a multi-day parked run \u2014 pause/resume scope is one tool invocation, and durable resumption is the framework's job. Overlaps RE-CONSENT + credential-injection mechanics; misses dead-refresh-token trigger + durable checkpoint + resume-the-same-long-run.",
+          "url": "https://auth0.com/ai/docs/get-started/asynchronous-authorization"
+        }
+      ],
+      "keyFacts": [
+        {
+          "fact": "Scalekit explicitly states that for revoked/dead refresh tokens 'automated recovery is not possible... must be reauthorized' via magic_link, after which 'the automation workflow would need to be manually restarted or handled through your own retry logic' \u2014 i.e., the run is NOT resumed; retry is the customer's responsibility. This is direct verbatim confirmation of Revive's thesis that this category assumes a later retry.",
+          "source": "https://www.scalekit.com/blog/how-handle-token-refresh-ai-agents"
+        },
+        {
+          "fact": "Nango provides per-provider dead-refresh-token diagnosis guides (Microsoft Entra AADSTS invalid_grant, Google 'token expired or revoked', Salesforce, QuickBooks, Jira, etc.) and recommends marking the connection 're-auth required' then re-running OAuth \u2014 but is silent on resuming failed background jobs or preserving step-level state. Detection lives at the token pipeline, not the run.",
+          "source": "https://nango.dev/blog/microsoft-oauth-refresh-token-invalid-grant/"
+        },
+        {
+          "fact": "Auth0 CIBA async authorization is documented as blocking a tool call until user approval and then injecting credentials, with the blocking variant noted as 'only useful during development' due to timeout risk; production uses an interrupt the developer re-enters. Its scope is a single tool invocation / step-up approval, not dead-refresh-token-triggered durable checkpoint + resume of a multi-day run.",
+          "source": "https://auth0.com/ai/docs/get-started/asynchronous-authorization"
+        },
+        {
+          "fact": "Arcade's auth model raises an interrupt when scopes are unmet, runs OAuth, and then requires the tool to be RE-INVOKED with the token injected 'on its next invocation' \u2014 re-invoke-from-tool-boundary, not durable resume of an arbitrary in-flight step in a long-running run.",
+          "source": "https://docs.arcade.dev/en/home/build-tools/create-a-tool-with-auth"
+        },
+        {
+          "fact": "WorkOS has a documented failure mode where, on token expiry, the MCP server is marked 'Logged out' and requires MANUAL reauthentication \u2014 the opposite of automatic hot-splice/resume. Pipes MCP sessions END when they expire rather than resuming.",
+          "source": "https://workos.com/blog/ai-agent-secrets-management"
+        },
+        {
+          "fact": "Composio marks a connection EXPIRED only after background refresh attempts fail and exposes a manual /refresh endpoint that generates a new OAuth URL \u2014 connection-state recovery only. A known issue causes action calls to fail for ~30-60s after OAuth completes, requiring app-side retry, reinforcing the retry-later model rather than same-run resumption.",
+          "source": "https://docs.composio.dev/reference/api-reference/connected-accounts/postConnectedAccountsByNanoidRefresh"
+        },
+        {
+          "fact": "An independent March 2026 industry essay titled 'The Agentic Auth Problem Nobody Is Actually Solving' frames exactly this gap (long-running agents hitting refresh flows mid-execution producing an 'undefined state most orchestration frameworks handle badly'), corroborating that no shipped vendor owns the dead-token-to-resume splice.",
+          "source": "https://medium.com/advisor360-com/the-agentic-auth-problem-nobody-is-actually-solving-8f7d364ae3e3"
+        }
+      ],
+      "implicationForRevive": "STRONGLY VALIDATING for Revive's core thesis, with two caveats to defend against. (1) The thesis holds cleanly: every OAuth-lifecycle / agent-auth vendor researched (Scalekit, Nango, Stytch, WorkOS, Arcade, Composio, Pipedream, Paragon, Merge, Klavis, Descope, Auth0) stops at the connection/token level and assumes a later retry. Several do CLASSIFY dead-vs-refreshable refresh tokens (Scalekit, Nango, Composio, Auth0) and several ship a RE-CONSENT flow (Scalekit magic_link, Auth0 CIBA, Arcade interrupt, Connect/Link modals). But NONE ship the durable CHECKPOINT-at-exact-step or the hot-SPLICE-into-the-same-parked-run + resume \u2014 every one of them hands resumption back to the application as a retry. Scalekit's own docs say this in plain language. So Revive's claimed wedge \u2014 the splice in the middle \u2014 is genuinely unoccupied by this category. (2) Two competitive watch-items: (a) Auth0 for AI Agents (Token Vault + CIBA) is the closest and most credible adjacent player \u2014 it already pairs re-consent with automatic credential injection and a pause/resume primitive; Revive must articulate clearly that CIBA is single-tool-call step-up approval, not dead-refresh-token-triggered durable resumption of a long parked run, and that gap is narrow enough that Auth0 could extend toward it. (b) Arcade's interrupt + token-injection is architecturally adjacent at the tool boundary. Recommended positioning for Revive: lean on the two capabilities NObody in this category provides \u2014 (i) DURABLE checkpoint of the exact in-flight step at the instant of token death, and (ii) HOT-SPLICE + resume that EXACT step in the SAME process/run without restart \u2014 and explicitly concede that classification and re-consent are increasingly commoditized here, so the moat is the checkpoint+splice, not the OAuth handling. Also note Revive's neutrality claim is real: these vendors each want you on THEIR connection layer, whereas Revive's value is being a framework-neutral sidecar that wraps whichever of these token vaults the customer already uses."
+    },
+    {
+      "facet": "Durable Execution & Agent Orchestration Frameworks (Temporal, Inngest, Trigger.dev, Restate, DBOS, LangGraph/LangGraph Platform, Cloudflare Workflows, Hatchet, Windmill)",
+      "summary": "Every framework in this category operates at the GRAPH-STATE / durable-execution level exactly as Revive's thesis predicts. All nine ship robust, generic primitives to pause a run and resume the SAME run when an external signal arrives \u2014 Temporal Signals, Inngest step.waitForEvent, Trigger.dev wait.forToken (with HTTP-callback URL), Restate awakeables, DBOS durable notifications/events, LangGraph interrupt()+checkpointer, Cloudflare Workflows step.waitForEvent, Hatchet durable event waits, Windmill suspend/approval steps. These are real, shipped capabilities and they genuinely deliver the 'resume-the-same-run after an external event' half of Revive's splice (the resume mechanics are arguably MORE mature than anything Revive would build). BUT none has the other half: there is NO built-in auth-death trigger, NO provider-error classifier that recognizes invalid_grant / AADSTS700082 / refresh-token death, and NO out-of-band re-consent flow. In every case the framework supplies a neutral 'wait for a signal' primitive and the DEVELOPER must (a) catch the OAuth error themselves, (b) classify dead-refresh vs. refreshable-access themselves, (c) wire the re-consent UX themselves, and (d) feed the re-minted token back through a generic signal/event/token. The frameworks have no concept of OAuth refresh-token lifecycle at all \u2014 they checkpoint/resume on infra failures and explicit developer-raised waits, not on credential death. The closest thing to actual auth-aware resume in this space is Auth0's auth0-ai library layered ON TOP of LangGraph (CIBA), but that is pre-authorization (approve a tool call BEFORE it runs / step-up consent), not detection-and-repair of a DEAD refresh token mid-run, and it is an Auth0 product, not a LangGraph capability. Net: this category is precisely the 'has the resume rail but no auth-death trigger and no re-consent' gap Revive describes. They provide the landing strip for the splice but not the trigger or the re-consent that gets you there.",
+      "players": [
+        {
+          "name": "Temporal",
+          "whatTheyDo": "Durable workflow engine. Human-in-the-loop via Signals; workflows persist state across crashes/outages and resume from latest state in the same run. Activities auto-retry per Retry Policy.",
+          "overlapWithRevive": "partial",
+          "evidence": "Signals deliver same-run resume and the AI human-in-the-loop cookbook shows approve/edit gates. But the Temporal HITL tutorial is a GENERIC Signal-based approval gate \u2014 it does NOT cover OAuth refresh-token death detection or re-consent. Confirmed via fetch of learn.temporal.io HITL tutorial: 'no built-in authentication-death triggering or provider error classification... You'd need to implement that detection and triggering yourself.' OAuth token handling in Temporal = developer passes tokens as activity args and writes their own refresh/retry; no auth-death classifier, no re-consent flow.",
+          "url": "https://learn.temporal.io/tutorials/ai/building-durable-ai-applications/human-in-the-loop/"
+        },
+        {
+          "name": "Inngest",
+          "whatTheyDo": "Durable execution for workflows & AI. step.waitForEvent() pauses a function until a matching event arrives or timeout, then resumes the same function with the event data. Function pausing supported.",
+          "overlapWithRevive": "partial",
+          "evidence": "Has the same-run resume primitive (waitForEvent for approvals/human-in-the-loop). But docs contain NO OAuth re-authentication pattern \u2014 the waitForEvent mechanism is generic; developer must catch the auth error, build the re-consent, and send the resume event. No auth-death trigger, no refresh-token classifier, no built-in re-consent.",
+          "url": "https://www.inngest.com/docs/features/inngest-functions/steps-workflows/wait-for-event"
+        },
+        {
+          "name": "Trigger.dev",
+          "whatTheyDo": "Durable task platform. wait.forToken() / waitpoint tokens pause a run (checkpointed, zero idle compute, stop being charged) and resume the SAME run when completed via SDK, React hooks, or an HTTP-callback URL returned at token creation.",
+          "overlapWithRevive": "partial",
+          "evidence": "Strongest pure resume-same-run primitive in the set (explicit pause+checkpoint, HTTP callback URL hands work to a third party, resumes exact point). But confirmed via fetch of trigger.dev/docs/wait-for-token: 'no mention of built-in OAuth refresh-token expiry detection or authentication-death triggering... developers must implement their own logic to wire authentication events to token completion.' Generic external-signal primitive only.",
+          "url": "https://trigger.dev/docs/wait-for-token"
+        },
+        {
+          "name": "Restate",
+          "whatTheyDo": "Durable execution engine. Awakeables pause a service until an external system returns the awakeable ID via completeAwakeable(); the service can be shut down while awaiting and restored when completed. Used for human approval / webhook waits surviving crashes for days/weeks.",
+          "overlapWithRevive": "partial",
+          "evidence": "Awakeables = same-run external-signal resume that survives process death (ideal landing strip for a re-minted token). But it is a fully generic primitive \u2014 no OAuth awareness, no invalid_grant classifier, no re-consent. Marketed for 'human evaluator, approval step, or another external signal,' not credential death.",
+          "url": "https://docs.restate.dev/develop/go/external-events"
+        },
+        {
+          "name": "DBOS",
+          "whatTheyDo": "Postgres-backed durable workflows. On restart, resumes all incomplete (PENDING) workflows from the last completed step by checking Postgres for prior step outputs. Durable timeouts/notifications let a workflow wait days/weeks for an event then resume.",
+          "overlapWithRevive": "no",
+          "evidence": "Resume is keyed on INFRA failure (process interruption/restart) and explicit durable notifications/events \u2014 there is no auth-death trigger and no re-consent concept. Search of DBOS docs/repos surfaced NO OAuth token refresh, re-authentication, or credential-death handling. Purely infra-failure + developer-driven event waits.",
+          "url": "https://docs.dbos.dev/typescript/tutorials/workflow-tutorial"
+        },
+        {
+          "name": "LangGraph / LangGraph Platform",
+          "whatTheyDo": "Agent graph framework. interrupt() pauses a graph at a node; with a persistent checkpointer (e.g. AsyncPostgresSaver) the thread can be resumed by thread_id with Command(resume=...). interrupt_on policy can pause on tool calls.",
+          "overlapWithRevive": "partial",
+          "evidence": "Has checkpoint + same-run (same-thread) resume and a tool-call interrupt policy. The auth-relevant flow is Auth0's auth0-ai library (CIBA) layered ON TOP \u2014 but that is PRE-authorization / step-up consent BEFORE a tool runs, not detection-and-repair of a DEAD refresh token. Per fetch of the Auth0 blog: it 'solves approval gates for critical actions, not refresh token lifecycle management'; does not address invalid_grant recovery or re-minting into a paused run. LangGraph itself has no auth-death trigger. Caveat: interrupt() re-runs the node from the top on resume, so pre-interrupt side effects run twice \u2014 relevant idempotency hazard for any splice built here.",
+          "url": "https://auth0.com/blog/async-ciba-python-langgraph-auth0/"
+        },
+        {
+          "name": "Cloudflare Workflows",
+          "whatTheyDo": "Durable execution on Workers. step.do / step.sleep / step.sleepUntil / step.waitForEvent; state auto-persisted between steps; waitForEvent pauses for approvals/webhooks/user input and resumes exactly where it left off, even after hibernation. GA + Dynamic Workflows (May 2026).",
+          "overlapWithRevive": "partial",
+          "evidence": "Ships the same-run resume primitive (waitForEvent for 'human approval before making changes'). But it is generic \u2014 no OAuth refresh-token death detection, no classifier, no built-in re-consent. Developer must catch the auth error and emit the event. Infra-durable + explicit waits only.",
+          "url": "https://developers.cloudflare.com/workflows/"
+        },
+        {
+          "name": "Hatchet",
+          "whatTheyDo": "Orchestration engine for background tasks, AI agents, durable workflows. Durable tasks checkpoint progress, survive crashes/long waits, resume on any worker without re-executing completed work. Durable event waits: pause until an event arrives (read from a durable event log on resume).",
+          "overlapWithRevive": "no",
+          "evidence": "Resume is on crash recovery + generic durable event waits/durable sleep. Docs show NO OAuth awareness \u2014 no invalid_grant trigger, no re-consent. The 'pause until event' is a neutral primitive a developer would have to wire to auth death themselves.",
+          "url": "https://docs.hatchet.run/v1/durable-event-waits"
+        },
+        {
+          "name": "Windmill",
+          "whatTheyDo": "Workflow/script platform. Suspend + Approval steps: a step with Suspend enabled halts the flow until approval/resume events are POSTed to generated secret resume URLs (webhook-style), then resumes or cancels the flow.",
+          "overlapWithRevive": "no",
+          "evidence": "Suspend/approval is a generic human-approval webhook gate (N approvals via secret URLs). No OAuth refresh-token death detection, no classifier, no re-consent flow tied to credential lifecycle. The resume URL could in principle carry a token, but nothing about auth-death is built in.",
+          "url": "https://www.windmill.dev/docs/flows/flow_approval"
+        }
+      ],
+      "keyFacts": [
+        {
+          "fact": "Across all nine frameworks, the 'resume the same run after an external event' rail is real and shipped (Temporal Signals, Inngest waitForEvent, Trigger.dev wait.forToken, Restate awakeables, DBOS notifications, LangGraph interrupt+checkpointer, Cloudflare waitForEvent, Hatchet durable event waits, Windmill suspend) \u2014 but in EVERY case it is a neutral, generic external-signal primitive with no OAuth semantics.",
+          "source": "https://trigger.dev/docs/wait-for-token, https://docs.restate.dev/develop/go/external-events, https://www.inngest.com/docs/features/inngest-functions/steps-workflows/wait-for-event"
+        },
+        {
+          "fact": "None of the frameworks has a built-in auth-death TRIGGER: none classifies a provider invalid_grant / AADSTS700082 / refresh-token-expired error to distinguish dead-refresh from refreshable-access. This classification is the developer's responsibility in all nine.",
+          "source": "https://learn.temporal.io/tutorials/ai/building-durable-ai-applications/human-in-the-loop/"
+        },
+        {
+          "fact": "Temporal's own AI human-in-the-loop tutorial is a generic Signal-based approve/edit gate; confirmed it has 'no built-in authentication-death triggering or provider error classification' and that detection 'would require custom application logic outside Temporal's core framework.'",
+          "source": "https://learn.temporal.io/tutorials/ai/building-durable-ai-applications/human-in-the-loop/"
+        },
+        {
+          "fact": "Trigger.dev wait.forToken is the strongest dedicated pause+checkpoint+HTTP-callback-resume primitive (run is checkpointed, billing stops, resumes exact point on callback), yet its docs confirm 'no mention of built-in OAuth refresh-token expiry detection or authentication-death triggering' \u2014 developers wire auth events to token completion themselves.",
+          "source": "https://trigger.dev/docs/wait-for-token"
+        },
+        {
+          "fact": "The only auth-aware resume pattern in this category is Auth0's auth0-ai library (CIBA) on top of LangGraph, and it is PRE-authorization / step-up consent before a tool runs \u2014 explicitly 'approval gates for critical actions, not refresh token lifecycle management.' It does NOT detect a dead refresh token mid-run or re-mint and splice a token into a paused run.",
+          "source": "https://auth0.com/blog/async-ciba-python-langgraph-auth0/"
+        },
+        {
+          "fact": "Actual invalid_grant detection + 'mark account for re-authentication' + magic-link re-consent + inject fresh creds belongs to CONNECTION-level vendors (Scalekit, Nango), not the durable-execution frameworks \u2014 Scalekit explicitly: 'If the refresh token expires or is revoked, the integration cannot recover automatically and must be reauthorized,' resolved via its magic_link API and token vault, restoring future operation rather than splicing into a specific parked in-flight step.",
+          "source": "https://www.scalekit.com/blog/how-handle-token-refresh-ai-agents"
+        },
+        {
+          "fact": "LangGraph's interrupt() re-executes the node from the top on resume (pre-interrupt side effects run twice) \u2014 a concrete idempotency hazard any splice-on-LangGraph must handle, and evidence the resume model is graph-state-centric, not step-precise around a single failing token call.",
+          "source": "https://auth0.com/blog/async-ciba-python-langgraph-auth0/"
+        },
+        {
+          "fact": "DBOS, Hatchet, and Windmill resume strictly on infra failure (crash/restart) plus developer-defined event/approval waits, with zero OAuth or credential-lifecycle awareness in their docs \u2014 the clearest 'no' cases.",
+          "source": "https://docs.hatchet.run/v1/durable-event-waits, https://www.windmill.dev/docs/flows/flow_approval"
+        }
+      ],
+      "implicationForRevive": "STRONGLY VALIDATES the facet-2 half of Revive's thesis, with one important nuance. (1) Confirmed gap: not a single durable-execution / agent-orchestration framework ships an auth-death trigger, an OAuth-error classifier, or an out-of-band re-consent flow. They checkpoint and resume on infra failure and developer-raised waits; OAuth refresh-token death is simply not a concept in any of their roadmaps. So Revive's CLASSIFY (step 1) and RE-CONSENT (step 3) are genuinely unowned here. (2) But Revive should NOT overclaim ownership of the resume/splice mechanics: the 'resume the same run after a token is re-minted' RAIL already exists and is mature across all nine frameworks (Trigger.dev wait.forToken, Restate awakeables, Temporal Signals, Cloudflare/Inngest/Hatchet waitForEvent, LangGraph interrupt+checkpointer, Windmill suspend). Revive's defensible wedge is the TRIGGER + CLASSIFIER + RE-CONSENT that fires INTO these existing resume rails \u2014 i.e., the detection-and-reconsent front half, plus the glue that maps a re-minted token onto the framework's native resume primitive. Positioning Revive as 'we own the whole splice including resume' invites the rebuttal 'these frameworks already resume runs.' Positioning it as 'we are the neutral auth-death trigger + re-consent that drives YOUR existing waitpoint/awakeable/signal' is far stronger and matches what the evidence shows is actually missing. (3) Competitive watch-outs: Auth0's auth0-ai + GraphResumer shows a major identity vendor already building auth-aware interrupt/resume glue on top of LangGraph \u2014 today it's pre-authorization, not dead-token repair, but it is the most likely party to extend toward Revive's space, and it is framework-specific (LangGraph) rather than neutral. The neutral cross-framework angle is Revive's real differentiation. (4) Engineering caveat to internalize: LangGraph re-runs the interrupted node from the top on resume (side effects run twice), so the 'hot-splice resume the EXACT step' claim must reckon with each framework's resume granularity \u2014 some resume the step, some re-run the node \u2014 meaning Revive's checkpoint (step 2) must be designed per-framework for idempotency, not assumed uniform."
+    },
+    {
+      "facet": "FACET 4: THE PAIN & WHY-NOW \u2014 documented dead-reauth failures, refresh-token lifetime/rotation mechanics, and the 2025-2026 rise of long-running unattended agents that makes the run-level dead-refresh-token splice acute.",
+      "summary": "All four flagship \"re-auth doesn't fix the live run\" bugs are REAL and verifiable, and they say almost exactly what Revive's thesis claims. OpenAI Codex #14144 (opened Mar 9 2026, OPEN) is verbatim: after `codex mcp login <server>` succeeds, the SAME running session keeps failing MCP calls with `invalid_grant: Invalid or expired refresh token` until the app/session is restarted \u2014 the reporter explicitly frames it as a \"runtime credential cache invalidation\" problem, i.e. the splice Revive owns. Claude Code #12447 (opened Nov 26 2025, OPEN, labels area:auth/bug/has-repro) reports that OAuth tokens expire during long-running autonomous tasks, throwing `401 ... OAuth token has expired`, halting concurrent multi-day instances simultaneously and leaving work in incomplete states (partial commits, mid-process branches), requiring manual `/login`; it explicitly requests refresh-token handling + session resumption. Claude Code #28827 (\"OAuth token refresh fails in non-interactive/headless mode,\" marked DUPLICATE Feb 26 2026) reports ~10-15 min access-token expiry killing scripted/orchestrated loops silently. GitHub Copilot CLI #2779 (\"Automatic MCP Server Token Refresh,\" opened Apr 16 2026, OPEN) reports OAuth tokens expiring mid-autopilot, MCP calls failing with Azure AADSTS9010010, requiring manual `/mcp reload` mid-run \u2014 \"turning what should be a hands-off workflow into a babysitting exercise.\" Strong corroborating bugs not in the brief: Claude Code #24317 (single-use refresh-token race across concurrent sessions, forces re-auth) and #68398 (8-hr access token expires, refresh token not used, daily re-login). The error-code mechanics are confirmed from primary sources: Microsoft's official docs set the DEFAULT refresh-token lifetime at 90 days for \"all other scenarios\" (24h for SPA/OTP), with revocation on password change/SSPR/admin reset (AADSTS50173) and inactivity expiry (AADSTS700082); Google invalidates refresh tokens after 6 months inactivity, caps users at 100 live tokens per client (silently evicting the oldest), and 7-day expiry for apps in Testing publishing status \u2014 all surfacing as `invalid_grant: Token has been expired or revoked`. The why-now is a genuine collision: by 2026 agents run 30-52+ hours unattended (Claude /goal, Opus 4.7 1M-context agentic runs, \"Agent Runtime\" days-long sandboxes), so a single run now routinely crosses token-lifetime/rotation/reuse-detection boundaries it previously never reached \u2014 and a 2026 900-practitioner survey confirms identity/token-expiry is a top unsolved blocker (\"an agent may continue operating hours, days, or weeks after the user closes their session\"). The enabling standard also just landed: MCP spec 2025-11-25 (SEP-1036) standardized URL-mode out-of-band re-consent elicitation, exactly the (3) re-consent primitive Revive relies on. NET: the pain is documented, primary-sourced, OPEN, and acute precisely because long-horizon agents + short/rotating refresh tokens + in-process clients that can't even re-splice their own freshly-minted token now intersect on every multi-day run.",
+      "players": [
+        {
+          "name": "OpenAI Codex CLI (issue #14144)",
+          "whatTheyDo": "Coding agent CLI; after re-auth of an OAuth MCP server, the live session keeps using the stale refresh token and fails with invalid_grant until restart. This is the bug Revive fixes, not a competing product.",
+          "overlapWithRevive": "no",
+          "evidence": "github.com/openai/codex/issues/14144 \u2014 opened Mar 9 2026, OPEN. Verbatim: 'codex mcp login <server>' reports success but same session still fails MCP ops with 'invalid_grant: Invalid or expired refresh token' until app/session restarted. Reporter calls it 'runtime credential cache invalidation.' Does NOT checkpoint, does NOT hot-splice the new token into the parked run, does NOT resume the same step \u2014 restart is the only remedy. Pure pain-evidence.",
+          "url": "https://github.com/openai/codex/issues/14144"
+        },
+        {
+          "name": "Claude Code (issue #12447, plus #28827, #24317, #68398)",
+          "whatTheyDo": "Anthropic's agentic coding CLI. Documented to die on OAuth expiry during long autonomous runs, leaving work half-done; re-login is manual and does not resume the killed run.",
+          "overlapWithRevive": "no",
+          "evidence": "github.com/anthropics/claude-code/issues/12447 \u2014 opened Nov 26 2025, OPEN, labels area:auth/bug/has-repro. Error: '401 ... OAuth token has expired. Please obtain a new token or refresh.' Halts concurrent hours/days instances simultaneously; leaves partial commits/mid-process branches; needs manual /login. Issue itself REQUESTS refresh handling + session resumption \u2014 i.e. Revive's capability is absent. #28827 (dup, Feb 26 2026) headless ~10-15min expiry kills orchestrated loops. #24317 (Feb 9 2026) single-use refresh-token race across concurrent sessions. #68398 8-hr access token, refresh token unused, daily re-login. No checkpoint\u2192reconsent\u2192hot-splice\u2192resume.",
+          "url": "https://github.com/anthropics/claude-code/issues/12447"
+        },
+        {
+          "name": "GitHub Copilot CLI (issue #2779)",
+          "whatTheyDo": "Copilot agent CLI; MCP OAuth tokens expire mid-autopilot, tool calls fail with AADSTS9010010, requires manual /mcp reload mid-run. Feature request, not shipped.",
+          "overlapWithRevive": "no",
+          "evidence": "github.com/github/copilot-cli/issues/2779 \u2014 opened Apr 16 2026, OPEN, labels area:authentication/area:mcp, unassigned, no PRs. Mid-workflow AADSTS9010010 failures; workaround is a manual 'MCP Auth Recovery Gate' (retry 3x/10s then ask user to /mcp reload) that 'defeats autopilot's purpose.' Asks for proactive background refresh \u2014 does NOT checkpoint, re-consent out-of-band, hot-splice, or resume the same run. Pain-evidence only.",
+          "url": "https://github.com/github/copilot-cli/issues/2779"
+        },
+        {
+          "name": "Nango (OAuth-lifecycle vendor)",
+          "whatTheyDo": "Managed OAuth/token-refresh platform. On refresh failure (invalid_grant) it marks the connection 're-auth required,' STOPS background refresh, and fires a webhook telling YOUR app to prompt the user to reconnect later.",
+          "overlapWithRevive": "partial",
+          "evidence": "nango.dev/docs/guides/auth/token-refreshing + invalid_grant blog posts. Demonstrably ships (1) classify/detect dead refresh token and a re-auth-required signal/webhook = pieces of CLASSIFY + a re-consent trigger. But it operates at the CONNECTION level and explicitly 'assumes a later retry' \u2014 no in-flight run checkpoint, no awaiting approval bound to a parked step, no hot-splice of the minted token into a live run, no resume-same-step. Confirms Revive's thesis that lifecycle vendors stop at the connection boundary.",
+          "url": "https://nango.dev/docs/guides/auth/token-refreshing"
+        },
+        {
+          "name": "Auth0 / Stytch / WorkOS / Strata (token-rotation + reuse-detection identity vendors)",
+          "whatTheyDo": "OAuth rotation, reuse-detection (token-family revocation), and emerging agentic-identity/token-exchange. Define the rotation/reuse mechanics that make long-run death MORE likely, and surface re-auth, but at the connection/identity level.",
+          "overlapWithRevive": "no",
+          "evidence": "auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation + strata.io agentic-identity posts. Reuse-detection revokes the ENTIRE token family on replay of a rotated token \u2014 a long-lived agent that races itself (cf. Claude Code #24317) can trip this and force full re-auth. These vendors issue/rotate/revoke tokens and can prompt re-auth, but none packages durable in-run checkpoint \u2192 out-of-band re-consent \u2192 hot-splice \u2192 resume-the-same-step. They make the pain sharper, not solved.",
+          "url": "https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation"
+        },
+        {
+          "name": "LangGraph / Temporal (durable-execution frameworks)",
+          "whatTheyDo": "Checkpoint graph/workflow state and resume from last step after interruption, incl. human-in-the-loop interrupt()/signals and CIBA-style mid-workflow authorization.",
+          "overlapWithRevive": "partial",
+          "evidence": "docs.langchain.com/oss/python/langgraph/durable-execution + docs.temporal.io langgraph + auth0.com/blog async-ciba-python-langgraph. They ship CHECKPOINT + RESUME and even human-in-the-loop authorization pauses (CIBA at point of need) = the graph-state half plus a generic approval hook. But there is no auth-DEATH trigger: nothing classifies a provider invalid_grant/AADSTS700082 as the signal to checkpoint, and nothing hot-splices a freshly minted refresh/access token back into the live run's auth context. Matches Revive's claim that durable frameworks reach the graph-state level but not the auth-death-to-splice middle.",
+          "url": "https://docs.langchain.com/oss/python/langgraph/durable-execution"
+        }
+      ],
+      "keyFacts": [
+        {
+          "fact": "OpenAI Codex #14144 is verbatim Revive's thesis: after a SUCCESSFUL re-auth, the same running session keeps failing MCP calls with 'invalid_grant: Invalid or expired refresh token' until the app/session is restarted; reporter labels it 'runtime credential cache invalidation.' Opened Mar 9 2026, OPEN.",
+          "source": "https://github.com/openai/codex/issues/14144"
+        },
+        {
+          "fact": "Claude Code #12447 (opened Nov 26 2025, OPEN, area:auth/bug/has-repro): OAuth tokens expire during long autonomous tasks \u2192 401 'OAuth token has expired'; halts concurrent hours/days instances simultaneously, leaves partial commits / mid-process branches; manual /login required. The issue itself requests refresh-token handling + session resumption.",
+          "source": "https://github.com/anthropics/claude-code/issues/12447"
+        },
+        {
+          "fact": "Claude Code #28827 ('OAuth token refresh fails in non-interactive/headless mode,' marked DUPLICATE Feb 26 2026): access token expires ~10-15 min in headless -p mode, refresh not attempted, kills orchestrator loops silently.",
+          "source": "https://github.com/anthropics/claude-code/issues/28827"
+        },
+        {
+          "fact": "GitHub Copilot CLI #2779 (opened Apr 16 2026, OPEN): MCP OAuth tokens expire mid-autopilot, tool calls fail with Azure AADSTS9010010, requiring manual /mcp reload mid-run \u2014 'turning what should be a hands-off workflow into a babysitting exercise.' Feature request, unassigned, no PRs.",
+          "source": "https://github.com/github/copilot-cli/issues/2779"
+        },
+        {
+          "fact": "Corroborating Claude Code bugs beyond the brief: #24317 (Feb 9 2026) single-use refresh-token RACE across concurrent sessions forces re-auth; #68398 8-hr access token expires and refresh token is NOT used, forcing daily re-login. Shows this is a pattern, not isolated.",
+          "source": "https://github.com/anthropics/claude-code/issues/24317"
+        },
+        {
+          "fact": "Microsoft OFFICIAL docs: default refresh-token lifetime is 90 days for 'all other scenarios' (24h for SPA and email-OTP flows). Refresh tokens self-rotate on every use; revoked on password change / SSPR / admin reset. (Confirms Entra 90-day inactivity claim from primary source, doc updated 2026-06-15.)",
+          "source": "https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens"
+        },
+        {
+          "fact": "AADSTS700082 = 'refresh token expired due to inactivity' (default ~90 days idle); AADSTS50173 = 'grant expired due to it being revoked' after credential change/password reset/admin revoke \u2014 both require a fresh interactive auth, exactly the dead-refresh-token condition Revive classifies in step (1).",
+          "source": "https://learn.microsoft.com/en-us/troubleshoot/entra/entra-id/app-integration/error-code-aadsts50173-grant-expired-revoked"
+        },
+        {
+          "fact": "Google: refresh token invalidated after 6 months of inactivity; max 100 live refresh tokens per user per OAuth client (oldest SILENTLY invalidated when exceeded); 7-day expiry while app is in 'Testing' publishing status \u2014 all surface as 'invalid_grant: Token has been expired or revoked.'",
+          "source": "https://nango.dev/blog/google-oauth-invalid-grant-token-has-been-expired-or-revoked/"
+        },
+        {
+          "fact": "Refresh-token rotation + reuse-detection revokes the ENTIRE token family on replay of an already-used token \u2014 so a long-lived agent that races itself (cf. Claude Code #24317) can trip reuse-detection and be forced into full re-auth, making dead-refresh-token mid-run MORE likely now than in the static-token era.",
+          "source": "https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation"
+        },
+        {
+          "fact": "Why-now (agent horizon): by 2026 agents run 30-52+ hours unattended (Claude /goal multi-hour runs, Opus 4.7 1M-context agentic coding, 'Agent Runtime' sandboxes running 'for days at a time'), so a single run now routinely crosses token lifetime/rotation/reuse boundaries it never previously reached.",
+          "source": "https://www.oreilly.com/radar/long-running-agents/"
+        },
+        {
+          "fact": "Why-now (identity gap, quantified): 2026 survey of 900+ practitioners \u2014 93% of AI-agent projects use unscoped API keys, 74% over-permissioned, only 18% of security leaders confident their identity systems handle agents; the auth stack 'was built for humans logging in, not for software principals acting indefinitely' and an agent 'may continue operating hours, days, or weeks after the user closes their session.'",
+          "source": "https://blog.gitguardian.com/ai-agents-authentication-how-autonomous-systems-prove-identity/"
+        },
+        {
+          "fact": "Enabling primitive for Revive step (3) just shipped: MCP spec 2025-11-25 (SEP-1036) standardized URL-mode out-of-band re-consent elicitation \u2014 client must show the full URL, require explicit consent, and open it so neither client nor LLM sees credentials. This is the standardized re-consent flow Revive's splice depends on.",
+          "source": "https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation"
+        },
+        {
+          "fact": "Standard production guidance treats invalid_grant as PERMANENT: 'retry once; if it fails again, mark account re-auth required and alert the user' and 'do not put invalid_grant on a hot retry loop.' This is precisely why a dead refresh token silently kills a run today \u2014 the correct handling is human re-consent, which no agent CLI currently splices back into the live run.",
+          "source": "https://nango.dev/blog/microsoft-oauth-refresh-token-invalid-grant/"
+        }
+      ],
+      "implicationForRevive": "The pain is REAL, PRIMARY-SOURCED, and largely UNRESOLVED \u2014 strongly de-risks Revive's problem statement. All four named bugs verify (Codex #14144 OPEN, Claude Code #12447 OPEN, #28827 dup, Copilot CLI #2779 OPEN), plus two corroborating Claude Code bugs (#24317, #68398). Codex #14144 is almost a word-for-word statement of Revive's claim that re-auth does not repair the live run ('runtime credential cache invalidation'), and Claude Code #12447 literally requests refresh-handling + session resumption \u2014 confirming the capability is absent in the incumbents Revive sidecars. WHY-NOW holds on three independent legs that genuinely converged in 2025-2026: (a) refresh-token lifetimes/rotation are short and brittle and now confirmed from Microsoft's own docs (90-day default, family-revoking reuse-detection) and Google (6-month + 100-token cap); (b) agents now run 30-52+ hours / multi-day unattended, so a single run crosses those boundaries mid-flight for the first time; (c) the enabling standard for out-of-band re-consent (MCP 2025-11-25 SEP-1036 URL-mode elicitation) only landed Nov 2025, so the splice was not even buildable as a neutral primitive before then. CAVEATS for diligence: (1) none of the issues report quantified frequency/MTBF \u2014 Revive will need its own telemetry to size 'how often this bites' (the per-run probability rises with run length and with rotation/reuse-detection, but no public hit-rate exists); (2) the obvious near-term fix for in-process bugs is simply correct refresh-token handling (what #12447/#2779 ask for), which the CLI vendors could ship and which would NOT require Revive \u2014 Revive's defensible wedge is specifically the TRULY-DEAD refresh token (invalid_grant/AADSTS700082/50173) where no silent refresh is possible and human re-consent + hot-splice + resume-same-step is the only remedy; that exact scenario is where every incumbent (Codex/Claude/Copilot) and every lifecycle vendor (Nango stops at connection-level webhook) and every durable framework (LangGraph/Temporal lack the auth-death trigger) demonstrably stops short. No competitor ships the full packaged run-level dead-refresh-token \u2192 checkpoint \u2192 re-consent \u2192 hot-splice \u2192 resume-the-same-run loop."
+    },
+    {
+      "facet": "Human-in-the-loop / agent interrupt & re-consent middleware \u2014 does anything package async re-consent + checkpoint + resume specifically for DEAD-TOKEN recovery?",
+      "summary": "Across the entire HITL / interrupt / re-consent middleware landscape, NOTHING ships the full packaged run-level dead-refresh-token \u2192 checkpoint \u2192 re-consent \u2192 hot-splice \u2192 resume-the-same-run flow. The building blocks all exist and are converging, but each player owns a different slice and none owns the splice. (A) The MCP 2025-11-25 spec gives the cleanest NEW primitive: URL-mode elicitation (mode:\"url\"), a URLElicitationRequiredError (code -32042) the server raises when an interaction must complete first, and an optional notifications/elicitation/complete that lets the client retry the original tools/call. This is purpose-built for out-of-band OAuth re-consent \u2014 but it is a TRANSPORT/handshake spec only. It explicitly does NOT detect a dead refresh token, does NOT checkpoint an in-flight step, and does NOT define how a long-running run is parked and resumed (the spec even says the client SHOULD provide manual retry/cancel if the completion notification never arrives, and that the retry of tools/call is \"optional\"). Crucially the spec scopes elicitation to a single tools/call retry, not to a multi-day autonomous run's mid-step recovery; classification, checkpointing, and same-run hot-splice are all left to the implementer. (B) HITL middleware (HumanLayer, LangGraph interrupts, AG-UI, OpenAI/Agno/Microsoft Agent Framework, Cloudflare Agents) ships pause/checkpoint/resume mechanics but is triggered by AGENT/MODEL decisions (a tool wants approval), never by an auth-death signal, and carries an approval decision + opaque state \u2014 not a freshly minted token spliced back in. HumanLayer's own 12-Factor \"Factor 6 launch/pause/resume\" + \"Factor 12 stateless reducer\" model is the closest durable pause/resume substrate, but it has no token concept at all. (C) Auth0's async-authorization (CIBA) + LangGraph interrupt pattern is the nearest thing to \"async re-auth in the loop,\" but it does step-up/initial authorization for an action via a second device \u2014 NOT recovery from a dead refresh token, no checkpoint-on-token-death, no hot-splice. (D) A Truto blog is the single best public articulation of EXACTLY Revive's gap (\"if your agent stashed an access token in its state at pause time, that token is dead by the time approval arrives... your resume logic must re-fetch credentials... gracefully detect the invalid_grant case and surface a re-auth flow\") \u2014 but it frames this as a pattern YOU must build, and Truto itself only does proactive server-side refresh-before-expiry (connection level). This strongly validates Revive's thesis within this facet: the HITL category has the pause/resume rails and the MCP spec now has the re-consent transport, but no shipped product wires an auth-death CLASSIFIER + checkpoint + URL re-consent + same-run token SPLICE together as one unit.",
+      "players": [
+        {
+          "name": "MCP elicitation spec (2025-11-25, URL mode)",
+          "whatTheyDo": "Standardizes out-of-band interactions: URL-mode elicitation (elicitation/create with mode:url + elicitationId + url + message), a URLElicitationRequiredError (-32042) the server raises to signal 'complete this first, then retry', and an optional notifications/elicitation/complete so the client can auto-retry the original tools/call. Explicitly designed for OAuth re-consent / payments / API keys where the MCP server acts as OAuth client to a third party and credentials must not transit the client.",
+          "overlapWithRevive": "partial",
+          "evidence": "Provides the RE-CONSENT TRANSPORT primitive Revive's step (3) needs, and the -32042 error is an 'auth/interaction required' signal. But it is a protocol handshake only: spec text shows it does NOT classify a dead refresh token vs refreshable access token, does NOT checkpoint an in-flight step, and does NOT define run parking/resume \u2014 it scopes recovery to retrying ONE tools/call (and even that retry is 'optional'; client SHOULD offer manual retry/cancel if the completion notification never arrives). WorkOS's summary confirms the release 'does not address refresh token expiration, resuming agent runs after token death, or hot-splicing new tokens.' Token lifecycle and same-run splice are left entirely to the implementer.",
+          "url": "https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation"
+        },
+        {
+          "name": "HumanLayer (approval SDK + 12-Factor Agents)",
+          "whatTheyDo": "Human-in-the-loop SDK: @require_approval / human_as_tool decorators route approval requests to Slack/email/etc.; agent-webhooks deliver the human's decision back; a preserved opaque 'state' object lets the app be stateless across the pause (12-Factor 'Factor 6 launch/pause/resume' + 'Factor 12 stateless reducer'). (Note: humanlayer.dev has since pivoted messaging toward an AI IDE/'software factory' product.)",
+          "overlapWithRevive": "partial",
+          "evidence": "Owns durable pause/resume + async human response delivery \u2014 the rails Revive's checkpoint/resume sit on. But the trigger is always an AGENT decision (a tool call wants approval), NOT an auth-death signal; the payload carried back is an approval decision + opaque state blob, with NO token concept, NO invalid_grant classification, and NO credential re-minting or splice. Does not detect dead refresh tokens, does not re-consent for OAuth, does not hot-swap a token into a running step.",
+          "url": "https://www.humanlayer.dev/docs/core/agent-webhooks"
+        },
+        {
+          "name": "LangGraph interrupts / human-in-the-loop + checkpointers",
+          "whatTheyDo": "interrupt() pauses graph mid-node; full state snapshot (current node, state keys, position) is persisted via a checkpointer; Command(resume=...) resumes after the human responds. HITL middleware can pause specific tool calls for review.",
+          "overlapWithRevive": "partial",
+          "evidence": "Ships the strongest GRAPH-STATE checkpoint/resume engine (matches Revive's step 2 mechanics). But interrupts are raised by agent/tool logic, not by token death; there is no built-in OAuth-failure trigger and no re-consent. Community evidence (langgraphjs #1308 'resume not working with checkpoint') shows resume itself is fiddly. The Auth0 integration bolts re-auth ON TOP of interrupts but is step-up authorization, not refresh-token recovery. No token classify/splice.",
+          "url": "https://docs.langchain.com/oss/python/langchain/human-in-the-loop"
+        },
+        {
+          "name": "Auth0 async authorization (CIBA) + LangGraph",
+          "whatTheyDo": "Client-Initiated Backchannel Authentication: obtains a specific user permission at the moment it's needed by pushing an approval to a secondary device, using a LangGraph interrupt to park the graph until the device approves.",
+          "overlapWithRevive": "partial",
+          "evidence": "Closest thing to 'async re-auth inside the agent loop' and demonstrates pause-until-out-of-band-approval. But it is step-up / initial action authorization, NOT dead-refresh-token recovery: per the article there is no discussion of refresh-token expiration, no checkpoint-on-token-death, and no hot-splice of a re-minted token into the same run. Different trigger (policy gate on an action) and different goal (consent for an action vs reviving a broken credential).",
+          "url": "https://auth0.com/blog/async-ciba-python-langgraph-auth0/"
+        },
+        {
+          "name": "AG-UI protocol",
+          "whatTheyDo": "Event protocol between an agent backend and a frontend; supports human-in-the-loop via RunFinished outcome:{type:'interrupt', interrupts:[...]} so the UI can pause and resume a run, plus ToolCall* events and Custom/Raw extension events.",
+          "overlapWithRevive": "no",
+          "evidence": "Pure interaction/transport layer for agent\u2194frontend. Defines NO events for OAuth, token expiry, re-consent, or auth-failure recovery; HITL is limited to tool-approval/input interrupts. Any auth handling is explicitly out of scope and left to extension Custom/Raw events.",
+          "url": "https://docs.ag-ui.com/concepts/events"
+        },
+        {
+          "name": "Truto (HITL approvals blog + connection layer)",
+          "whatTheyDo": "Unified-API / connection vendor; blog teaches HITL approval architecture and warns that a stashed access token (and possibly the refresh token) is dead by approval time, so resume logic must re-fetch creds and detect invalid_grant. Truto's own product does proactive server-side OAuth refresh before expiry.",
+          "overlapWithRevive": "partial",
+          "evidence": "Single best PUBLIC articulation of exactly Revive's problem ('that token is dead by the time approval arrives... your resume logic must re-fetch credentials, not reuse what it captured... gracefully detect the invalid_grant case and surface a re-auth flow'). But it explicitly frames this as a pattern the developer must build; the WebFetch verdict: 'teaches the architectural pattern you need to implement, not a shipped product.' Truto's actual feature is proactive-refresh-before-expiry at the CONNECTION level \u2014 not dead-token detect\u2192checkpoint\u2192re-consent\u2192same-run splice.",
+          "url": "https://truto.one/blog/implementing-human-in-the-loop-approval-workflows-for-consequential-saas-api-actions/"
+        },
+        {
+          "name": "Other HITL frameworks (OpenAI Agents SDK, Agno, Microsoft Agent Framework, Cloudflare Agents)",
+          "whatTheyDo": "All provide tool-call approval / needs_approval interrupts and pause-present-decide-resume mechanics, with varying degrees of state persistence (Cloudflare/Agno emphasize production-grade durable pause/resume).",
+          "overlapWithRevive": "no",
+          "evidence": "Same shape as LangGraph/HumanLayer: human oversight is triggered by the agent proposing a risky action, the resume carries an approval decision, and none has an OAuth-death trigger, refresh-token classifier, re-consent flow, or token hot-splice. Auth lifecycle is entirely outside their HITL scope.",
+          "url": "https://openai.github.io/openai-agents-python/human_in_the_loop/"
+        }
+      ],
+      "keyFacts": [
+        {
+          "fact": "MCP 2025-11-25 URL-mode elicitation is a transport/handshake for out-of-band OAuth re-consent (mode:url, elicitationId, URLElicitationRequiredError code -32042, optional notifications/elicitation/complete) \u2014 but it does NOT classify dead vs refreshable tokens, does NOT checkpoint, and scopes recovery to retrying a single tools/call (retry is 'optional').",
+          "source": "https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation"
+        },
+        {
+          "fact": "WorkOS's MCP 2025-11-25 writeup confirms the release 'does not address refresh token expiration, resuming agent runs after token death, or hot-splicing new tokens' \u2014 it covers initial OAuth/CIMD and async Tasks, not runtime token lifecycle.",
+          "source": "https://workos.com/blog/mcp-2025-11-25-spec-update"
+        },
+        {
+          "fact": "Truto's HITL blog states the exact Revive failure mode verbatim: 'If your agent stashed an access token in its state at pause time, that token is dead by the time approval arrives. Your resume logic must re-fetch credentials, not reuse what it captured' and advises 'gracefully detect the invalid_grant case and surface a re-auth flow' \u2014 but presents this as a do-it-yourself pattern, not a shipped product.",
+          "source": "https://truto.one/blog/implementing-human-in-the-loop-approval-workflows-for-consequential-saas-api-actions/"
+        },
+        {
+          "fact": "Auth0 CIBA + LangGraph delivers async step-up authorization (approve an action via a second device, parked behind a LangGraph interrupt) with no discussion of refresh-token expiration, checkpoint-on-token-death, or hot-splice \u2014 it is initial/step-up authorization, not dead-token recovery.",
+          "source": "https://auth0.com/blog/async-ciba-python-langgraph-auth0/"
+        },
+        {
+          "fact": "HumanLayer's pause/resume model (12-Factor 'Factor 6 launch/pause/resume' + 'Factor 12 stateless reducer', delivered via agent webhooks + opaque state object) is triggered by agent approval requests and carries a decision, with no token/OAuth concept \u2014 confirming HITL middleware lacks an auth-death trigger.",
+          "source": "https://www.humanlayer.dev/blog/12-factor-agents"
+        },
+        {
+          "fact": "AG-UI's HITL is limited to RunFinished outcome interrupts and ToolCall events and defines no OAuth/token-expiry/re-consent events \u2014 auth lifecycle is explicitly out of scope for the agent\u2194frontend protocol.",
+          "source": "https://docs.ag-ui.com/concepts/events"
+        },
+        {
+          "fact": "Connection-layer vendors (per Nango's invalid_grant guides) treat invalid_grant as 'the only fix is interactive re-auth, starting a new OAuth flow from scratch' handled at the connection level for a LATER retry \u2014 none ties re-auth back into a live, parked run.",
+          "source": "https://nango.dev/blog/microsoft-oauth-refresh-token-invalid-grant/"
+        }
+      ],
+      "implicationForRevive": "Within this facet, Revive's thesis holds up well and is arguably strongest here: the HITL/interrupt category already provides durable pause-checkpoint-resume rails (LangGraph checkpointers, HumanLayer Factor 6, Cloudflare/Agno durable agents) and the MCP 2025-11-25 spec just standardized the missing RE-CONSENT TRANSPORT (URL-mode elicitation + -32042 + completion notification) \u2014 but NO product wires these together driven by an auth-death CLASSIFIER and finished with a same-run token HOT-SPLICE. Every HITL trigger today is an agent/model decision ('this tool needs approval'), never 'the refresh token just died'; every resume carries an approval decision or opaque state, never a freshly minted credential injected into the parked step. The four risks to underline: (1) The MCP spec makes step (3) re-consent nearly commodity, so Revive's defensible value must concentrate in steps (1) CLASSIFY and (4) HOT-SPLICE-into-same-run plus the packaging \u2014 not in the elicitation call itself. (2) Auth0+CIBA and LangGraph interrupts show a credible 'pause-for-async-auth' pattern already exists; Revive must clearly differentiate dead-refresh-token RECOVERY from step-up AUTHORIZATION. (3) Truto already articulated the exact gap publicly, so the idea is 'in the water' \u2014 speed and a neutral cross-framework sidecar (vs being locked to one orchestrator's interrupt API) are the wedge. (4) The biggest convergence threat is a durable-agent framework (LangGraph/Cloudflare/HumanLayer) natively catching an invalid_grant inside its checkpointed tool-call and firing an MCP URL elicitation to resume \u2014 that would collapse Revive's splice into the framework; Revive should target the neutral, framework-agnostic seam before that happens."
+    }
+  ],
+  "refutations": [
+    {
+      "refuted": false,
+      "bestCounterexample": "Two products came closest from my angle, each missing different parts of the splice. (1) Gemini CLI is the ONLY product rated \"Full\" in RedCaller's June 2026 MCP-client refresh-token support matrix (PR #26312, merged May 13 2026): it \"checks token expiry before every request and refreshes mid-session... No restart required on token expiry.\" But this is ACCESS-token mid-session refresh using a still-valid refresh token \u2014 it does not classify a DEAD refresh token, has no out-of-band re-consent, and performs no durable checkpoint of an in-flight step; when the refresh token itself is dead (invalid_grant) it falls back to interactive re-auth, not a hot-splice into a parked run. (2) mcp-remote (community OAuth proxy, the de-facto neutral sidecar that Continue.dev/Cursor/Claude Code route through) shipped Dec 2025 \"invalid_grant recovery\" \u2014 but it recovers by CLEARING stale tokens and triggering fresh authentication for the NEXT call (connection-level), not by checkpointing and resuming the same in-flight run; the Codex #14144 bug persists even through it. (3) Hermes Agent (Nous Research) credential-pools genuinely does step (1): on invalid_grant it \"marks the refresh token as dead and stops replaying it\" \u2014 but recovery is POOL ROTATION to another healthy key, not re-consent + checkpoint + same-run resume; its own bug #28686 shows that when the pool exhausts mid-run the session goes zombie and silently drops messages (i.e., the run dies, not resumes), and #32849 shows it still hasn't settled terminal-failure handling.",
+      "counterexampleUrl": "https://www.redcaller.com/docs/references/mcp-client-oauth-refresh-token-support",
+      "gapThatRemains": "No product packages all five steps as one neutral cross-framework sidecar. The ecosystem cleanly splits the pieces: (a) CLASSIFY dead-vs-refreshable exists in places (Hermes marks RT dead; mcp-remote detects invalid_grant; Nango/Scalekit blog it) \u2014 but only as a connection-level signal, never as a trigger that fires a checkpoint. (b) Mid-session access-token refresh now ships (Gemini CLI \"Full\", Goose, Cursor background refresh) \u2014 but this is the EASY case (refresh token still alive), not dead-RT recovery. (c) Durable step-accurate CHECKPOINT exists in frameworks (LangGraph, Temporal) but with no auth-death trigger. (d) Out-of-band RE-CONSENT is now standardized as transport only (MCP 2025-11-25 URL-mode elicitation, SEP-2207 offline_access) but ships in no product wired to a parked run. (e) HOT-SPLICE into the SAME live run is the universally missing piece \u2014 most strikingly, Cursor's own June 2 2026 matrix entry documents it verbatim: \"Background refresh works... but refreshed token not picked up by active MCP transport. Team working on architectural fix.\" Even the one freshly-minted-token-into-live-transport problem is unsolved by the vendors who have the token in hand. The two independent expert write-ups I hit both conclude no product exists: SecureCoders calls it \"an unsolved gap\" with \"Zero full support\" for mid-session resumption, and the Advisor360 essay states flatly \"Nobody is shipping this yet.\" So the specific unbuilt thing remains: a framework-neutral sidecar that, on a TRULY-dead refresh token, durably checkpoints the exact in-flight step, drives out-of-band re-consent, and splices the new token back into the SAME parked run to resume that step with no restart.",
+      "confidence": 0.85,
+      "reasoning": "I deliberately took a different angle from the prior research: instead of re-checking connection-auth vendors and durable-execution frameworks, I hunted MCP gateway/proxy sidecars (mcp-remote, mcp-gateway-registry), the comprehensive June 2026 MCP-client refresh-token support matrix (RedCaller), agent credential-pool products (Hermes, Goose), and recent 2026 launches. All converge on the same verdict. The strongest disconfirming candidate, Gemini CLI's \"Full\" rating, on inspection only does mid-session ACCESS-token refresh \u2014 the easy case where the refresh token is still alive \u2014 which is categorically different from dead-RT classify + checkpoint + re-consent + hot-splice. mcp-remote, the one genuinely neutral cross-framework sidecar in the space, only does connection-level invalid_grant recovery (clear tokens, re-auth next call), not same-run resumption \u2014 confirmed by the persisting Codex #14144 bug. Hermes does classify dead RTs but recovers via pool rotation and demonstrably dies (zombie session) when the pool exhausts mid-run. Two independent 2026 expert sources explicitly conclude nobody ships this (\"unsolved gap\"; \"Nobody is shipping this yet\"). The most damning detail FOR the claim: Cursor's June 2026 entry shows even a well-resourced vendor that successfully refreshes the token cannot get it picked up by the active transport (\"architectural fix\" pending) \u2014 the hot-splice itself is the live unsolved engineering problem industry-wide. I withhold the remaining 15% because the matrix didn't fully expand and a stealth/quiet commercial launch (e.g., an Arcade or Auth0 feature) could exist that no search surfaced; but across multiple distinct angles I found no product doing the full packaged splice."
+    },
+    {
+      "refuted": false,
+      "bestCounterexample": "Google ADK's long-running pause/resume feature (developers.googleblog.com \"Build Long-running AI agents that pause, resume, and never lose context with ADK\" + adk.dev authentication docs) is the closest single-vendor packaging. It ships the durable rails the splice needs \u2014 persistent session storage (SQLite/Cloud SQL), state-machine checkpoints that survive container restarts, and event-driven resume (webhook wakes the agent, hydrates the session, picks up where it left off) \u2014 AND it has a real OAuth re-consent primitive (adk_request_credential) with a Resume feature that binds an authorization response back to the SAME invocation via invocation_id. That is genuinely 3 of the 4 mechanical pieces (checkpoint + re-consent transport + resume-same-invocation) in one product. Microsoft's Entra Auth SDK sidecar is the closest neutral \"sidecar\" framing but is even further off \u2014 it does machine-identity client-credentials/OBO token lifecycle, not human refresh-token-death recovery into a run.",
+      "gapThatRemains": "No product wires the TRIGGER and the SPLICE to the rails. (1) CLASSIFY: ADK's auth/resume is for INITIAL authorization (first-time consent for a tool call via adk_request_credential); it has no detector that catches a dead refresh token (invalid_grant / AADSTS700082 / 50173) mid-run and distinguishes it from a still-refreshable access token. ADK docs explicitly push refresh handling into developer tool code (\"if not creds.valid and creds.expired and creds.refresh_token: creds.refresh(...)\") and say nothing about invalid_grant detection. (2) AUTH-DEATH-AS-PAUSE-TRIGGER: ADK pause is triggered by long-running tools, human-approval gates, and external webhooks \u2014 never by a refresh token dying. So the checkpoint does not fire \"the instant the token dies\"; that instant is an unhandled error inside a tool. (3) HOT-SPLICE: the resume carries an authorization-code/credential for a NEW consent flow, not a re-minted token injected into an already-parked step that died on a stale token \u2014 there is no token-swap-into-live-run semantics. (4) NEUTRALITY: ADK's resume is ADK-specific (its own session service + invocation_id), not a cross-framework sidecar; the only thing marketed as a neutral sidecar (Entra Auth SDK) does no run-level checkpoint/re-consent/splice at all. So the unbuilt middle is exactly: auto-classify the dead refresh token, treat that as the checkpoint trigger, and hot-splice the re-minted token back into the exact parked step \u2014 packaged neutrally across frameworks.",
+      "confidence": 0.78,
+      "reasoning": "I attacked from angles the brief's prior research under-covered: MCP-native auth-resume products, \"babysitting\"-fix tools, machine-identity auth sidecars, and major-vendor \"full lifecycle pause/resume\" launches. The strongest new candidates I surfaced were Google ADK's pause/resume + Resume-feature (invocation_id-bound auth response) and Microsoft's Entra Auth SDK sidecar \u2014 neither was central in the prior facets, so they were worth probing as fresh potential refutations. Fetching the primary docs for both, plus the ADK long-running-agents blog, confirmed the same structural gap the brief predicts: the resume rails and even an initial-consent re-consent primitive exist, but the auth-DEATH classifier (invalid_grant detection mid-run), the death-as-pause-trigger, and the hot-splice of a re-minted token into the same parked step are uniformly left to developers, and the one neutral sidecar (Entra) does machine-token lifecycle only. Search results also re-confirmed the pain bugs (openclaw #31132/#8808, Copilot mid-session token death) with no shipped fix. I did NOT find any product \u2014 major vendor, MCP startup, or durable-execution add-on \u2014 that packages all four steps as a neutral cross-framework sidecar, so refuted=false. Confidence is 0.78 rather than higher because the space is moving fast (ADK is one invocation_id-reuse + an invalid_grant catch away from converging), the relevant proof is partly in fast-changing changelogs/private launches I can't fully see, and I cannot exhaustively rule out a stealth 2026 entrant. But on the evidence available, the full packaged splice remains unshipped."
+    },
+    {
+      "refuted": false,
+      "bestCounterexample": "AWS Bedrock AgentCore Identity (https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-authentication.html) is the strongest counterexample I found from a fresh angle and the closest single product to the splice. It ships: a token vault with automatic refresh-token storage/use; a @requires_access_token decorator that suspends a function call and surfaces an out-of-band authorization URL (via streaming/callback/polling) to the caller; and resume of that call once consent completes. That covers RE-CONSENT transport plus credential-injection mechanics in one managed AWS product. But it explicitly fails the three load-bearing parts of the claim: (1) CLASSIFY \u2014 it cannot reliably detect dead refresh tokens at all: 'Access tokens returned by AgentCore are not guaranteed to be valid. Tokens can be revoked by customers on the federated provider side, which AgentCore cannot detect.' The developer must manually pass forceAuthentication=true. (2) DURABLE STEP-ACCURATE CHECKPOINT + HOT-SPLICE INTO THE SAME PARKED RUN \u2014 the suspend/resume scope is a single decorated function/tool-call boundary (step-up / first-time authorization), not a durable checkpoint of an arbitrary in-flight step in a multi-day run; resume of the broader agent execution-graph state is left to the application/framework. (3) When the refresh token is itself dead it 'falls back to prompting the user for full reauthorization' \u2014 a fresh connection-level federation flow for the next/retried invocation, not a hot-splice into the exact parked step. Secondary candidates (Permit.io MCP Gateway, agentgateway, WorkOS Pipes MCP, Hermes Agent credential pools) are all connection-level: gateways transparently refresh access tokens but on refresh-token death the client 'must reconnect' and re-run consent; Hermes credential pools merely rotate to the next pooled credential or a fallback provider on invalid_grant with no checkpoint, no re-consent, no same-run resume.",
+      "gapThatRemains": "No product packages all five parts as one neutral cross-framework unit. Specifically still unbuilt: (a) automatic CLASSIFICATION of a truly-dead refresh token (invalid_grant / AADSTS700082 / AADSTS50173 / Google 'expired or revoked') as the TRIGGER \u2014 AgentCore can't even detect provider-side revocation; credential vendors detect it but only to mark the connection re-auth-required for a later retry. (b) A DURABLE STEP-ACCURATE CHECKPOINT fired at the instant of token death \u2014 existing suspend/resume is scoped to a single tool-call/decorator boundary (AgentCore, Auth0 CIBA, Arcade) or to generic developer-raised waits (Temporal/Inngest/Trigger.dev/Restate), never auto-triggered by auth death. (c) HOT-SPLICE of the freshly minted token into the SAME long-running parked process to resume the EXACT step with no restart \u2014 everyone hands resumption back to the app as a retry-later, stores the token in a vault for the NEXT invocation, or requires the client to reconnect. (d) Doing all of this as a framework-NEUTRAL sidecar rather than locked to one vendor's runtime (AgentCore=AWS, Pipes=WorkOS, credential pools=Hermes, CIBA=Auth0+LangGraph). The closest products own RE-CONSENT (now near-commoditized by MCP 2025-11-25 URL-mode elicitation) and the resume RAIL (durable-execution frameworks), but the CLASSIFY trigger + auth-death-fired durable checkpoint + same-run hot-splice middle remains unowned.",
+      "confidence": 0.82,
+      "reasoning": "I deliberately searched angles likely missed by other skeptics: MCP gateways/proxies (agentgateway, Permit.io, Kong), 2026 agent-reliability and checkpoint/resume platforms (Google ADK, Microsoft Agent Framework, Dapr Agents), credential-pool products (Hermes Agent), and major-cloud agent-identity (AWS Bedrock AgentCore Identity, Microsoft Entra Agent ID). The most credible new counterexample, AgentCore Identity, was verified directly against AWS docs and decisively falls short on classification, step-accurate durable checkpoint, and same-run hot-splice \u2014 its suspend/resume is single-tool-call step-up authorization with vault-based token storage for the next call, mirroring the Auth0-CIBA/Arcade pattern already in the prior research. MCP gateways confirmed connection-level: transparent access-token refresh, but on refresh-token death the client must reconnect. Hermes credential pools just rotate or fall back. No product, neutral or otherwise, wires CLASSIFY-dead-token -> auth-death-triggered durable checkpoint -> URL re-consent -> hot-splice-into-same-parked-run -> resume-exact-step. I'm holding confidence at 0.82 rather than higher because the space is moving fast (AgentCore, Entra Agent ID, MCP-spec-driven gateways all shipping in 2026) and a newer or stealth offering could exist that my searches didn't surface; but every concrete shipping product I or the prior research examined stops short of the packaged splice, so refuted=false.",
+      "counterexampleUrl": "https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-authentication.html"
+    }
+  ]
+}

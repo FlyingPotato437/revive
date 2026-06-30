@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "revive-sidecar"
+version = "0.1.0"
+description = "Credential recovery for durable workflows: checkpoint, reauthorize, rotate a credential lease, and resume the same logical run safely."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Revive Labs" }]
+keywords = ["oauth", "agents", "langgraph", "temporal", "durable-execution", "token-refresh", "ai-agents", "mcp"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = []  # core is stdlib-only
+
+[project.optional-dependencies]
+langgraph = ["langgraph>=0.2"]
+temporal = ["temporalio>=1.7"]
+postgres = ["psycopg[binary]>=3.2"]
+hosted = ["temporalio>=1.7", "psycopg[binary]>=3.2"]
+dev = ["langgraph>=0.2"]
+
+[project.urls]
+Homepage = "https://revive.dev"
+Source = "https://github.com/revive-labs/revive"
+
+[tool.hatch.build.targets.wheel]
+packages = ["revive"]
