@@ -10,6 +10,7 @@
     "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "framer-motion": "11.18.2",
     "next": "^15.5.19",
     "postgres": "^3.4.7",

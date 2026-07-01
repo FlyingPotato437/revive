@@ -68,7 +68,7 @@ export default function RecoveryLab() {
           <div className="min-w-[230px] xl:border-r xl:border-hairline xl:pr-6">
             <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">Scenario</div>
             <div className="mt-1.5 text-[15px] font-semibold text-ink">Nightly executive briefing</div>
-            <div className="mt-1 text-[12px] text-ink-muted">Microsoft Graph · unattended · 8 steps</div>
+            <div className="mt-1 text-[12px] text-ink-muted">Microsoft Graph / unattended / 8 steps</div>
           </div>
 
           <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
@@ -89,7 +89,7 @@ export default function RecoveryLab() {
         </div>
       </section>
 
-      <section className="instrument-panel evidence-plate mt-5 overflow-hidden rounded-[8px]"><div className="flex h-12 items-center justify-between border-b border-[#e3e4e0] px-5"><div><span className="mr-2 font-mono text-[7.5px] text-[#b0b2ae]">TRACE/05</span><span className="text-[11px] font-semibold text-[#26292e]">Recovery continuity spine</span><span className="ml-2 font-mono text-[8.5px] text-[#96999e]">identity → run → action</span></div><StatusBadge tone={revive?.status === "completed" ? "ok" : awaiting ? "warn" : revive ? "cobalt" : "neutral"}>{revive?.status?.replaceAll("_", " ") ?? "not started"}</StatusBadge></div><RecoveryTrace run={revive} /></section>
+      <section className="instrument-panel evidence-plate mt-5 overflow-hidden rounded-[8px]"><div className="flex h-12 items-center justify-between border-b border-[#e3e4e0] px-5"><div><span className="text-[11px] font-semibold text-[#26292e]">Recovery continuity spine</span><span className="ml-2 font-mono text-[8.5px] text-[#96999e]">identity → run → action</span></div><StatusBadge tone={revive?.status === "completed" ? "ok" : awaiting ? "warn" : revive ? "cobalt" : "neutral"}>{revive?.status?.replaceAll("_", " ") ?? "not started"}</StatusBadge></div><RecoveryTrace run={revive} /></section>
 
       <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <LaneColumn run={baseline} eyebrow="Control" title="Unprotected workflow" accent="baseline">

@@ -1,33 +1,13 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 const phases = [
-  {
-    key: "failure",
-    system: "Identity",
-    title: "Grant rejected",
-    body: "The provider returns a terminal credential error.",
-  },
-  {
-    key: "human",
-    system: "Account owner",
-    title: "Access reconnected",
-    body: "A person securely restores access once.",
-  },
-  {
-    key: "lease",
-    system: "Revive",
-    title: "Lease rotated",
-    body: "Stale workers are fenced from generation 2.",
-  },
-  {
-    key: "resume",
-    system: "Runtime",
-    title: "Run continues",
-    body: "The same execution resumes at checkpoint 05.",
-  },
+  { key: "detect", owner: "IDENTITY", title: "Grant rejected", note: "AADSTS700082", color: "#C2413A" },
+  { key: "recover", owner: "ACCOUNT OWNER", title: "Access restored", note: "one secure action", color: "#4967F2" },
+  { key: "rotate", owner: "REVIVE", title: "Lease advanced", note: "generation 01 to 02", color: "#4967F2" },
+  { key: "resume", owner: "RUNTIME", title: "Run resumed", note: "checkpoint 05", color: "#148060" },
 ] as const;
 
 export function HeroVisual() {
@@ -39,66 +19,77 @@ export function HeroVisual() {
       setPhase(phases.length - 1);
       return;
     }
-    const timer = window.setInterval(() => setPhase((current) => (current + 1) % phases.length), 1650);
+    const timer = window.setInterval(() => setPhase((value) => (value + 1) % phases.length), 1750);
     return () => window.clearInterval(timer);
   }, [reduceMotion]);
 
   const current = phases[phase];
 
-  return <motion.div initial={reduceMotion ? false : { opacity: 0, x: 26, scale: .985 }} animate={{ opacity: 1, x: 0, scale: 1 }} transition={{ duration: .9, delay: .12, ease: [0.22, 1, 0.36, 1] }} className="relative lg:translate-x-8">
-    <div className="home-glass-orb home-glass-orb-one" />
-    <div className="home-glass-orb home-glass-orb-two" />
+  return (
+    <motion.figure
+      initial={reduceMotion ? false : { opacity: 0, y: 20, rotate: 0.8 }}
+      animate={{ opacity: 1, y: 0, rotate: 0 }}
+      transition={{ duration: 0.8, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+      className="recovery-record relative mx-auto w-full max-w-[620px] lg:mr-0"
+      aria-label="Revive recovery incident record"
+    >
+      <div className="record-binding" aria-hidden="true" />
+      <div className="relative border border-[#bfc5ce] bg-[#fbfcf8] shadow-[0_24px_55px_-42px_rgba(24,31,44,.65)]">
+        <header className="grid grid-cols-[1fr_auto] border-b border-[#151922]">
+          <div className="p-5 sm:p-6">
+            <p className="font-mono text-[9px] font-medium tracking-[.12em] text-[#596273]">RECOVERY INCIDENT RECORD</p>
+            <p className="mt-2 text-[13px] font-semibold tracking-[-.02em] text-[#151922]">Nightly executive briefing</p>
+          </div>
+          <div className="flex min-w-[108px] flex-col justify-center border-l border-[#151922] bg-[#edf0ff] px-4 text-right">
+            <span className="font-mono text-[8px] text-[#697386]">CASE</span>
+            <span className="mt-1 font-mono text-[12px] font-semibold text-[#2e49c8]">RV-0248</span>
+          </div>
+        </header>
 
-    <section className="home-liquid-shell relative overflow-hidden rounded-[18px] p-3 sm:p-4" aria-label="Animated recovery handoff">
-      <div className="home-liquid-highlight pointer-events-none absolute inset-x-8 top-0 h-px" />
-      <header className="flex items-center justify-between px-2 pb-3 pt-1">
-        <div><div className="font-mono text-[8px] uppercase tracking-[.15em] text-[#9ca8c8]">Recovery handoff</div><div className="mt-1 text-[11px] font-medium text-[#e9ece9]">Nightly executive briefing</div></div>
-        <div className="flex items-center gap-2 font-mono text-[8px] uppercase tracking-[.1em] text-[#8390a7]"><span className="h-1.5 w-1.5 rounded-full bg-[#6f83ff]" />live sequence</div>
-      </header>
-
-      <div className="home-liquid-panel relative overflow-hidden rounded-[14px] p-4 sm:p-5">
-        <div className="home-coordinate-field pointer-events-none absolute inset-0 opacity-30" />
-        <div className="relative grid gap-4 sm:grid-cols-[.8fr_1.2fr]">
-          <div className="hidden rounded-[12px] border border-white/10 bg-[#0c111a]/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.05)] sm:block">
-            <div className="font-mono text-[8px] uppercase tracking-[.12em] text-[#d1726d]">Access interruption</div>
-            <div className="mt-3 font-mono text-[13px] text-[#f1f2ef]">AADSTS700082</div>
-            <p className="mt-2 text-[10px] leading-4 text-[#8f98a7]">Refresh token expired. The run is parked before the next remote action.</p>
-            <div className="mt-5 flex items-center gap-3 border-t border-white/10 pt-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#8294ff]/40 bg-[#8294ff]/10 text-[9px] font-semibold text-[#b9c2ff]">AO</div>
-              <div className="min-w-0"><div className="text-[10px] font-medium text-[#e4e7e4]">Account owner</div><div className="mt-0.5 text-[8px] text-[#7f8998]">one secure action</div></div>
-              <motion.span animate={{ opacity: phase === 1 ? [0.35, 1, 0.35] : 0.35 }} transition={{ duration: 1.2, repeat: phase === 1 && !reduceMotion ? Infinity : 0 }} className="ml-auto h-2 w-2 rounded-full bg-[#6f83ff]" />
-            </div>
+        <div className="grid sm:grid-cols-[.8fr_1.2fr]">
+          <div className="border-b border-[#cfd4da] p-5 sm:border-b-0 sm:border-r sm:p-6">
+            <p className="font-mono text-[8px] tracking-[.1em] text-[#747d8b]">EXECUTION</p>
+            <p className="mt-3 font-mono text-[20px] font-medium tracking-[-.04em] text-[#151922]">run_7f2</p>
+            <dl className="mt-7 space-y-4 text-[10px]">
+              <div><dt className="text-[#8a94a3]">Checkpoint</dt><dd className="mt-1 font-mono text-[#303744]">05 / prepare brief</dd></div>
+              <div><dt className="text-[#8a94a3]">Action key</dt><dd className="mt-1 font-mono text-[#303744]">send_exec_05</dd></div>
+              <div><dt className="text-[#8a94a3]">Duplicate effects</dt><dd className="mt-1 font-mono font-semibold text-[#148060]">0 observed</dd></div>
+            </dl>
           </div>
 
-          <div className="flex min-h-[188px] flex-col rounded-[12px] border border-white/10 bg-white/[.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08)] backdrop-blur-xl">
-            <div className="flex items-center justify-between font-mono text-[8px] uppercase tracking-[.11em] text-[#778193]"><span>Current transition</span><span>{phase + 1} / {phases.length}</span></div>
-            <div className="flex flex-1 items-center">
-              <motion.div key={current.key} initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35, ease: [0.22, 1, 0.36, 1] }}>
-                <div className="font-mono text-[8px] uppercase tracking-[.12em] text-[#91a0ff]">{current.system}</div>
-                <div className="mt-2 text-[22px] font-semibold tracking-[-.04em] text-[#f0f2ef]">{current.title}</div>
-                <p className="mt-2 max-w-[280px] text-[10px] leading-4 text-[#9099a8]">{current.body}</p>
-              </motion.div>
+          <div className="flex min-h-[282px] flex-col p-5 sm:p-6">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[8px] tracking-[.1em] text-[#747d8b]">LIVE TRANSITION</span>
+              <span className="font-mono text-[9px] text-[#747d8b]">{String(phase + 1).padStart(2, "0")} / 04</span>
             </div>
-            <div className="flex items-center justify-between border-t border-white/10 pt-3 text-[8px] text-[#7c8695]"><span>run_7f2</span><span className="font-mono">generation {phase >= 2 ? "2" : "1"}</span></div>
+
+            <div className="flex flex-1 items-center py-8">
+              <AnimatePresence mode="wait">
+                <motion.div key={current.key} initial={reduceMotion ? false : { opacity: 0, y: 9 }} animate={{ opacity: 1, y: 0 }} exit={reduceMotion ? {} : { opacity: 0, y: -7 }} transition={{ duration: 0.28 }}>
+                  <p className="font-mono text-[8px] font-semibold tracking-[.12em]" style={{ color: current.color }}>{current.owner}</p>
+                  <p className="mt-3 text-[28px] font-semibold leading-none tracking-[-.045em] text-[#151922]">{current.title}</p>
+                  <p className="mt-3 font-mono text-[10px] text-[#737c8a]">{current.note}</p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            <ol className="grid grid-cols-4 gap-2" aria-hidden="true">
+              {phases.map((item, index) => (
+                <li key={item.key}>
+                  <div className="h-[3px] bg-[#dde1e5]"><motion.div className="h-full origin-left" style={{ backgroundColor: item.color }} animate={{ scaleX: index <= phase ? 1 : 0 }} transition={{ duration: 0.35 }} /></div>
+                  <span className={`mt-2 block font-mono text-[7px] ${index <= phase ? "text-[#49515e]" : "text-[#a5acb5]"}`}>{item.owner.split(" ")[0]}</span>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
 
-        <ol className="relative mt-5 grid grid-cols-4 gap-2" aria-hidden="true">
-          <div className="absolute left-[10%] right-[10%] top-[9px] h-px bg-white/10" />
-          <motion.div className="absolute left-[10%] right-[10%] top-[9px] h-px origin-left bg-[#6f83ff]" animate={{ scaleX: phase / (phases.length - 1) }} transition={{ type: "spring", stiffness: 95, damping: 20 }} />
-          {phases.map((item, index) => {
-            const reached = index <= phase;
-            const active = index === phase;
-            return <li key={item.key} className="relative text-center">
-              <motion.span animate={{ scale: active && !reduceMotion ? 1.16 : 1 }} transition={{ type: "spring", stiffness: 220, damping: 18 }} className={`mx-auto block h-[18px] w-[18px] rounded-full border-[4px] border-[#141a25] shadow-[0_0_0_1px_currentColor] ${reached ? index === 0 ? "bg-[#c95f59] text-[#c95f59]" : index === phases.length - 1 ? "bg-[#65bb91] text-[#65bb91]" : "bg-[#6f83ff] text-[#6f83ff]" : "bg-[#141a25] text-[#4d5666]"}`} />
-              <span className={`mt-2 block text-[8px] font-medium ${reached ? "text-[#b8bec8]" : "text-[#596273]"}`}>{item.system}</span>
-            </li>;
-          })}
-        </ol>
+        <footer className="flex items-center justify-between border-t border-[#151922] bg-[#f0f2ed] px-5 py-3 font-mono text-[8px] text-[#66707e] sm:px-6">
+          <span>SAME LOGICAL RUN</span>
+          <span className="font-semibold text-[#2e49c8]">CREDENTIAL GENERATION {phase >= 2 ? "02" : "01"}</span>
+        </footer>
       </div>
-
-      <footer className="grid grid-cols-3 gap-2 px-2 pt-3 font-mono text-[8px] text-[#778193]"><span>same run</span><span className="text-center">human in control</span><span className="text-right">duplicate effects: 0</span></footer>
-      <p className="sr-only">A four-part recovery sequence: the credential grant is rejected, the account owner restores access, Revive rotates the credential lease, and the durable runtime resumes the same run at its checkpoint.</p>
-    </section>
-  </motion.div>;
+      <figcaption className="sr-only">The provider rejects a credential, the account owner restores access, Revive advances the lease, and the original run resumes at its checkpoint.</figcaption>
+    </motion.figure>
+  );
 }

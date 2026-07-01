@@ -53,7 +53,7 @@ export default function RecoveryCasesPage() {
           <div className="min-w-0"><div className="truncate text-[12px] font-medium text-ink">{item.recoveryCase?.id ?? item.runId}</div><div className="mt-0.5 truncate font-mono text-[9.5px] text-ink-faint">{item.runId}</div></div>
           <div><span className="font-mono text-[9.5px] text-[#676b72]">{item.deathCode ?? "Not recorded"}</span></div>
           <div><CaseStatus status={item.status}>{item.recoveryCase?.status?.replaceAll("_", " ") ?? item.status.replaceAll("_", " ")}</CaseStatus></div>
-          <div><div className="flex items-center gap-2"><div className="h-1.5 w-20 overflow-hidden rounded-full bg-paper-inset"><div className="h-full rounded-full bg-cobalt" style={{ width: `${(item.completedSteps / item.totalSteps) * 100}%` }} /></div><span className="font-mono text-[9.5px] text-ink-faint">{item.completedSteps}/{item.totalSteps}</span></div></div>
+          <div><div className="flex items-center gap-2"><div className="flex gap-0.5" aria-hidden="true">{Array.from({ length: item.totalSteps }).map((_, index) => <span key={index} className={`h-2 w-1.5 ${index < item.completedSteps ? "bg-cobalt" : "bg-[#d8dce0]"}`} />)}</div><span className="font-mono text-[9.5px] text-ink-faint">{item.completedSteps}/{item.totalSteps}</span></div></div>
           <div className="font-mono text-[10px] text-ink-muted">gen {item.generation}</div><div className="flex items-center justify-between text-[10.5px] text-ink-faint"><span>{relativeTime(item.createdAt)}</span><span className="translate-x-1 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100">→</span></div>
         </Link>)}
       </section>

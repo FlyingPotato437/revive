@@ -21,30 +21,31 @@ export function Nav() {
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (value) => setScrolled(value > 18));
 
-  return <motion.header className="sticky top-0 z-50 bg-[#0d1118]/88 px-3 py-2 backdrop-blur-xl sm:px-5">
-    <div className={`marketing-nav-rail mx-auto flex h-12 max-w-[1380px] items-center rounded-[14px] px-2.5 transition-shadow sm:px-3 ${scrolled ? "shadow-[0_18px_48px_-30px_rgba(0,0,0,.95)]" : ""}`}>
-      <Link href="/" aria-label="Revive home" className="group flex min-w-0 items-center gap-2.5">
-        <span className="revive-mark" aria-hidden><span className="revive-mark-ring" /><span className="revive-mark-core" /></span>
-        <span className="text-[15px] font-semibold tracking-[-.03em] text-[#eef0ed]">Revive</span>
-        <span className="hidden h-4 w-px bg-white/10 lg:block" />
-        <span className="hidden font-mono text-[8px] uppercase tracking-[.1em] text-[#697386] lg:block">Recovery control plane</span>
-      </Link>
+  return (
+    <motion.header className={`sticky top-0 z-50 border-b bg-[#f4f5f1]/95 backdrop-blur-md transition-colors ${scrolled ? "border-[#c9ced4]" : "border-[#151922]"}`}>
+      <div className="mx-auto flex h-[62px] max-w-[1380px] items-center px-5 sm:px-8">
+        <Link href="/" aria-label="Revive home" className="group flex items-center gap-3">
+          <span className="revive-mark" aria-hidden><span className="revive-mark-ring" /><span className="revive-mark-core" /></span>
+          <span className="text-[15px] font-semibold tracking-[-.035em] text-[#151922]">Revive</span>
+          <span className="hidden font-mono text-[8px] tracking-[.1em] text-[#828a96] lg:inline">RECOVERY CONTROL PLANE</span>
+        </Link>
 
-      <nav className="marketing-nav-switch ml-auto hidden items-center rounded-[10px] p-1 md:flex" aria-label="Primary navigation">
-        {LINKS.map((link) => {
-          const active = !link.href.includes("#") && pathname === link.href;
-          return <Link key={link.href} href={link.href} className={`relative flex h-7 items-center rounded-[7px] px-3 text-[10.5px] font-medium transition ${active ? "text-[#eef0ed]" : "text-[#87909f] hover:text-[#d9dcda]"}`}>{active && <motion.span layoutId={reduceMotion ? undefined : "marketing-nav-active"} className="absolute inset-0 rounded-[7px] border border-white/10 bg-white/[.07] shadow-[inset_0_1px_0_rgba(255,255,255,.06)]" />}<span className="relative">{link.label}</span></Link>;
-        })}
-      </nav>
+        <nav className="ml-auto hidden h-full items-center md:flex" aria-label="Primary navigation">
+          {LINKS.map((link) => {
+            const active = !link.href.includes("#") && pathname === link.href;
+            return <Link key={link.href} href={link.href} className={`relative flex h-full items-center border-l border-[#d6dadf] px-4 text-[11px] font-medium transition-colors last:border-r ${active ? "text-[#2e49c8]" : "text-[#66707e] hover:bg-white/70 hover:text-[#151922]"}`}>{active && <motion.span layoutId={reduceMotion ? undefined : "marketing-nav-active"} className="absolute inset-x-0 bottom-0 h-[3px] bg-[#4967f2]" />}<span>{link.label}</span></Link>;
+          })}
+        </nav>
 
-      <div className="ml-auto flex items-center gap-1.5 md:ml-3">
-        <Link href="/login" className="hidden h-8 items-center rounded-[8px] px-3 text-[10.5px] font-medium text-[#818b9a] transition hover:bg-white/[.04] hover:text-white sm:inline-flex">Log in</Link>
-        <Link href="/app" className="inline-flex h-8 items-center rounded-[8px] bg-[#6f83ff] px-3 text-[10.5px] font-semibold text-[#0d1118] transition hover:bg-[#8294ff] active:translate-y-px"><span className="sm:hidden">Open lab</span><span className="hidden sm:inline">Open recovery lab</span></Link>
-        <button onClick={() => setOpen((value) => !value)} className="ml-0.5 flex h-8 w-8 items-center justify-center rounded-[8px] border border-white/12 bg-white/[.035] md:hidden" aria-label="Toggle navigation" aria-expanded={open}><span className="relative h-3.5 w-4"><motion.span animate={{ rotate: reduceMotion ? 0 : open ? 45 : 0, y: reduceMotion ? 0 : open ? 5 : 0 }} className="absolute left-0 top-0 h-px w-4 bg-white" /><motion.span animate={{ opacity: open ? 0 : 1 }} className="absolute left-0 top-[6px] h-px w-4 bg-white" /><motion.span animate={{ rotate: reduceMotion ? 0 : open ? -45 : 0, y: reduceMotion ? 0 : open ? -5 : 0 }} className="absolute bottom-0 left-0 h-px w-4 bg-white" /></span></button>
+        <div className="ml-auto flex items-center gap-2 md:ml-5">
+          <Link href="/login" className="hidden px-2 text-[11px] font-medium text-[#66707e] transition-colors hover:text-[#151922] sm:inline-flex">Log in</Link>
+          <Link href="/app" className="inline-flex h-9 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px"><span className="sm:hidden">Open lab</span><span className="hidden sm:inline">Open recovery lab</span></Link>
+          <button onClick={() => setOpen((value) => !value)} className="ml-1 flex h-9 w-9 items-center justify-center border border-[#151922] bg-transparent md:hidden" aria-label="Toggle navigation" aria-expanded={open}><span className="relative h-3.5 w-4"><motion.span animate={{ rotate: reduceMotion ? 0 : open ? 45 : 0, y: reduceMotion ? 0 : open ? 5 : 0 }} className="absolute left-0 top-0 h-px w-4 bg-[#151922]" /><motion.span animate={{ opacity: open ? 0 : 1 }} className="absolute left-0 top-[6px] h-px w-4 bg-[#151922]" /><motion.span animate={{ rotate: reduceMotion ? 0 : open ? -45 : 0, y: reduceMotion ? 0 : open ? -5 : 0 }} className="absolute bottom-0 left-0 h-px w-4 bg-[#151922]" /></span></button>
+        </div>
       </div>
-    </div>
 
-    <AnimatePresence>{open && <motion.nav initial={reduceMotion ? false : { opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="marketing-nav-rail mx-auto mt-2 max-w-[1380px] overflow-hidden rounded-[14px] p-1.5 md:hidden">{LINKS.map((link) => <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="block rounded-[9px] px-4 py-3 text-[12px] text-[#a9b0ba] transition hover:bg-white/[.05] hover:text-white">{link.label}</Link>)}</motion.nav>}</AnimatePresence>
-    <ScrollProgress />
-  </motion.header>;
+      <AnimatePresence>{open && <motion.nav initial={reduceMotion ? false : { opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="border-t border-[#cfd4da] bg-[#fbfcf8] px-5 py-2 md:hidden">{LINKS.map((link) => <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="block border-b border-[#e1e4e7] py-3 text-[12px] font-medium text-[#4f5866] last:border-0">{link.label}</Link>)}</motion.nav>}</AnimatePresence>
+      <ScrollProgress />
+    </motion.header>
+  );
 }

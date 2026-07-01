@@ -26,7 +26,7 @@ export function LaneColumn({ run, eyebrow, title, accent, children }: { run: Run
     <motion.section layout className={`instrument-panel relative overflow-hidden rounded-[8px] ${accent === "revive" ? "before:absolute before:bottom-0 before:left-0 before:top-0 before:z-20 before:w-[2px] before:bg-cobalt" : ""} ${accent === "revive" && run?.status === "completed" ? "!border-ok/35" : ""}`}>
       <header className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4">
         <div>
-          <div className={`flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.13em] ${accent === "revive" ? "text-cobalt" : "text-ink-faint"}`}><span className="font-mono text-[7.5px] text-[#b0b2ae]">{accent === "revive" ? "LANE/02" : "LANE/01"}</span>{eyebrow}</div>
+          <div className={`text-[9px] font-semibold uppercase tracking-[0.11em] ${accent === "revive" ? "text-cobalt" : "text-ink-faint"}`}>{eyebrow}</div>
           <h2 className="mt-1 text-[16px] font-semibold tracking-[-0.02em] text-ink">{title}</h2>
         </div>
         <Pill tone={meta.tone}><Dot tone={meta.tone} pulse={meta.pulse} />{meta.label}</Pill>
