@@ -4,9 +4,9 @@ import { motion } from "framer-motion";
 import type { RunState } from "@/lib/types";
 
 export function Outcome({ baseline, revive }: { baseline: RunState; revive: RunState }) {
-  const recovered = revive.metrics.recoveredMs ? `${(revive.metrics.recoveredMs / 1000).toFixed(1)}s` : "—";
+  const recovered = revive.metrics.recoveredMs ? `${(revive.metrics.recoveredMs / 1000).toFixed(1)}s` : "Not measured";
   return (
-    <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-card border border-hairline bg-white shadow-seat">
+    <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="instrument-panel overflow-hidden rounded-[8px]">
       <div className="flex items-center justify-between border-b border-hairline px-5 py-3.5">
         <div><div className="text-[10px] font-semibold uppercase tracking-[0.11em] text-ink-faint">Recovery result</div><div className="mt-1 text-[13px] font-medium text-ink">One credential failure, two execution outcomes</div></div>
         <span className="rounded-[6px] bg-ok-soft px-2 py-1 text-[10px] font-semibold text-ok">Invariant passed</span>

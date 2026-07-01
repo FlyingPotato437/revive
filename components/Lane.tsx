@@ -23,16 +23,16 @@ export function LaneColumn({ run, eyebrow, title, accent, children }: { run: Run
   const deathIndex = steps.findIndex((step) => step.status === "failed" || step.status === "checkpointed");
 
   return (
-    <motion.section layout className={`overflow-hidden rounded-card border bg-white shadow-seat ${accent === "revive" && run?.status === "completed" ? "border-ok/30" : "border-hairline"}`}>
+    <motion.section layout className={`instrument-panel relative overflow-hidden rounded-[8px] ${accent === "revive" ? "before:absolute before:bottom-0 before:left-0 before:top-0 before:z-20 before:w-[2px] before:bg-cobalt" : ""} ${accent === "revive" && run?.status === "completed" ? "!border-ok/35" : ""}`}>
       <header className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4">
         <div>
-          <div className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${accent === "revive" ? "text-cobalt" : "text-ink-faint"}`}>{eyebrow}</div>
+          <div className={`flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.13em] ${accent === "revive" ? "text-cobalt" : "text-ink-faint"}`}><span className="font-mono text-[7.5px] text-[#b0b2ae]">{accent === "revive" ? "LANE/02" : "LANE/01"}</span>{eyebrow}</div>
           <h2 className="mt-1 text-[16px] font-semibold tracking-[-0.02em] text-ink">{title}</h2>
         </div>
         <Pill tone={meta.tone}><Dot tone={meta.tone} pulse={meta.pulse} />{meta.label}</Pill>
       </header>
 
-      <div className="flex min-h-12 items-center gap-3 border-b border-hairline bg-paper-baseline px-5 py-2.5">
+      <div className="evidence-plate flex min-h-12 items-center gap-3 border-b border-hairline px-5 py-2.5">
         {run ? <TokenChip fingerprint={run.token.fingerprint} generation={run.token.generation} rotated={run.token.generation > 1} /> : <span className="text-[11px] text-ink-faint">Credential lease appears when the run starts</span>}
         <span className="ml-auto font-mono text-[10px] text-ink-faint">{run ? `${run.metrics.completedSteps}/${run.steps.length}` : "0/8"}</span>
       </div>
@@ -52,7 +52,7 @@ function StepRow({ step, index, accent, active, afterDeath, terminal }: { step: 
   const faded = accent === "baseline" && terminal && afterDeath && step.status === "pending";
   const tinted = active || step.status === "resuming" || step.status === "checkpointed";
   return (
-    <motion.li initial={{ opacity: 0 }} animate={{ opacity: faded ? 0.35 : 1 }} transition={{ delay: index * 0.025 }} className={`relative flex min-h-[54px] items-center gap-3 rounded-[8px] px-3 py-2 transition ${tinted ? "bg-cobalt-soft/60" : "hover:bg-paper-baseline"}`}>
+    <motion.li initial={{ opacity: 0 }} animate={{ opacity: faded ? 0.35 : 1 }} transition={{ delay: index * 0.025 }} className={`relative flex min-h-[54px] items-center gap-3 border-b border-[#ecece8] px-3 py-2 transition last:border-0 ${tinted ? "bg-cobalt-soft/55" : "hover:bg-[#fafaf6]"}`}>
       <div className="relative self-stretch pt-2">
         <StatusNode status={step.status} />
         {index < 7 && <span className={`absolute left-[10.5px] top-[29px] bottom-[-13px] w-px ${step.status === "ok" ? accent === "revive" ? "bg-cobalt/40" : "bg-ok/35" : "bg-hairline"}`} />}

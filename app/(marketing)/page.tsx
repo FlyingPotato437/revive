@@ -1,65 +1,123 @@
 import Link from "next/link";
 import { HeroVisual } from "@/components/marketing/HeroVisual";
-import { HeroDrift, Lift, Reveal, Stagger, StaggerItem } from "@/components/marketing/Motion";
+import { Reveal, Stagger, StaggerItem } from "@/components/marketing/Motion";
 
-const primitives = [
-  { n: "01", title: "Run–credential binding", body: "Map a credential lease to every active run and the exact action it interrupted.", tag: "correlation" },
-  { n: "02", title: "Durable recovery case", body: "Persist the checkpoint and recovery state so the original worker can disappear safely.", tag: "continuity" },
-  { n: "03", title: "Fenced credential rotation", body: "Advance the lease generation so stale workers cannot reuse invalid credentials.", tag: "identity" },
-  { n: "04", title: "Idempotent replay", body: "Resume with the original action key and stop when the upstream result is ambiguous.", tag: "safety" },
+const recoveryStages = [
+  { title: "Classify the failure", body: "Separate a dead grant from a refreshable token or transient provider error.", system: "Identity" },
+  { title: "Bind the affected run", body: "Join the credential lease, logical run, checkpoint and failed action.", system: "Revive" },
+  { title: "Reauthorize the right account", body: "Issue a short-lived recovery capability without exposing credentials to the worker.", system: "User" },
+  { title: "Resume the original execution", body: "Rotate the lease generation, reconcile side effects and continue from the checkpoint.", system: "Runtime" },
 ];
 
-const integrations = [
-  { name: "LangGraph", detail: "native interrupt + checkpoint adapter", status: "available" },
-  { name: "Microsoft Entra", detail: "Authorization Code + PKCE adapter", status: "available" },
-  { name: "Nango", detail: "connect-session and proxy adapter", status: "available" },
-  { name: "Temporal", detail: "signal-based resume adapter", status: "available" },
+const invariants = [
+  { title: "Same logical run", body: "Recovery advances the existing execution instead of spawning a replacement job." },
+  { title: "Credential generation fencing", body: "Workers holding the rejected generation cannot race the resumed run." },
+  { title: "Checkpoint outside the process", body: "The original worker can disappear while recovery remains actionable." },
+  { title: "Replay with evidence", body: "Every mutating action keeps its idempotency key and reconciliation state." },
+];
+
+const faqs = [
+  { q: "Is Revive another token vault?", a: "No. Nango, Auth0 and provider vaults own token custody. Revive owns the recovery contract around the affected run." },
+  { q: "Why is normal workflow retry insufficient?", a: "Retrying with the rejected credential fails again. Blind replay can also repeat a remote side effect that already committed." },
+  { q: "Does recovery survive a worker restart?", a: "Yes. The recovery case and checkpoint are durable, so another worker can resume the same logical run." },
+  { q: "Which runtimes can Revive coordinate?", a: "The repository includes LangGraph and Temporal adapters. The contract is designed to support additional durable runtimes." },
 ];
 
 export default function Home() {
-  return <>
-    <section className="relative overflow-hidden border-b border-hairline">
-      <div className="marketing-grid absolute inset-0 -z-10 opacity-60" />
-      <div className="absolute left-1/2 top-[-260px] -z-10 h-[620px] w-[760px] -translate-x-1/2 rounded-full bg-cobalt/[.08] blur-[100px]" />
-      <div className="mx-auto grid min-h-[720px] max-w-[1240px] items-center gap-14 px-5 py-20 sm:px-7 lg:grid-cols-[1.02fr_.98fr] lg:py-24">
-        <div>
-          <Reveal y={14}><div className="inline-flex items-center gap-2 rounded-[7px] border border-hairline bg-white/80 px-3 py-1.5 shadow-seat backdrop-blur"><span className="h-1.5 w-1.5 rounded-full bg-cobalt" /><span className="text-[9px] font-semibold uppercase tracking-[.13em] text-ink-muted">Recovery control plane for durable agents</span></div></Reveal>
-          <Reveal delay={.06}><h1 className="mt-6 max-w-[760px] text-balance text-[clamp(42px,6vw,72px)] font-semibold leading-[.98] tracking-[-.055em] text-ink">Credential failures shouldn&apos;t kill durable workflows.</h1></Reveal>
-          <Reveal delay={.12}><p className="mt-6 max-w-[620px] text-[16px] leading-7 text-ink-muted">Revive binds an OAuth failure to the run it interrupted, gets the right account reauthorized, and resumes the failed action with its original idempotency key.</p></Reveal>
-          <Reveal delay={.18} className="mt-8 flex flex-wrap gap-3"><Link href="/app" className="group inline-flex h-11 items-center gap-2 rounded-[9px] bg-ink px-5 text-[12.5px] font-semibold text-white shadow-sm transition hover:bg-[#292f3a]">Try the recovery lab <span className="transition-transform group-hover:translate-x-1">→</span></Link><Link href="#architecture" className="inline-flex h-11 items-center rounded-[9px] border border-hairline bg-white px-5 text-[12.5px] font-semibold text-ink transition hover:border-ink/20 hover:bg-paper-inset">See the architecture</Link></Reveal>
-          <Reveal delay={.24} className="mt-8 grid max-w-[630px] grid-cols-2 gap-x-7 gap-y-4 border-t border-hairline pt-5 sm:grid-cols-4"><MiniStat value="256-bit" label="recovery links" /><MiniStat value="15 min" label="link lifetime" /><MiniStat value="durable" label="worker restart" /><MiniStat value="one key" label="action replay" /></Reveal>
+  return <div className="revive-home">
+    <section className="relative overflow-hidden border-b border-white/10">
+      <div className="home-hero-grid pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] lg:block" />
+      <div className="relative mx-auto grid min-h-[calc(100dvh-64px)] max-w-[1380px] items-center gap-12 px-5 py-12 sm:px-8 lg:grid-cols-[.88fr_1.12fr] lg:gap-10 lg:py-14">
+        <div className="relative z-10 max-w-[650px]">
+          <div className="font-mono text-[10px] font-medium uppercase tracking-[.16em] text-[#8294ff]">Credential recovery infrastructure</div>
+          <h1 className="mt-6 text-[clamp(44px,4.6vw,66px)] font-semibold leading-[.94] tracking-[-.06em] text-[#f2f3ef]"><span className="block">Keep the run.</span><span className="block sm:whitespace-nowrap">Replace the credential.</span></h1>
+          <p className="mt-7 max-w-[580px] text-[16px] leading-7 text-[#a7adb8]">Revive reconnects identity to the exact checkpoint, then resumes the original run without repeating committed work.</p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link href="/app" className="inline-flex h-12 items-center rounded-[8px] bg-[#6f83ff] px-5 text-[12px] font-semibold text-[#0d1118] transition hover:bg-[#8394ff] active:translate-y-px">Run the failure</Link>
+            <Link href="#architecture" className="inline-flex h-12 items-center rounded-[8px] border border-white/15 px-5 text-[12px] font-semibold text-[#e5e7e8] transition hover:border-white/30 hover:bg-white/[.04] active:translate-y-px">Read architecture</Link>
+          </div>
         </div>
-        <HeroDrift><HeroVisual /></HeroDrift>
+        <HeroVisual />
       </div>
     </section>
 
-    <section className="border-b border-hairline bg-white"><div className="mx-auto grid max-w-[1240px] divide-y divide-hairline px-5 sm:grid-cols-2 sm:divide-x sm:divide-y-0 sm:px-7 lg:grid-cols-4">{integrations.map((item) => <div key={item.name} className="flex items-center gap-3 px-0 py-4 sm:px-5 first:pl-0 last:pr-0"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.status === "available" ? "bg-ok" : "bg-ink-faint"}`} /><div className="min-w-0"><div className="flex items-center gap-2"><span className="text-[11px] font-semibold text-ink">{item.name}</span><span className="text-[7.5px] font-semibold uppercase tracking-[.09em] text-ink-faint">{item.status}</span></div><div className="mt-0.5 truncate text-[9.5px] text-ink-faint">{item.detail}</div></div></div>)}</div></section>
-
-    <section id="product" className="mx-auto max-w-[1240px] px-5 py-24 sm:px-7 lg:py-32">
-      <Reveal className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><Kicker>Product boundary</Kicker><h2 className="mt-4 max-w-[520px] text-[clamp(32px,4vw,48px)] font-semibold leading-[1.03] tracking-[-.045em] text-ink">The missing contract between identity and execution.</h2></div><p className="max-w-[610px] text-[14px] leading-6 text-ink-muted lg:justify-self-end">Credential systems know a grant is broken. Durable runtimes know how to pause a workflow. Neither system owns the correlation, recovery policy, identity handoff, and safe action replay between them.</p></Reveal>
-      <div className="relative mt-14 grid gap-3 lg:grid-cols-[1fr_1.16fr_1fr]"><BoundaryCard label="Credential systems" title="Detect connection failure" items={["Refresh rejected", "Grant revoked", "Step-up required"]} muted /><div className="relative rounded-[16px] border border-cobalt/25 bg-[#131720] p-6 text-white shadow-[0_24px_60px_-32px_rgba(47,67,155,.6)]"><div className="flex items-center justify-between"><Kicker dark>Revive</Kicker><span className="rounded-[5px] bg-cobalt/20 px-2 py-1 text-[8px] font-semibold uppercase tracking-[.08em] text-[#9eacff]">control plane</span></div><h3 className="mt-5 text-[21px] font-semibold tracking-[-.025em]">Recover the logical run</h3><div className="mt-5 space-y-2.5">{["Bind credential → run → action", "Route authenticated reauthorization", "Rotate lease generation", "Resume with idempotency guard"].map((item, index) => <div key={item} className="flex items-center gap-3 rounded-[8px] border border-white/[.07] bg-white/[.035] px-3 py-2.5 text-[10.5px] text-white/65"><span className="font-mono text-[8px] text-[#8395ff]">0{index + 1}</span>{item}</div>)}</div></div><BoundaryCard label="Durable runtimes" title="Pause and resume execution" items={["Checkpoint state", "Wait for event", "Schedule retry"]} muted /></div>
+    <section aria-label="Recovery boundary" className="border-b border-white/10">
+      <div className="mx-auto grid max-w-[1380px] px-5 sm:px-8 md:grid-cols-[1fr_1.18fr_1fr] md:px-8">
+        <BoundaryCell label="Credential system" title="Grant rejected" detail="Entra, Nango, Auth0" tone="fail" />
+        <BoundaryCell label="Revive continuity layer" title="Run correlated" detail="lease / run / checkpoint / action" tone="active" />
+        <BoundaryCell label="Durable runtime" title="Execution resumed" detail="LangGraph, Temporal" tone="ok" />
+      </div>
     </section>
 
-    <section id="architecture" className="border-y border-hairline bg-white"><div className="mx-auto max-w-[1240px] px-5 py-24 sm:px-7 lg:py-32"><Reveal><Kicker>Recovery architecture</Kicker><h2 className="mt-4 max-w-[700px] text-[clamp(32px,4vw,48px)] font-semibold leading-[1.04] tracking-[-.045em] text-ink">Six explicit state transitions. No magic token injection.</h2><p className="mt-5 max-w-[650px] text-[14px] leading-6 text-ink-muted">The worker can restart between every stage. The unit of continuity is the logical run and its checkpoint—not a process in memory.</p></Reveal><Stagger className="relative mt-14 grid gap-3 md:grid-cols-3 xl:grid-cols-6">{["Detect", "Bind", "Checkpoint", "Reauthorize", "Rotate", "Replay once"].map((step, index) => <StaggerItem key={step}><div className="group relative min-h-[150px] rounded-[13px] border border-hairline bg-paper-base p-4 transition hover:border-cobalt/25 hover:bg-white hover:shadow-lift"><div className="flex items-center justify-between"><span className="font-mono text-[9px] text-ink-faint">0{index + 1}</span><span className={`h-1.5 w-1.5 rounded-full ${index === 0 ? "bg-fail" : index === 5 ? "bg-ok" : "bg-cobalt"}`} /></div><div className="mt-8 text-[13px] font-semibold text-ink">{step}</div><p className="mt-2 text-[10.5px] leading-4 text-ink-faint">{architectureCopy[index]}</p>{index < 5 && <span className="absolute -right-[9px] top-1/2 z-10 hidden h-px w-[14px] bg-hairline xl:block" />}</div></StaggerItem>)}</Stagger></div></section>
+    <section id="product" className="mx-auto grid max-w-[1380px] gap-16 px-5 py-24 sm:px-8 lg:grid-cols-[.72fr_1.28fr] lg:py-36">
+      <Reveal className="lg:sticky lg:top-28 lg:self-start">
+        <h2 className="max-w-[520px] text-[clamp(36px,5vw,62px)] font-semibold leading-[.98] tracking-[-.055em] text-[#eef0ed]">A credential failure is not a workflow failure.</h2>
+        <p className="mt-6 max-w-[480px] text-[14px] leading-6 text-[#8e96a3]">The missing layer is a durable record connecting the broken identity to the exact work that stopped.</p>
+      </Reveal>
+      <Stagger className="border-t border-white/12">
+        {recoveryStages.map((stage) => <StaggerItem key={stage.title}>
+          <article className="group grid gap-5 border-b border-white/12 py-7 sm:grid-cols-[120px_1fr] sm:py-9">
+            <div className="font-mono text-[10px] uppercase tracking-[.12em] text-[#697180] group-hover:text-[#8294ff]">{stage.system}</div>
+            <div><h3 className="text-[22px] font-semibold tracking-[-.035em] text-[#e9ebe9]">{stage.title}</h3><p className="mt-2 max-w-[590px] text-[13px] leading-6 text-[#8e96a3]">{stage.body}</p></div>
+          </article>
+        </StaggerItem>)}
+      </Stagger>
+    </section>
 
-    <section className="mx-auto max-w-[1240px] px-5 py-24 sm:px-7 lg:py-32"><Reveal className="text-center"><Kicker>Operational guarantees</Kicker><h2 className="mx-auto mt-4 max-w-[700px] text-[clamp(32px,4vw,48px)] font-semibold leading-[1.04] tracking-[-.045em] text-ink">Depth comes from invariants, not feature count.</h2></Reveal><Stagger className="mt-14 grid gap-4 md:grid-cols-2">{primitives.map((item) => <StaggerItem key={item.n}><Lift className="h-full"><article className="flex h-full min-h-[210px] flex-col rounded-[15px] border border-hairline bg-white p-6 shadow-seat"><div className="flex items-center justify-between"><span className="font-mono text-[9px] text-cobalt">{item.n}</span><span className="rounded-[5px] bg-paper-inset px-2 py-1 text-[8px] font-semibold uppercase tracking-[.09em] text-ink-faint">{item.tag}</span></div><h3 className="mt-10 text-[18px] font-semibold tracking-[-.025em] text-ink">{item.title}</h3><p className="mt-3 max-w-[520px] text-[12px] leading-5 text-ink-muted">{item.body}</p></article></Lift></StaggerItem>)}</Stagger></section>
+    <section id="architecture" className="border-y border-white/10 bg-[#111722]">
+      <div className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
+        <Reveal><div className="max-w-[760px]"><div className="font-mono text-[10px] uppercase tracking-[.16em] text-[#8294ff]">The recovery contract</div><h2 className="mt-5 text-[clamp(36px,5vw,64px)] font-semibold leading-[.98] tracking-[-.055em] text-[#eef0ed]">Same run ID. New credential generation.</h2></div></Reveal>
+        <div className="mt-14 grid overflow-hidden rounded-[12px] border border-white/12 bg-[#0d121b] lg:grid-cols-[1.15fr_.85fr]">
+          <Reveal className="relative min-h-[430px] overflow-hidden border-b border-white/10 p-7 sm:p-10 lg:border-b-0 lg:border-r">
+            <div className="home-coordinate-field absolute inset-0 opacity-40" />
+            <div className="relative flex h-full flex-col justify-between">
+              <div className="flex items-center justify-between font-mono text-[9px] uppercase tracking-[.12em] text-[#697180]"><span>Logical execution</span><span>protected</span></div>
+              <div className="py-16">
+                <div className="text-[clamp(56px,8vw,104px)] font-semibold leading-none tracking-[-.075em] text-[#f0f2ef]">run_7f2</div>
+                <div className="mt-5 flex items-center gap-4"><span className="font-mono text-[11px] text-[#d15d57]">grant rejected</span><span className="h-px flex-1 bg-white/12" /><span className="font-mono text-[11px] text-[#8294ff]">generation 2</span></div>
+              </div>
+              <div className="font-mono text-[10px] text-[#7f8794]">checkpoint: files / action key preserved</div>
+            </div>
+          </Reveal>
+          <Stagger className="grid sm:grid-cols-2 lg:grid-cols-1">
+            {invariants.map((item) => <StaggerItem key={item.title} className="border-b border-white/10 last:border-0 sm:odd:border-r lg:odd:border-r-0">
+              <div className="min-h-[150px] p-6 sm:p-7"><h3 className="text-[15px] font-semibold tracking-[-.025em] text-[#e7e9e7]">{item.title}</h3><p className="mt-3 text-[11.5px] leading-5 text-[#7f8794]">{item.body}</p></div>
+            </StaggerItem>)}
+          </Stagger>
+        </div>
+      </div>
+    </section>
 
-    <section className="border-y border-hairline bg-[#10131a] text-white"><div className="mx-auto grid max-w-[1240px] gap-12 px-5 py-20 sm:px-7 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:py-24"><Reveal><Kicker dark>Company direction</Kicker><h2 className="mt-4 max-w-[560px] text-[clamp(30px,4vw,46px)] font-semibold leading-[1.04] tracking-[-.045em]">Recovery is the wedge. Run reliability is the platform.</h2><p className="mt-5 max-w-[590px] text-[13px] leading-6 text-white/45">The existing trace pipeline can eventually measure incident cost, retries, and action risk inside this control plane. It should not become a second product promise until customers pull Revive there.</p></Reveal><Stagger className="space-y-2">{[{label:"Now",title:"Credential failure recovery",status:"implemented foundation"},{label:"Next",title:"Vault and runtime integration matrix",status:"design partner work"},{label:"Later",title:"Run health, cost and policy intelligence",status:"earned expansion"}].map((item) => <StaggerItem key={item.label}><div className="flex items-center gap-4 rounded-[11px] border border-white/10 bg-white/[.035] p-4"><span className="w-10 text-[8px] font-semibold uppercase tracking-[.1em] text-[#8395ff]">{item.label}</span><div className="min-w-0 flex-1"><div className="text-[11px] font-medium text-white/75">{item.title}</div><div className="mt-0.5 text-[9px] text-white/30">{item.status}</div></div><span className="h-1.5 w-1.5 rounded-full bg-white/25" /></div></StaggerItem>)}</Stagger></div></section>
+    <section className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
+      <Reveal><h2 className="max-w-[720px] text-[clamp(34px,4.5vw,56px)] font-semibold leading-[1] tracking-[-.05em] text-[#eef0ed]">Built between systems that already do their jobs well.</h2></Reveal>
+      <div className="mt-14 overflow-hidden rounded-[12px] border border-white/12">
+        <SystemRow label="Credential custody" systems={["Microsoft Entra", "Nango", "Auth0 Token Vault"]} detail="Tokens stay with the identity layer." />
+        <SystemRow label="Recovery contract" systems={["Revive"]} detail="Correlates identity, execution and replay evidence." active />
+        <SystemRow label="Durable execution" systems={["LangGraph", "Temporal"]} detail="The runtime owns checkpointing and scheduling." />
+      </div>
+    </section>
 
-    <section id="faq" className="mx-auto max-w-[900px] px-5 py-24 sm:px-7 lg:py-32"><Reveal><Kicker>Questions</Kicker><h2 className="mt-4 text-[clamp(30px,4vw,44px)] font-semibold tracking-[-.045em] text-ink">The important distinctions.</h2></Reveal><Reveal delay={.08} className="mt-10 divide-y divide-hairline border-y border-hairline">{faqs.map((faq) => <details key={faq.q} className="group py-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-5 text-[13px] font-semibold text-ink"><span>{faq.q}</span><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-hairline text-[14px] font-normal text-ink-faint transition group-open:rotate-45 group-open:border-cobalt/20 group-open:text-cobalt">+</span></summary><p className="mt-3 max-w-[760px] pr-10 text-[12px] leading-5 text-ink-muted">{faq.a}</p></details>)}</Reveal></section>
+    <section id="faq" className="border-y border-white/10 bg-[#111722]">
+      <div className="mx-auto grid max-w-[1180px] gap-12 px-5 py-24 sm:px-8 lg:grid-cols-[.65fr_1.35fr] lg:py-28">
+        <Reveal><h2 className="text-[38px] font-semibold tracking-[-.045em] text-[#eef0ed]">Clear boundaries.</h2><p className="mt-4 max-w-[300px] text-[13px] leading-6 text-[#858d99]">What Revive owns, and what it deliberately leaves to other infrastructure.</p></Reveal>
+        <Reveal delay={.06} className="border-t border-white/12">{faqs.map((faq) => <details key={faq.q} className="group border-b border-white/12 py-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[14px] font-semibold text-[#e2e5e3]"><span>{faq.q}</span><span className="font-mono text-[16px] font-normal text-[#697180] transition group-open:rotate-45 group-open:text-[#8294ff]">+</span></summary><p className="mt-3 max-w-[680px] pr-10 text-[12px] leading-6 text-[#858d99]">{faq.a}</p></details>)}</Reveal>
+      </div>
+    </section>
 
-    <section className="border-t border-hairline"><div className="mx-auto max-w-[1240px] px-5 py-20 sm:px-7"><Reveal className="relative overflow-hidden rounded-[18px] bg-cobalt p-8 text-white sm:p-12"><div className="marketing-grid-dark absolute inset-0 opacity-30" /><div className="relative flex flex-col gap-8 md:flex-row md:items-end md:justify-between"><div><div className="text-[9px] font-semibold uppercase tracking-[.13em] text-white/55">Developer preview</div><h2 className="mt-4 max-w-[650px] text-[clamp(30px,4vw,46px)] font-semibold leading-[1.03] tracking-[-.045em]">Break a credential. Watch the run survive.</h2><p className="mt-4 max-w-[560px] text-[12px] leading-5 text-white/65">The local recovery lab demonstrates checkpointing, one-time reauthorization, credential generations, and idempotent replay.</p></div><Link href="/app" className="group inline-flex h-11 shrink-0 items-center gap-2 rounded-[9px] bg-white px-5 text-[12px] font-semibold text-ink shadow-sm">Open recovery lab <span className="transition-transform group-hover:translate-x-1">→</span></Link></div></Reveal></div></section>
-  </>;
+    <section className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-36">
+      <Reveal className="grid gap-10 border-l-2 border-[#6f83ff] pl-6 sm:pl-10 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div><h2 className="max-w-[820px] text-[clamp(40px,6vw,76px)] font-semibold leading-[.95] tracking-[-.06em] text-[#eef0ed]">Break the credential.<br />Keep the execution.</h2><p className="mt-5 max-w-[560px] text-[14px] leading-6 text-[#8e96a3]">Run the local fault injection and inspect every recovery transition.</p></div>
+        <Link href="/app" className="inline-flex h-12 w-fit items-center rounded-[8px] bg-[#6f83ff] px-6 text-[12px] font-semibold text-[#0d1118] transition hover:bg-[#8394ff] active:translate-y-px">Open recovery lab</Link>
+      </Reveal>
+    </section>
+  </div>;
 }
 
-function Kicker({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) { return <div className={`text-[9px] font-semibold uppercase tracking-[.14em] ${dark ? "text-[#92a2ff]" : "text-cobalt"}`}>{children}</div>; }
-function MiniStat({ value, label }: { value: string; label: string }) { return <div><div className="font-mono text-[11px] font-medium text-ink">{value}</div><div className="mt-1 text-[9px] text-ink-faint">{label}</div></div>; }
-function BoundaryCard({ label, title, items, muted }: { label: string; title: string; items: string[]; muted?: boolean }) { return <div className={`rounded-[16px] border border-hairline p-6 ${muted ? "bg-white" : "bg-paper-base"}`}><Kicker>{label}</Kicker><h3 className="mt-5 text-[18px] font-semibold tracking-[-.025em] text-ink">{title}</h3><div className="mt-6 space-y-3">{items.map((item) => <div key={item} className="flex items-center gap-2.5 text-[10.5px] text-ink-muted"><span className="h-1.5 w-1.5 rounded-full bg-ink-faint" />{item}</div>)}</div></div>; }
+function BoundaryCell({ label, title, detail, tone }: { label: string; title: string; detail: string; tone: "fail" | "active" | "ok" }) {
+  const color = tone === "fail" ? "text-[#d76a64]" : tone === "ok" ? "text-[#65bb91]" : "text-[#8294ff]";
+  return <div className={`relative border-white/10 py-6 md:border-r md:px-7 md:last:border-0 ${tone === "active" ? "bg-[#111722]" : ""}`}><div className={`font-mono text-[9px] uppercase tracking-[.12em] ${color}`}>{label}</div><div className="mt-2 text-[15px] font-semibold text-[#e3e5e3]">{title}</div><div className="mt-1 font-mono text-[9px] text-[#68707d]">{detail}</div></div>;
+}
 
-const architectureCopy = ["Normalize the provider signal.", "Correlate lease, run and action.", "Persist the exact execution point.", "Route the correct account securely.", "Fence stale credential generations.", "Reconcile before side effects repeat."];
-const faqs = [
-  { q: "Is this another token vault?", a: "No. The target product integrates with vaults such as Nango or Auth0. Revive owns the run–credential correlation and recovery state around them." },
-  { q: "Is this just workflow retry?", a: "No. A retry with the same rejected grant fails again, and blind replay can duplicate remote side effects. Revive changes the credential generation and preserves the action key." },
-  { q: "Does the current demo use real Microsoft credentials?", a: "The default lab remains an offline provider-shaped fixture. When Entra and storage variables are configured, the same recovery ticket uses the real Authorization Code + PKCE callback." },
-  { q: "What about agent efficiency tooling?", a: "The existing trace pipeline can later measure protected calls, incident cost, retry patterns and recovery outcomes. That is useful infrastructure, but it should not dilute the initial recovery wedge." },
-];
+function SystemRow({ label, systems, detail, active = false }: { label: string; systems: string[]; detail: string; active?: boolean }) {
+  return <div className={`grid gap-5 border-b border-white/10 p-5 last:border-0 sm:grid-cols-[170px_1fr_1fr] sm:items-center sm:p-6 ${active ? "bg-[#172039]" : "bg-[#0f141d]"}`}><div className="font-mono text-[9px] uppercase tracking-[.12em] text-[#77808d]">{label}</div><div className="flex flex-wrap gap-x-5 gap-y-2">{systems.map((system) => <span key={system} className={`text-[14px] font-semibold ${active ? "text-[#91a0ff]" : "text-[#e1e4e1]"}`}>{system}</span>)}</div><p className="text-[11px] leading-5 text-[#7f8794]">{detail}</p></div>;
+}

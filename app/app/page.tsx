@@ -8,6 +8,8 @@ import { LaneColumn } from "@/components/Lane";
 import { ClassifierCard, ReconsentCard } from "@/components/Panels";
 import { EventLog } from "@/components/EventLog";
 import { Outcome } from "@/components/Outcome";
+import { PageHeader, SummaryStrip, StatusBadge } from "@/components/app/ConsolePrimitives";
+import { RecoveryTrace } from "@/components/app/RecoveryTrace";
 
 const DEATH_CODES = [
   { code: "AADSTS700082", label: "Refresh token inactive" },
@@ -51,36 +53,17 @@ export default function RecoveryLab() {
   const committedActions = revive?.actions.filter((action) => action.state === "committed").length ?? 0;
 
   return (
-    <div className="mx-auto max-w-[1380px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-cobalt">
-            Recovery lab
-            <span className="rounded-[5px] bg-cobalt-soft px-1.5 py-0.5 text-[9px] tracking-[0.08em]">sandbox</span>
-          </div>
-          <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.035em] text-ink sm:text-[32px]">
-            Inspect a credential failure end to end
-          </h1>
-          <p className="mt-2 max-w-[720px] text-[14px] leading-6 text-ink-muted">
-            Fault-inject an Entra grant failure, park the affected run, rotate its credential lease, and resume the same logical execution with an idempotent action key.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-[11px] text-ink-faint">
-          <span className="h-2 w-2 rounded-full bg-ok shadow-[0_0_0_4px_rgba(20,128,96,.10)]" />
-          Event store online
-          <span className="text-hairline">·</span>
-          <span className="font-mono">policy v0.2</span>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1400px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
+      <PageHeader eyebrow="Recovery lab" title="Inspect a credential failure end to end" description="Fault-inject an Entra grant failure, bind it to the affected run, and watch the same logical execution recover without duplicating a remote action." actions={<><StatusBadge tone="ok"><span className="h-1.5 w-1.5 rounded-full bg-current" />event store online</StatusBadge><span className="font-mono text-[9px] text-[#95989d]">policy v0.2</span></>} />
 
-      <section className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Recovery state">
-        <Metric label="Recovery case" value={caseStatus.replaceAll("_", " ")} detail={revive?.recoveryCase?.id ?? "No open case"} tone={awaiting ? "warn" : revive?.recoveryCase?.status === "recovered" ? "ok" : "neutral"} />
-        <Metric label="Credential lease" value={`Generation ${leaseGeneration}`} detail={revive?.token.leaseId ?? "Created on run"} tone={leaseGeneration > 1 ? "cobalt" : "neutral"} />
-        <Metric label="Action ledger" value={`${committedActions} committed`} detail={revive?.actions[0]?.idempotencyKey ?? "Exactly-once guard ready"} tone={committedActions ? "ok" : "neutral"} />
-        <Metric label="Run continuity" value={revive?.metrics.resumes ? `${revive.metrics.resumes} resume` : "Checkpoint ready"} detail="Process-independent logical run" tone={revive?.metrics.resumes ? "cobalt" : "neutral"} />
-      </section>
+      <div className="mt-5"><SummaryStrip items={[
+        { label: "Recovery case", value: caseStatus.replaceAll("_", " "), detail: revive?.recoveryCase?.id ?? "No open case", tone: awaiting ? "warn" : revive?.recoveryCase?.status === "recovered" ? "ok" : undefined },
+        { label: "Credential lease", value: `Generation ${leaseGeneration}`, detail: revive?.token.leaseId ?? "Created on run", tone: leaseGeneration > 1 ? "cobalt" : undefined },
+        { label: "Action ledger", value: `${committedActions} committed`, detail: revive?.actions[0]?.idempotencyKey ?? "Exactly-once guard ready", tone: committedActions ? "ok" : undefined },
+        { label: "Run continuity", value: revive?.metrics.resumes ? `${revive.metrics.resumes} resume` : "Checkpoint ready", detail: "Process-independent logical run", tone: revive?.metrics.resumes ? "cobalt" : undefined },
+      ]} /></div>
 
-      <section className="mt-4 rounded-card border border-hairline bg-white p-4 shadow-seat sm:p-5">
+      <section className="instrument-panel evidence-plate mt-5 rounded-[8px] p-4 sm:p-5">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end">
           <div className="min-w-[230px] xl:border-r xl:border-hairline xl:pr-6">
             <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">Scenario</div>
@@ -106,7 +89,9 @@ export default function RecoveryLab() {
         </div>
       </section>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <section className="instrument-panel evidence-plate mt-5 overflow-hidden rounded-[8px]"><div className="flex h-12 items-center justify-between border-b border-[#e3e4e0] px-5"><div><span className="mr-2 font-mono text-[7.5px] text-[#b0b2ae]">TRACE/05</span><span className="text-[11px] font-semibold text-[#26292e]">Recovery continuity spine</span><span className="ml-2 font-mono text-[8.5px] text-[#96999e]">identity → run → action</span></div><StatusBadge tone={revive?.status === "completed" ? "ok" : awaiting ? "warn" : revive ? "cobalt" : "neutral"}>{revive?.status?.replaceAll("_", " ") ?? "not started"}</StatusBadge></div><RecoveryTrace run={revive} /></section>
+
+      <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <LaneColumn run={baseline} eyebrow="Control" title="Unprotected workflow" accent="baseline">
           {baseline?.status === "dead" && <div className="relative z-10 mx-3 mb-3 rounded-[9px] border border-fail/15 bg-fail-soft px-4 py-3 text-[12px] leading-5 text-ink-muted">The workflow exhausted retries against a dead grant. Remaining steps were abandoned and now require an operator restart.</div>}
         </LaneColumn>
@@ -120,7 +105,7 @@ export default function RecoveryLab() {
 
       <AnimatePresence>{state.done && baseline && revive && <div className="mt-4"><Outcome baseline={baseline} revive={revive} /></div>}</AnimatePresence>
 
-      <div className="mt-4 h-[310px] overflow-hidden rounded-card">
+      <div className="mt-5 h-[310px] overflow-hidden rounded-[10px]">
         <EventLog logs={state.logs} />
       </div>
 
@@ -128,17 +113,6 @@ export default function RecoveryLab() {
         <span>Sandbox flow: detect → bind run → checkpoint → reauthorize → rotate lease → replay once</span>
         <span className="font-mono">No provider credentials are stored by this demo</span>
       </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: "neutral" | "cobalt" | "ok" | "warn" }) {
-  const dot = tone === "ok" ? "bg-ok" : tone === "warn" ? "bg-warn" : tone === "cobalt" ? "bg-cobalt" : "bg-ink-faint";
-  return (
-    <div className="min-w-0 rounded-[11px] border border-hairline bg-white px-4 py-3 shadow-seat">
-      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-faint"><span className={`h-1.5 w-1.5 rounded-full ${dot}`} />{label}</div>
-      <div className="mt-2 truncate text-[14px] font-semibold capitalize text-ink">{value}</div>
-      <div className="mt-0.5 truncate font-mono text-[10px] text-ink-faint">{detail}</div>
     </div>
   );
 }

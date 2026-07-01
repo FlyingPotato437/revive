@@ -1,36 +1,104 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 
-const events = [
-  { label: "Grant rejected", meta: "AADSTS700082", tone: "fail", delay: .2 },
-  { label: "Run checkpointed", meta: "step 05 · files", tone: "blue", delay: .55 },
-  { label: "User reauthorized", meta: "lease generation 2", tone: "warn", delay: .9 },
-  { label: "Action replayed once", meta: "8 / 8 complete", tone: "ok", delay: 1.25 },
-];
+const phases = [
+  {
+    key: "failure",
+    system: "Identity",
+    title: "Grant rejected",
+    body: "The provider returns a terminal credential error.",
+  },
+  {
+    key: "human",
+    system: "Account owner",
+    title: "Access reconnected",
+    body: "A person securely restores access once.",
+  },
+  {
+    key: "lease",
+    system: "Revive",
+    title: "Lease rotated",
+    body: "Stale workers are fenced from generation 2.",
+  },
+  {
+    key: "resume",
+    system: "Runtime",
+    title: "Run continues",
+    body: "The same execution resumes at checkpoint 05.",
+  },
+] as const;
 
 export function HeroVisual() {
-  return (
-    <motion.div initial={{ opacity: 0, y: 22, scale: .985 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: .85, delay: .2, ease: [0.22, 1, 0.36, 1] }} className="relative">
-      <div className="absolute -inset-10 -z-10 rounded-full bg-cobalt/10 blur-3xl" />
-      <div className="overflow-hidden rounded-[18px] border border-[#292f3d] bg-[#121620] shadow-[0_28px_80px_-32px_rgba(18,27,60,.55)]">
-        <header className="flex h-12 items-center justify-between border-b border-white/10 px-4"><div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#42d392] shadow-[0_0_0_4px_rgba(66,211,146,.1)]" /><span className="text-[10px] font-medium text-white/70">Recovery case</span></div><span className="font-mono text-[8.5px] text-white/25">rcv_7f2b1a</span></header>
-        <div className="grid gap-0 md:grid-cols-[1fr_170px]">
-          <div className="p-4 sm:p-5">
-            <div className="mb-4 flex items-center justify-between"><div><div className="text-[9px] font-semibold uppercase tracking-[.11em] text-white/30">Nightly executive briefing</div><div className="mt-1 text-[12px] font-medium text-white/85">Same logical run · process independent</div></div><span className="rounded-[5px] border border-[#d19a35]/20 bg-[#d19a35]/10 px-2 py-1 text-[8px] font-semibold uppercase tracking-[.08em] text-[#e5b75f]">recovering</span></div>
-            <div className="relative space-y-1">
-              <span className="absolute bottom-5 left-[11px] top-5 w-px bg-white/10" />
-              {events.map((event, index) => <motion.div key={event.label} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: .45, delay: event.delay }} className="relative flex items-center gap-3 rounded-[8px] px-1 py-2.5"><motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: event.delay, type: "spring", stiffness: 300, damping: 20 }} className={`relative z-10 flex h-[22px] w-[22px] items-center justify-center rounded-full border ${event.tone === "fail" ? "border-[#e06a61]/35 bg-[#e06a61]/10" : event.tone === "ok" ? "border-[#42d392]/35 bg-[#42d392]/10" : event.tone === "warn" ? "border-[#e5b75f]/35 bg-[#e5b75f]/10" : "border-[#7890ff]/35 bg-[#7890ff]/10"}`}><span className={`h-1.5 w-1.5 rounded-full ${event.tone === "fail" ? "bg-[#e06a61]" : event.tone === "ok" ? "bg-[#42d392]" : event.tone === "warn" ? "bg-[#e5b75f]" : "bg-[#7890ff]"}`} /></motion.span><div className="min-w-0 flex-1"><div className="text-[10.5px] font-medium text-white/80">{event.label}</div><div className="mt-0.5 truncate font-mono text-[8.5px] text-white/28">{event.meta}</div></div>{index === events.length - 1 && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }} className="font-mono text-[8px] text-[#42d392]">resolved</motion.span>}</motion.div>)}
+  const reduceMotion = useReducedMotion();
+  const [phase, setPhase] = useState(reduceMotion ? phases.length - 1 : 0);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setPhase(phases.length - 1);
+      return;
+    }
+    const timer = window.setInterval(() => setPhase((current) => (current + 1) % phases.length), 1650);
+    return () => window.clearInterval(timer);
+  }, [reduceMotion]);
+
+  const current = phases[phase];
+
+  return <motion.div initial={reduceMotion ? false : { opacity: 0, x: 26, scale: .985 }} animate={{ opacity: 1, x: 0, scale: 1 }} transition={{ duration: .9, delay: .12, ease: [0.22, 1, 0.36, 1] }} className="relative lg:translate-x-8">
+    <div className="home-glass-orb home-glass-orb-one" />
+    <div className="home-glass-orb home-glass-orb-two" />
+
+    <section className="home-liquid-shell relative overflow-hidden rounded-[18px] p-3 sm:p-4" aria-label="Animated recovery handoff">
+      <div className="home-liquid-highlight pointer-events-none absolute inset-x-8 top-0 h-px" />
+      <header className="flex items-center justify-between px-2 pb-3 pt-1">
+        <div><div className="font-mono text-[8px] uppercase tracking-[.15em] text-[#9ca8c8]">Recovery handoff</div><div className="mt-1 text-[11px] font-medium text-[#e9ece9]">Nightly executive briefing</div></div>
+        <div className="flex items-center gap-2 font-mono text-[8px] uppercase tracking-[.1em] text-[#8390a7]"><span className="h-1.5 w-1.5 rounded-full bg-[#6f83ff]" />live sequence</div>
+      </header>
+
+      <div className="home-liquid-panel relative overflow-hidden rounded-[14px] p-4 sm:p-5">
+        <div className="home-coordinate-field pointer-events-none absolute inset-0 opacity-30" />
+        <div className="relative grid gap-4 sm:grid-cols-[.8fr_1.2fr]">
+          <div className="hidden rounded-[12px] border border-white/10 bg-[#0c111a]/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.05)] sm:block">
+            <div className="font-mono text-[8px] uppercase tracking-[.12em] text-[#d1726d]">Access interruption</div>
+            <div className="mt-3 font-mono text-[13px] text-[#f1f2ef]">AADSTS700082</div>
+            <p className="mt-2 text-[10px] leading-4 text-[#8f98a7]">Refresh token expired. The run is parked before the next remote action.</p>
+            <div className="mt-5 flex items-center gap-3 border-t border-white/10 pt-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#8294ff]/40 bg-[#8294ff]/10 text-[9px] font-semibold text-[#b9c2ff]">AO</div>
+              <div className="min-w-0"><div className="text-[10px] font-medium text-[#e4e7e4]">Account owner</div><div className="mt-0.5 text-[8px] text-[#7f8998]">one secure action</div></div>
+              <motion.span animate={{ opacity: phase === 1 ? [0.35, 1, 0.35] : 0.35 }} transition={{ duration: 1.2, repeat: phase === 1 && !reduceMotion ? Infinity : 0 }} className="ml-auto h-2 w-2 rounded-full bg-[#6f83ff]" />
             </div>
           </div>
-          <aside className="border-t border-white/10 bg-white/[.025] p-4 md:border-l md:border-t-0"><div className="text-[8px] font-semibold uppercase tracking-[.12em] text-white/25">Invariants</div><div className="mt-4 space-y-3"><Invariant label="Credential" value="gen 2" /><Invariant label="Checkpoint" value="durable" /><Invariant label="Duplicate effects" value="0" /><Invariant label="Resume time" value="4.8s" /></div><div className="mt-5 rounded-[8px] border border-[#42d392]/15 bg-[#42d392]/[.06] p-3"><div className="flex items-center gap-2 text-[9px] font-medium text-[#6de2ad]"><span className="h-1.5 w-1.5 rounded-full bg-[#42d392]" />Run recovered</div><div className="mt-1.5 font-mono text-[8px] text-white/30">action key preserved</div></div></aside>
-        </div>
-        <div className="relative h-1 overflow-hidden bg-white/[.04]"><motion.span initial={{ x: "-100%" }} animate={{ x: "400%" }} transition={{ duration: 2.8, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut" }} className="absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-transparent via-cobalt to-transparent" /></div>
-      </div>
-    </motion.div>
-  );
-}
 
-function Invariant({ label, value }: { label: string; value: string }) {
-  return <div className="flex items-center justify-between gap-2 border-b border-white/[.07] pb-2.5 text-[9px] last:border-0"><span className="text-white/30">{label}</span><span className="font-mono text-white/65">{value}</span></div>;
+          <div className="flex min-h-[188px] flex-col rounded-[12px] border border-white/10 bg-white/[.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08)] backdrop-blur-xl">
+            <div className="flex items-center justify-between font-mono text-[8px] uppercase tracking-[.11em] text-[#778193]"><span>Current transition</span><span>{phase + 1} / {phases.length}</span></div>
+            <div className="flex flex-1 items-center">
+              <motion.div key={current.key} initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35, ease: [0.22, 1, 0.36, 1] }}>
+                <div className="font-mono text-[8px] uppercase tracking-[.12em] text-[#91a0ff]">{current.system}</div>
+                <div className="mt-2 text-[22px] font-semibold tracking-[-.04em] text-[#f0f2ef]">{current.title}</div>
+                <p className="mt-2 max-w-[280px] text-[10px] leading-4 text-[#9099a8]">{current.body}</p>
+              </motion.div>
+            </div>
+            <div className="flex items-center justify-between border-t border-white/10 pt-3 text-[8px] text-[#7c8695]"><span>run_7f2</span><span className="font-mono">generation {phase >= 2 ? "2" : "1"}</span></div>
+          </div>
+        </div>
+
+        <ol className="relative mt-5 grid grid-cols-4 gap-2" aria-hidden="true">
+          <div className="absolute left-[10%] right-[10%] top-[9px] h-px bg-white/10" />
+          <motion.div className="absolute left-[10%] right-[10%] top-[9px] h-px origin-left bg-[#6f83ff]" animate={{ scaleX: phase / (phases.length - 1) }} transition={{ type: "spring", stiffness: 95, damping: 20 }} />
+          {phases.map((item, index) => {
+            const reached = index <= phase;
+            const active = index === phase;
+            return <li key={item.key} className="relative text-center">
+              <motion.span animate={{ scale: active && !reduceMotion ? 1.16 : 1 }} transition={{ type: "spring", stiffness: 220, damping: 18 }} className={`mx-auto block h-[18px] w-[18px] rounded-full border-[4px] border-[#141a25] shadow-[0_0_0_1px_currentColor] ${reached ? index === 0 ? "bg-[#c95f59] text-[#c95f59]" : index === phases.length - 1 ? "bg-[#65bb91] text-[#65bb91]" : "bg-[#6f83ff] text-[#6f83ff]" : "bg-[#141a25] text-[#4d5666]"}`} />
+              <span className={`mt-2 block text-[8px] font-medium ${reached ? "text-[#b8bec8]" : "text-[#596273]"}`}>{item.system}</span>
+            </li>;
+          })}
+        </ol>
+      </div>
+
+      <footer className="grid grid-cols-3 gap-2 px-2 pt-3 font-mono text-[8px] text-[#778193]"><span>same run</span><span className="text-center">human in control</span><span className="text-right">duplicate effects: 0</span></footer>
+      <p className="sr-only">A four-part recovery sequence: the credential grant is rejected, the account owner restores access, Revive rotates the credential lease, and the durable runtime resumes the same run at its checkpoint.</p>
+    </section>
+  </motion.div>;
 }

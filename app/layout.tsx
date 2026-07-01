@@ -15,7 +15,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Revive — credential recovery for durable workflows",
+  title: "Revive | Credential recovery for durable workflows",
   description:
     "Revive correlates credential failures to durable runs, reauthorizes the correct account, and resumes failed actions with idempotency protection.",
 };

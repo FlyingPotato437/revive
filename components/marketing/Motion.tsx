@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -11,15 +11,18 @@ export function ScrollProgress() {
 }
 
 export function Reveal({ children, className = "", delay = 0, y = 24 }: { children: React.ReactNode; className?: string; delay?: number; y?: number }) {
-  return <motion.div initial={{ opacity: 0, y }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-70px" }} transition={{ duration: .7, delay, ease: EASE }} className={className}>{children}</motion.div>;
+  const reduceMotion = useReducedMotion();
+  return <motion.div initial={reduceMotion ? false : { opacity: 0, y }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-70px" }} transition={{ duration: reduceMotion ? 0 : .7, delay: reduceMotion ? 0 : delay, ease: EASE }} className={className}>{children}</motion.div>;
 }
 
 export function Stagger({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-70px" }} variants={{ hidden: {}, show: { transition: { staggerChildren: .09 } } }} className={className}>{children}</motion.div>;
+  const reduceMotion = useReducedMotion();
+  return <motion.div initial={reduceMotion ? "show" : "hidden"} whileInView="show" viewport={{ once: true, margin: "-70px" }} variants={{ hidden: {}, show: { transition: { staggerChildren: reduceMotion ? 0 : .09 } } }} className={className}>{children}</motion.div>;
 }
 
 export function StaggerItem({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <motion.div variants={{ hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { duration: .62, ease: EASE } } }} className={className}>{children}</motion.div>;
+  const reduceMotion = useReducedMotion();
+  return <motion.div variants={{ hidden: reduceMotion ? {} : { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { duration: reduceMotion ? 0 : .62, ease: EASE } } }} className={className}>{children}</motion.div>;
 }
 
 export function Lift({ children, className = "" }: { children: React.ReactNode; className?: string }) {
