@@ -37,6 +37,13 @@ class Token:
     access_token: str
     refresh_token: str
     expires_in: int = 3600
+    # Optional recovery identity and fencing metadata. Providers that can
+    # resolve identity should populate these from a signed profile/id-token,
+    # never from browser-supplied display text.
+    subject: str | None = None
+    tenant: str | None = None
+    lease_id: str | None = None
+    generation: int = 1
 
     @property
     def fingerprint(self) -> str:

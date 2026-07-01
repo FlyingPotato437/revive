@@ -107,11 +107,13 @@ function log(
 export function startSession(
   failureStep: number,
   deathCode: string = "AADSTS700082",
+  workspaceId?: string,
 ): SessionState {
   const baseline = newRun("baseline");
   const revive = newRun("revive");
   const session: SessionState = {
     id: rid("sess_"),
+    workspaceId,
     failureStep,
     deathCode,
     createdAt: Date.now(),

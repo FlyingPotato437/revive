@@ -55,6 +55,14 @@ class AmbiguousSideEffect(RuntimeError):
     """A previous attempt may have committed and must be reconciled first."""
 
 
+class WrongRecoveryIdentity(RuntimeError):
+    """The reauthorized provider identity does not own the failed connection."""
+
+
+class StaleCredentialGeneration(RuntimeError):
+    """A worker attempted to continue with a fenced credential generation."""
+
+
 # --- results ---------------------------------------------------------------
 
 @dataclass
@@ -82,13 +90,22 @@ class Engine:
     def __init__(self, provider: Provider, store: CheckpointStore,
                  base_url: str = "http://localhost:8750",
                  channel: Channel = console_channel,
-                 on_event: Event = _noop, max_transient_retries: int = 3):
+                 on_event: Event = _noop, max_transient_retries: int = 3,
+                 reporter=None):
         self.provider = provider
         self.store = store
         self.base_url = base_url
         self.channel = channel
         self.emit = on_event
         self.max_transient_retries = max_transient_retries
+        self.reporter = reporter  # optional revive.Reporter; lifecycle metadata only
+
+    def _report(self, run_id: str, event: str, **fields) -> None:
+        if self.reporter is not None:
+            try:
+                self.reporter.emit(run_id, event, **fields)
+            except Exception:  # noqa: BLE001 - reporting must never break recovery
+                pass
 
     # --- run -------------------------------------------------------------
     def run(self, run_id: str, steps: list[Step], token: Token,
@@ -96,7 +113,22 @@ class Engine:
             state: Optional[dict] = None) -> Parked | Completed:
         state = state if state is not None else {}
         splices = state.get("_splices", 0)
+        if start_index == 0 and not state.get("_reported_open"):
+            state["_reported_open"] = True
+            self._report(run_id, "opened", steps_total=len(steps),
+                         lease_generation=token.generation)
+        if token.lease_id:
+            self.store.ensure_lease(token.lease_id, token.generation)
+            try:
+                self.store.assert_lease_generation(token.lease_id, token.generation)
+            except ValueError as error:
+                raise StaleCredentialGeneration(str(error)) from error
         for i in range(start_index, len(steps)):
+            if token.lease_id:
+                try:
+                    self.store.assert_lease_generation(token.lease_id, token.generation)
+                except ValueError as error:
+                    raise StaleCredentialGeneration(str(error)) from error
             step = steps[i]
             action_id = f"{run_id}:{step.id}"
             transient = 0
@@ -127,7 +159,12 @@ class Engine:
                     # access token expired -> attempt a REAL refresh
                     self.emit("auth", "access token expired — attempting silent refresh")
                     try:
-                        token = self.provider.refresh(token.refresh_token)
+                        refreshed = self.provider.refresh(token.refresh_token)
+                        token = Token(
+                            refreshed.access_token, refreshed.refresh_token,
+                            refreshed.expires_in, token.subject, token.tenant,
+                            token.lease_id, token.generation,
+                        )
                         self.emit("refresh", f"silent refresh ok → {token.fingerprint}")
                         continue  # retry the same step with the fresh token
                     except TokenError as te:
@@ -143,7 +180,13 @@ class Engine:
                             return self._park(run_id, i, step, state, token, scopes,
                                               Kind.AUTH,
                                               f"{result.code}: {result.title} — re-authorize to resume",
-                                              {"classifier": result.to_dict()})
+                                              {
+                                                  "classifier": result.to_dict(),
+                                                  "expected_subject": token.subject,
+                                                  "expected_tenant": token.tenant,
+                                                  "lease_id": token.lease_id,
+                                                  "lease_generation": token.generation,
+                                              })
                         # refreshable/unknown-but-not-human: retry once more
                         continue
                 except NeedsApproval as na:
@@ -166,6 +209,9 @@ class Engine:
         self.store.save_rendezvous(rdv.to_dict())
         self.channel(rdv)
         self.emit("rendezvous", f"{kind.value} rendezvous opened · {rdv.url}")
+        self._report(run_id, "parked", cause_code=context.get("classifier", {}).get("code"),
+                     failed_step=step.id, steps_done=i,
+                     lease_generation=context.get("lease_generation"))
         return Parked(rendezvous=rdv, checkpoint=cp)
 
     # --- resume ----------------------------------------------------------
@@ -179,17 +225,36 @@ class Engine:
         rdv_data = self.store.load_rendezvous(run_id)
         if rdv_data is None:
             raise ValueError(f"no recovery rendezvous for run {run_id}")
+        kind = Kind(rdv_data["kind"])
+        context = rdv_data.get("context") or {}
+        if kind == Kind.AUTH:
+            self._verify_recovery_identity(context, reply)
         if not self.store.consume_rendezvous(run_id, reply):
             raise ValueError("recovery rendezvous is expired or already consumed")
-        kind = Kind(rdv_data["kind"])
         t0 = cp.taken_at
         state = dict(cp.cursor)
 
         if kind == Kind.AUTH:
             # Re-consent minted a new refresh token; advance the credential lease.
             new_refresh = reply["refresh_token"]
-            token = self.provider.refresh(new_refresh)
+            refreshed = self.provider.refresh(new_refresh)
+            lease_id = context.get("lease_id")
+            old_generation = int(context.get("lease_generation") or 1)
+            new_generation = old_generation + 1
+            if lease_id:
+                try:
+                    new_generation = self.store.rotate_lease(lease_id, old_generation)
+                except ValueError as error:
+                    raise StaleCredentialGeneration(str(error)) from error
+            token = Token(
+                refreshed.access_token, refreshed.refresh_token,
+                refreshed.expires_in,
+                reply.get("provider_subject") or context.get("expected_subject"),
+                reply.get("provider_tenant") or context.get("expected_tenant"),
+                lease_id, new_generation,
+            )
             state["_splices"] = state.get("_splices", 0) + 1
+            state["_lease_generation"] = new_generation
             self.emit("rotate",
                       f"credential lease rotated → generation token {token.fingerprint}")
         else:
@@ -201,9 +266,29 @@ class Engine:
 
         self.store.set_status(run_id, "running")
         self.emit("resume", f"resuming step {cp.step_index + 1} ({cp.step_id}) from checkpoint")
+        self._report(run_id, "resumed", steps_done=cp.step_index,
+                     lease_generation=state.get("_lease_generation"))
         result = self.run(run_id, steps, token, cp.scopes,
                           start_index=cp.step_index, state=state)
         if isinstance(result, Completed):
             result.recovered_ms = (time.time() - t0) * 1000.0
             result.splices = state.get("_splices", 0)
+            self._report(run_id, "recovered", steps_done=result.steps_done,
+                         steps_total=len(steps), recovered_ms=result.recovered_ms,
+                         lease_generation=state.get("_lease_generation"))
         return result
+
+    @staticmethod
+    def _verify_recovery_identity(context: dict, reply: dict) -> None:
+        expected_subject = context.get("expected_subject")
+        expected_tenant = context.get("expected_tenant")
+        actual_subject = reply.get("provider_subject")
+        actual_tenant = reply.get("provider_tenant")
+        if expected_subject and actual_subject != expected_subject:
+            raise WrongRecoveryIdentity(
+                f"provider subject mismatch: expected {expected_subject!r}"
+            )
+        if expected_tenant and actual_tenant != expected_tenant:
+            raise WrongRecoveryIdentity(
+                f"provider tenant mismatch: expected {expected_tenant!r}"
+            )

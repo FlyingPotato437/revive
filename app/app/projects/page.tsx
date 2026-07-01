@@ -1,0 +1,8 @@
+import { cookies } from "next/headers";
+import { PageHeader, SectionHeading, StatusBadge } from "@/components/app/ConsolePrimitives";
+import { ProjectCreator } from "@/components/app/AccountControls";
+import { SESSION_COOKIE, verifySession } from "@/lib/auth";
+import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
+
+export const dynamic = "force-dynamic";
+export default async function ProjectsPage() { const jar = await cookies(); const auth = verifySession(jar.get(SESSION_COOKIE)?.value)!; const workspace = selectedWorkspace(auth.email, jar.get(WORKSPACE_COOKIE)?.value); return <div className="mx-auto max-w-[1080px] px-4 pb-20 pt-7 sm:px-6 lg:px-8"><PageHeader eyebrow="Account" title="Projects" description={`Projects inside ${workspace.name}. They provide a stable namespace for future API and usage isolation.`} actions={<StatusBadge tone="cobalt">{workspace.projects.length} total</StatusBadge>} /><section className="instrument-panel mt-5 overflow-hidden"><SectionHeading title="Create project" /><div className="p-5"><ProjectCreator /></div></section><section className="instrument-panel mt-5 overflow-hidden"><SectionHeading title="Workspace projects" />{workspace.projects.map((project) => <div key={project.id} className="grid gap-2 border-b border-[#e1e5ea] px-5 py-4 last:border-0 sm:grid-cols-[1fr_1fr_auto]"><span className="text-[10.5px] font-semibold">{project.name}</span><span className="font-mono text-[8.5px] text-[#8a929d]">{project.id}</span><span className="text-[9px] text-[#687180]">{new Date(project.createdAt).toLocaleDateString()}</span></div>)}</section></div>; }

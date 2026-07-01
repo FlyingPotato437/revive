@@ -9,7 +9,9 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from revive import CheckpointStore, Engine, Provider, Step, Token, AuthError, TokenError
+from revive import (CheckpointStore, Engine, Provider, Step, Token, AuthError,
+                    TokenError, StaleCredentialGeneration,
+                    WrongRecoveryIdentity)
 from revive.engine import Parked, Completed
 from examples.mock_idp import IdP, make_server
 from examples.nightly_briefing import build_steps, reconsent, SCOPES, FAILURE_STEP
@@ -87,6 +89,62 @@ class TestRecovery(unittest.TestCase):
             second_worker.resume(
                 "restart_run", steps, reply={"refresh_token": new_rt}
             )
+
+    def test_wrong_account_reauthorization_is_rejected_before_consumption(self):
+        import examples.nightly_briefing as nb
+        nb.BASE = BASE
+        store = CheckpointStore(":memory:")
+        provider = Provider("microsoft", f"{BASE}/oauth2/token", scopes=tuple(SCOPES))
+        engine = Engine(provider, store, base_url=BASE)
+        dead_rt = self.idp.issue_refresh(SCOPES, dead=True)
+        token = Token(
+            self.idp.mint_access(FAILURE_STEP), dead_rt,
+            subject="alice@company.com", tenant="company-tenant",
+            lease_id="lease_identity", generation=1,
+        )
+        steps = build_steps()
+        self.assertIsInstance(engine.run("identity_run", steps, token, SCOPES), Parked)
+        new_rt = reconsent(dead_rt)
+
+        with self.assertRaises(WrongRecoveryIdentity):
+            engine.resume("identity_run", steps, reply={
+                "refresh_token": new_rt,
+                "provider_subject": "bob@company.com",
+                "provider_tenant": "company-tenant",
+            })
+
+        done = engine.resume("identity_run", steps, reply={
+            "refresh_token": new_rt,
+            "provider_subject": "alice@company.com",
+            "provider_tenant": "company-tenant",
+        })
+        self.assertIsInstance(done, Completed)
+        self.assertEqual(done.state["_lease_generation"], 2)
+
+    def test_old_worker_is_fenced_after_lease_rotation(self):
+        import examples.nightly_briefing as nb
+        nb.BASE = BASE
+        store = CheckpointStore(":memory:")
+        provider = Provider("microsoft", f"{BASE}/oauth2/token", scopes=tuple(SCOPES))
+        engine = Engine(provider, store, base_url=BASE)
+        dead_rt = self.idp.issue_refresh(SCOPES, dead=True)
+        old_token = Token(
+            self.idp.mint_access(FAILURE_STEP), dead_rt,
+            subject="alice@company.com", tenant="company-tenant",
+            lease_id="lease_fence", generation=1,
+        )
+        steps = build_steps()
+        self.assertIsInstance(engine.run("fenced_run", steps, old_token, SCOPES), Parked)
+        new_rt = reconsent(dead_rt)
+        done = engine.resume("fenced_run", steps, reply={
+            "refresh_token": new_rt,
+            "provider_subject": "alice@company.com",
+            "provider_tenant": "company-tenant",
+        })
+        self.assertIsInstance(done, Completed)
+
+        with self.assertRaises(StaleCredentialGeneration):
+            engine.run("stale_worker", [], old_token, SCOPES)
 
 
 if __name__ == "__main__":

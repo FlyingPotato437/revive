@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 import { AppChrome } from "@/components/app/AppChrome";
+import { listWorkspaces, selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 
 export default async function AppLayout({
   children,
@@ -11,6 +12,12 @@ export default async function AppLayout({
   const jar = await cookies();
   const session = verifySession(jar.get(SESSION_COOKIE)?.value);
   if (!session) redirect("/login");
+  const workspaces = listWorkspaces(session.email);
+  const currentWorkspace = selectedWorkspace(session.email, jar.get(WORKSPACE_COOKIE)?.value);
 
-  return <AppChrome email={session.email}>{children}</AppChrome>;
+  return <AppChrome
+    email={session.email}
+    workspaces={workspaces.map(({ id, name, organization }) => ({ id, name, organization }))}
+    currentWorkspace={{ id: currentWorkspace.id, name: currentWorkspace.name, organization: currentWorkspace.organization }}
+  >{children}</AppChrome>;
 }

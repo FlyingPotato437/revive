@@ -8,9 +8,8 @@ import { ScrollProgress } from "./Motion";
 
 const LINKS = [
   { href: "/#product", label: "Product" },
-  { href: "/#architecture", label: "Architecture" },
   { href: "/compare", label: "Why Revive" },
-  { href: "/security", label: "Security" },
+  { href: "/benchmarks", label: "Evidence" },
 ];
 
 export function Nav() {

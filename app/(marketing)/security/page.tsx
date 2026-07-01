@@ -1,9 +1,11 @@
 import { Reveal, Stagger, StaggerItem } from "@/components/marketing/Motion";
 
+export const metadata = { robots: { index: false, follow: false } };
+
 const implemented = [
   ["No token in checkpoints", "Durable checkpoints retain a fingerprint, scopes and execution cursor, not the raw credential."],
   ["One-time recovery capabilities", "Recovery URLs use 256 bits of entropy, expire after 15 minutes and are consumed atomically."],
-  ["Credential generation fencing", "Reauthorization advances the lease generation so stale workers can be rejected."],
+  ["Credential generation fencing", "SQLite and Postgres stores atomically advance the lease and reject stale workers."],
   ["Replay ambiguity guard", "Mutating actions stop instead of retrying blindly when the upstream outcome cannot be established."],
   ["OAuth transaction integrity", "Entra recovery uses S256 PKCE, encrypted HttpOnly transaction state, a short expiry and constant-time state comparison."],
   ["Encrypted credential records", "Token sets are sealed with AES-256-GCM before local or Postgres persistence."],

@@ -43,7 +43,7 @@ body::before {
 .app-console::before {
   content: "";
   position: fixed;
-  inset: 0 0 0 236px;
+  inset: 0 0 0 248px;
   pointer-events: none;
   opacity: .7;
   background-image: repeating-linear-gradient(90deg, transparent 0 39px, rgba(21,25,34,.025) 39px 40px);

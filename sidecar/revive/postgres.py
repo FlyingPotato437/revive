@@ -116,5 +116,38 @@ class PostgresCheckpointStore:
         with self._conn.transaction():
             self._conn.execute("DELETE FROM revive_action_attempts WHERE action_id=%s", (action_id,))
 
+    def ensure_lease(self, lease_id: str, generation: int) -> None:
+        with self._conn.transaction():
+            self._conn.execute(
+                """INSERT INTO revive_credential_leases (lease_id, generation, updated_at)
+                   VALUES (%s,%s,now()) ON CONFLICT(lease_id) DO NOTHING""",
+                (lease_id, generation),
+            )
+
+    def assert_lease_generation(self, lease_id: str, generation: int) -> None:
+        row = self._conn.execute(
+            "SELECT generation FROM revive_credential_leases WHERE lease_id=%s", (lease_id,)
+        ).fetchone()
+        if row is None or int(row[0]) != generation:
+            current = int(row[0]) if row else None
+            raise ValueError(
+                f"stale credential generation for {lease_id}: got {generation}, current {current}"
+            )
+
+    def rotate_lease(self, lease_id: str, expected_generation: int) -> int:
+        next_generation = expected_generation + 1
+        with self._conn.transaction():
+            row = self._conn.execute(
+                """UPDATE revive_credential_leases
+                   SET generation=%s, updated_at=now()
+                   WHERE lease_id=%s AND generation=%s
+                   RETURNING generation""",
+                (next_generation, lease_id, expected_generation),
+            ).fetchone()
+        if row is None:
+            self.assert_lease_generation(lease_id, expected_generation)
+            raise ValueError(f"could not rotate credential lease {lease_id}")
+        return int(row[0])
+
     def close(self) -> None:
         self._conn.close()

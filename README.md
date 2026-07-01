@@ -72,6 +72,42 @@ The suite covers provider classification, real HTTP recovery against the local
 identity fixture, SQLite checkpoint persistence, worker-restart recovery and
 one-time rendezvous consumption.
 
+## ReviveBench
+
+ReviveBench is an executable local correctness suite, not a console dashboard
+and not a production-performance claim. It performs real HTTP calls against the
+repository's local OAuth fixture and records five invariants: same-run resume,
+worker-restart recovery, provider identity binding, generation fencing and
+side-effect reconciliation.
+
+```bash
+npm run bench:revive
+```
+
+The command writes the observed report to
+`benchmarks/results/revivebench-local.json`. The public `/benchmarks` page reads
+that file as a whitepaper. If the report is missing, the page shows no numbers.
+The methodology explicitly excludes customer recovery rate, provider-wide
+compatibility, cost savings and availability claims.
+
+## TypeScript SDK
+
+The packageable TypeScript SDK lives in `sdk/typescript` and exposes the
+action-level API Revive should sell to developers:
+
+```bash
+npm run sdk:build
+```
+
+The SDK wraps a workflow action with a stable idempotency key, action
+registration, credential failure classification, recovery case creation and
+optional side-effect reconciliation.
+
+## Trust boundaries
+
+Read `docs/trust-boundaries.md` for the token custody model, recovery state
+machine, threat model, deployment options and hosted production gates.
+
 ## Architecture
 
 ```text

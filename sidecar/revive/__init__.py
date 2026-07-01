@@ -12,17 +12,22 @@ Re-consent for a dead token is one `Kind` of rendezvous; human approval / step-u
 """
 from .checkpoint import Checkpoint, CheckpointStore
 from .classifier import ClassifierResult, Verdict, classify
-from .engine import AmbiguousSideEffect, Completed, Engine, NeedsApproval, Parked, Step, StepContext
+from .engine import (AmbiguousSideEffect, Completed, Engine, NeedsApproval,
+                     Parked, StaleCredentialGeneration, Step, StepContext,
+                     WrongRecoveryIdentity)
 from .providers import AuthError, Provider, Token, TokenError
 from .rendezvous import Kind, Rendezvous, console_channel, webhook_channel
 from .postgres import PostgresCheckpointStore
+from .reporter import Reporter
 
 __all__ = [
     "Engine", "Step", "StepContext", "Parked", "Completed", "NeedsApproval",
     "AmbiguousSideEffect",
+    "WrongRecoveryIdentity", "StaleCredentialGeneration",
     "Provider", "Token", "TokenError", "AuthError",
     "CheckpointStore", "Checkpoint",
     "PostgresCheckpointStore",
+    "Reporter",
     "classify", "ClassifierResult", "Verdict",
     "Rendezvous", "Kind", "console_channel", "webhook_channel",
 ]

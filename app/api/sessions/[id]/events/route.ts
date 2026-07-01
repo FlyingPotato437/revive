@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getBuffer, getSession, subscribe } from "@/lib/store";
 import type { ReviveEvent } from "@/lib/types";
 import { sessionFromCookies } from "@/lib/auth";
+import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +10,12 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!sessionFromCookies(req.cookies)) return new Response("unauthorized", { status: 401 });
+  const auth = sessionFromCookies(req.cookies);
+  if (!auth) return new Response("unauthorized", { status: 401 });
   const { id } = await params;
   const session = getSession(id);
+  const workspace = selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
+  if (session?.workspaceId && session.workspaceId !== workspace.id) return new Response("not found", { status: 404 });
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

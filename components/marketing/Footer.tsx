@@ -2,9 +2,8 @@ import Link from "next/link";
 
 const links = [
   { label: "Product", href: "/#product" },
-  { label: "Architecture", href: "/#architecture" },
   { label: "Why Revive", href: "/compare" },
-  { label: "Security", href: "/security" },
+  { label: "Evidence", href: "/benchmarks" },
   { label: "Recovery lab", href: "/app" },
 ];
 

@@ -3,12 +3,15 @@ import { startSession } from "@/lib/engine";
 import { DEFAULT_FAILURE_STEP, RUN_SCRIPT } from "@/lib/steps";
 import { listSessions } from "@/lib/store";
 import { sessionFromCookies } from "@/lib/auth";
+import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  if (!sessionFromCookies(req.cookies)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const sessions = listSessions().map((session) => ({
+  const auth = sessionFromCookies(req.cookies);
+  if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const workspace = selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
+  const sessions = listSessions().filter((session) => !session.workspaceId || session.workspaceId === workspace.id).map((session) => ({
     id: session.id,
     createdAt: session.createdAt,
     deathCode: session.deathCode,
@@ -25,7 +28,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!sessionFromCookies(req.cookies)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const auth = sessionFromCookies(req.cookies);
+  if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   let failureStep = DEFAULT_FAILURE_STEP;
   let deathCode = "AADSTS700082";
   try {
@@ -37,7 +41,8 @@ export async function POST(req: NextRequest) {
   }
   failureStep = Math.max(0, Math.min(RUN_SCRIPT.length - 1, failureStep));
 
-  const session = startSession(failureStep, deathCode);
+  const workspace = selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
+  const session = startSession(failureStep, deathCode, workspace.id);
   return NextResponse.json({
     sessionId: session.id,
     failureStep: session.failureStep,

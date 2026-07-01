@@ -52,6 +52,12 @@ class CheckpointStore:
                 state TEXT, attempts INTEGER, updated_at REAL
             )"""
         )
+        self._conn.execute(
+            """CREATE TABLE IF NOT EXISTS credential_leases (
+                lease_id TEXT PRIMARY KEY, generation INTEGER NOT NULL,
+                updated_at REAL NOT NULL
+            )"""
+        )
         self._conn.commit()
 
     def save(self, cp: Checkpoint) -> None:
@@ -154,6 +160,40 @@ class CheckpointStore:
         # A provider 401 proves the protected side effect was not accepted.
         self._conn.execute("DELETE FROM action_attempts WHERE action_id=?", (action_id,))
         self._conn.commit()
+
+    def ensure_lease(self, lease_id: str, generation: int) -> None:
+        """Create a lease once without allowing an old worker to lower it."""
+        self._conn.execute(
+            """INSERT INTO credential_leases (lease_id, generation, updated_at)
+               VALUES (?,?,?) ON CONFLICT(lease_id) DO NOTHING""",
+            (lease_id, generation, time.time()),
+        )
+        self._conn.commit()
+
+    def assert_lease_generation(self, lease_id: str, generation: int) -> None:
+        row = self._conn.execute(
+            "SELECT generation FROM credential_leases WHERE lease_id=?", (lease_id,)
+        ).fetchone()
+        if row is None or int(row[0]) != generation:
+            current = int(row[0]) if row else None
+            raise ValueError(
+                f"stale credential generation for {lease_id}: got {generation}, current {current}"
+            )
+
+    def rotate_lease(self, lease_id: str, expected_generation: int) -> int:
+        """Atomically fence the prior generation and return the new one."""
+        next_generation = expected_generation + 1
+        cur = self._conn.execute(
+            """UPDATE credential_leases
+               SET generation=?, updated_at=?
+               WHERE lease_id=? AND generation=?""",
+            (next_generation, time.time(), lease_id, expected_generation),
+        )
+        self._conn.commit()
+        if cur.rowcount != 1:
+            self.assert_lease_generation(lease_id, expected_generation)
+            raise ValueError(f"could not rotate credential lease {lease_id}")
+        return next_generation
 
     def close(self) -> None:
         self._conn.close()

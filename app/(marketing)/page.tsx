@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HeroVisual } from "@/components/marketing/HeroVisual";
 import { Reveal, Stagger, StaggerItem } from "@/components/marketing/Motion";
+import { IntegrationPanel } from "@/components/marketing/IntegrationPanel";
 
 const recoveryStages = [
   { title: "Classify the failure", body: "Separate a dead grant from a refreshable token or a transient provider error.", system: "Identity" },
@@ -17,7 +18,7 @@ const invariants = [
 ];
 
 const faqs = [
-  ["Is Revive another token vault?", "No. Nango, Auth0 and provider vaults own token custody. Revive owns the recovery contract around the affected run."],
+  ["Is Revive another token vault?", "No. Nango, Auth0 and provider vaults keep token custody. Revive coordinates recovery for the affected run."],
   ["Why is normal workflow retry insufficient?", "Retrying with the rejected credential fails again. Blind replay can also repeat a remote side effect that already committed."],
   ["Does recovery survive a worker restart?", "Yes. The recovery case and checkpoint are durable, so another worker can resume the same logical run."],
   ["Which runtimes can Revive coordinate?", "The repository includes LangGraph and Temporal adapters. The contract is designed to support more durable runtimes."],
@@ -96,13 +97,20 @@ export default function Home() {
       <Reveal className="systems-ledger mt-14 border-t border-[#151922]">
         <SystemRow label="Credential custody" systems="Microsoft Entra, Nango, Auth0" detail="Tokens stay with the identity layer." />
         <SystemRow label="Recovery contract" systems="Revive" detail="Correlates identity, execution and replay evidence." active />
-        <SystemRow label="Durable execution" systems="LangGraph, Temporal" detail="The runtime owns checkpointing and scheduling." />
+        <SystemRow label="Durable execution" systems="LangGraph, Temporal" detail="The runtime handles checkpointing and scheduling." />
       </Reveal>
+    </section>
+
+    <section className="border-y border-[#151922] bg-[#eef0eb]">
+      <div className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
+        <Reveal><h2 className="max-w-[780px] text-[clamp(36px,4.8vw,60px)] font-semibold leading-[.98] tracking-[-.055em] text-[#151922]">Add recovery at the action boundary.</h2><p className="mt-5 max-w-[620px] text-[13px] leading-6 text-[#687180]">Use the runtime and credential system already in production. Revive records the contract between them.</p></Reveal>
+        <Reveal delay={.06} className="mt-12"><IntegrationPanel /></Reveal>
+      </div>
     </section>
 
     <section id="faq" className="border-y border-[#151922] bg-[#eef0eb]">
       <div className="mx-auto grid max-w-[1180px] gap-12 px-5 py-24 sm:px-8 lg:grid-cols-[.65fr_1.35fr] lg:py-28">
-        <Reveal><h2 className="text-[42px] font-semibold tracking-[-.05em] text-[#151922]">Clear boundaries.</h2><p className="mt-4 max-w-[300px] text-[13px] leading-6 text-[#687180]">What Revive owns, and what it deliberately leaves to other infrastructure.</p></Reveal>
+        <Reveal><h2 className="text-[42px] font-semibold tracking-[-.05em] text-[#151922]">Clear boundaries.</h2><p className="mt-4 max-w-[300px] text-[13px] leading-6 text-[#687180]">How Revive fits with the infrastructure already running your workflows.</p></Reveal>
         <Reveal delay={.06} className="border-t border-[#151922]">{faqs.map(([question, answer]) => <details key={question} className="group border-b border-[#c7ccd2] py-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[14px] font-semibold text-[#151922]"><span>{question}</span><span className="font-mono text-[18px] font-normal text-[#737c89] transition group-open:rotate-45 group-open:text-[#2e49c8]">+</span></summary><p className="mt-3 max-w-[680px] pr-10 text-[12px] leading-6 text-[#687180]">{answer}</p></details>)}</Reveal>
       </div>
     </section>
