@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     /* ignore */
   }
   const { email = "", password = "", name } = body;
-  const created = createUser(email, password, name);
+  const created = await createUser(email, password, name);
   if (!created.ok)
     return NextResponse.json({ error: created.error }, { status: 400 });
 

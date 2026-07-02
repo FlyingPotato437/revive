@@ -1,21 +1,20 @@
 // ---------------------------------------------------------------------------
-// Lightweight auth for the local console.
-// - In-memory user store (survives HMR via globalThis; resets on server restart)
-// - scrypt-hashed passwords
-// - HMAC-signed session cookie
-//
-// This is demo-grade (no external DB / OAuth provider so the app is fully
-// self-contained), but signup → login → gated dashboard → logout all really work.
+// Console authentication.
+// - Durable user store: Postgres when DATABASE_URL is configured, otherwise an
+//   atomic 0600 JSON file under .revive/ (survives restarts either way).
+// - scrypt-hashed passwords, constant-time compares.
+// - HMAC-signed session cookie.
+// Production gaps that remain (tracked in ENGINEERING-GAPS.md): SSO/MFA, RBAC,
+// password reset, and session revocation lists.
 // ---------------------------------------------------------------------------
 
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { applicationSecret } from "./secrets";
+import { hostedDatabaseEnabled, sqlClient } from "./hosted";
 
 export const SESSION_COOKIE = "revive_session";
-
-// Hosted deployments should supply REVIVE_SECRET through their secret manager.
-// The local console creates a 0600 workspace secret instead of using a known
-// source-code fallback.
 const SESSION_TTL = 60 * 60 * 24 * 7; // 7 days (seconds)
 
 interface User {
@@ -26,32 +25,71 @@ interface User {
   createdAt: number;
 }
 
-interface AuthStore {
-  users: Map<string, User>;
+// --- durable storage ---------------------------------------------------------
+
+const directory = process.env.REVIVE_STATE_DIR || path.join(process.cwd(), ".revive");
+const usersFile = path.join(directory, "users.json");
+
+function readLocal(): Record<string, User> {
+  try {
+    return JSON.parse(fs.readFileSync(usersFile, "utf8")) as Record<string, User>;
+  } catch {
+    return {};
+  }
 }
 
-const g = globalThis as unknown as { __reviveAuth?: AuthStore };
-const store: AuthStore =
-  g.__reviveAuth ?? (g.__reviveAuth = { users: new Map() });
+function writeLocal(users: Record<string, User>): void {
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const temporary = `${usersFile}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, JSON.stringify(users, null, 2), { mode: 0o600 });
+  fs.renameSync(temporary, usersFile);
+}
+
+async function loadUser(email: string): Promise<User | null> {
+  if (hostedDatabaseEnabled()) {
+    const rows = await sqlClient()<User[]>`
+      select email, name, salt, hash, extract(epoch from created_at) * 1000 as "createdAt"
+      from revive_users where email = ${email} limit 1
+    `;
+    if (rows.length) return rows[0];
+    // fall through to local so pre-database accounts keep working
+  }
+  return readLocal()[email] ?? null;
+}
+
+async function storeUser(user: User): Promise<void> {
+  const users = readLocal();
+  users[user.email] = user;
+  writeLocal(users);
+  if (hostedDatabaseEnabled()) {
+    await sqlClient()`
+      insert into revive_users (email, name, salt, hash)
+      values (${user.email}, ${user.name}, ${user.salt}, ${user.hash})
+      on conflict (email) do nothing
+    `;
+  }
+}
+
+// --- password hashing ----------------------------------------------------------
 
 function hashPw(pw: string, salt: string) {
   return crypto.scryptSync(pw, salt, 64).toString("hex");
 }
 
-export function createUser(
+export async function createUser(
   email: string,
   password: string,
   name?: string,
-): { ok: boolean; error?: string } {
+): Promise<{ ok: boolean; error?: string }> {
   email = email.trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
     return { ok: false, error: "Enter a valid email address." };
-  if (password.length < 6)
-    return { ok: false, error: "Password must be at least 6 characters." };
-  if (store.users.has(email))
+  if (password.length < 8)
+    return { ok: false, error: "Password must be at least 8 characters." };
+  if (await loadUser(email))
     return { ok: false, error: "An account with that email already exists." };
   const salt = crypto.randomBytes(16).toString("hex");
-  store.users.set(email, {
+  await storeUser({
     email,
     name: name?.trim() || email.split("@")[0],
     salt,
@@ -61,23 +99,26 @@ export function createUser(
   return { ok: true };
 }
 
-export function verifyUser(
+export async function verifyUser(
   email: string,
   password: string,
-): { ok: boolean; error?: string } {
+): Promise<{ ok: boolean; error?: string }> {
   email = email.trim().toLowerCase();
-  const u = store.users.get(email);
-  if (!u) return { ok: false, error: "No account found for that email." };
-  const candidate = hashPw(password, u.salt);
+  const user = await loadUser(email);
+  // Constant-time-ish: hash against a dummy salt when the user is unknown so
+  // response timing does not reveal account existence.
+  const salt = user?.salt ?? "0".repeat(32);
+  const candidate = hashPw(password, salt);
+  const expected = user?.hash ?? candidate.replace(/./g, "0");
   const a = Buffer.from(candidate);
-  const b = Buffer.from(u.hash);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b))
-    return { ok: false, error: "Incorrect password." };
+  const b = Buffer.from(expected);
+  const match = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!user || !match) return { ok: false, error: "Invalid email or password." };
   return { ok: true };
 }
 
-export function getUser(email: string): User | undefined {
-  return store.users.get(email.trim().toLowerCase());
+export async function getUser(email: string): Promise<User | null> {
+  return loadUser(email.trim().toLowerCase());
 }
 
 // --- session token ---------------------------------------------------------
