@@ -33,7 +33,10 @@ export async function POST(req: NextRequest) {
       await assertLeaseGeneration(auth.workspace.id, connectionId, Math.floor(body.leaseGeneration));
     } catch (error) {
       if (error instanceof TransitionError) {
-        return NextResponse.json({ error: error.message, code: "stale_credential_generation" }, { status: error.status });
+        return NextResponse.json(
+          { error: error.message, code: "stale_credential_generation", replayVerdict: "blocked_stale_generation" },
+          { status: error.status },
+        );
       }
       throw error;
     }
@@ -56,11 +59,21 @@ export async function POST(req: NextRequest) {
   // "prepared" means the side effect has never been attempted, so both a
   // fresh registration and a replay of a prepared action are safe to execute.
   const isFresh = action.state === "prepared";
-  await audit({ workspaceId: auth.workspace.id, actor: auth.keyPrefix, subjectKind: "action", subjectId: action.id, event: isFresh ? "registered" : "replayed", detail: { runId, actionKey, state: action.state, attempts: action.attempts } });
+  // Replay verdict — the direct answer to "should this exact external side
+  // effect run again?": safe_to_execute (never attempted), already_committed
+  // (result recorded; return it, do not re-run), reconcile_first (attempt
+  // started but outcome unknown; check the provider before any retry).
+  const replayVerdict = isFresh
+    ? "safe_to_execute"
+    : action.state === "completed" || action.state === "reconciled"
+      ? "already_committed"
+      : "reconcile_first";
+  await audit({ workspaceId: auth.workspace.id, actor: auth.keyPrefix, subjectKind: "action", subjectId: action.id, event: isFresh ? "registered" : "replayed", detail: { runId, actionKey, state: action.state, attempts: action.attempts, replayVerdict } });
   return NextResponse.json({
     id: action.id,
     idempotencyKey: action.idempotencyKey,
     state: isFresh ? "new" : action.state === "started" ? "uncertain" : action.state,
+    replayVerdict,
     resultRef: action.resultRef,
     attempts: action.attempts,
   });

@@ -30,11 +30,19 @@ export interface RecoveryCase {
 
 export type ActionRegistrationState = "new" | "completed" | "uncertain" | "reconciled";
 
+export type ReplayVerdict =
+  | "safe_to_execute"
+  | "already_committed"
+  | "reconcile_first"
+  | "blocked_stale_generation";
+
 export interface ActionRegistration {
   id: string;
   idempotencyKey: string;
   /** Ledger verdict for this idempotency key. Only "new" may execute. */
   state: ActionRegistrationState;
+  /** Direct answer to "should this exact side effect run again?". */
+  replayVerdict?: ReplayVerdict;
   /** Stored result reference for completed/reconciled actions. */
   resultRef?: string;
 }
@@ -368,16 +376,16 @@ export class MemoryReviveTransport implements ReviveTransport {
       const previous = existing.state as ActionRegistrationState | "started" | undefined;
       if (previous === "completed" || previous === "reconciled") {
         return {
-          id, idempotencyKey: input.idempotencyKey, state: previous,
+          id, idempotencyKey: input.idempotencyKey, state: previous, replayVerdict: "already_committed",
           resultRef: existing.result !== undefined ? JSON.stringify(existing.result) : (existing.resultRef as string | undefined),
         };
       }
       // A prior attempt started but never finished: outcome is unknown.
       this.actions.set(id, { ...existing, state: "uncertain" });
-      return { id, idempotencyKey: input.idempotencyKey, state: "uncertain" };
+      return { id, idempotencyKey: input.idempotencyKey, state: "uncertain", replayVerdict: "reconcile_first" };
     }
     this.actions.set(id, { ...input, id, state: "started", idempotencyKey: input.idempotencyKey } as unknown as ActionRegistration & Record<string, unknown>);
-    return { id, idempotencyKey: input.idempotencyKey, state: "new" };
+    return { id, idempotencyKey: input.idempotencyKey, state: "new", replayVerdict: "safe_to_execute" };
   }
 
   async markStarted(input: Parameters<ReviveTransport["markStarted"]>[0]): Promise<void> {
