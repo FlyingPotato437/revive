@@ -1,0 +1,32 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
+        env: { REVIVE_SECRET: ci-only-secret-at-least-32-characters }
+      - name: control-plane integration tests
+        run: |
+          REVIVE_SECRET=ci-only-secret-at-least-32-characters npm run start &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/ >/dev/null && break; sleep 1; done
+          npx tsx scripts/test-control-plane.mts
+        env: { REVIVE_SECRET: ci-only-secret-at-least-32-characters }
+
+  sidecar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python -m unittest discover -s tests -v
+        working-directory: sidecar

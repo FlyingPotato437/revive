@@ -62,7 +62,7 @@ function emptyRun(lane: "baseline" | "revive", runId: string): RunState {
 export async function POST(req: NextRequest) {
   const auth = req.headers.get("authorization") || "";
   const key = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  const workspace = workspaceForApiKey(key);
+  const workspace = await workspaceForApiKey(key);
   if (!workspace) {
     return NextResponse.json({ error: "invalid or revoked API key" }, { status: 401 });
   }

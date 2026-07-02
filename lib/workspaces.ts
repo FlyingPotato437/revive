@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { authenticateHostedApiKey, hostedDatabaseEnabled, revokeHostedApiKey, saveHostedApiKey } from "./hosted";
 
 export const WORKSPACE_COOKIE = "revive_workspace";
 
@@ -17,6 +18,7 @@ export interface WorkspaceApiKey {
   hash: string;
   createdAt: number;
   lastUsedAt?: number;
+  expiresAt?: number;
   revokedAt?: number;
 }
 
@@ -29,6 +31,8 @@ export interface WorkspaceRecord {
   projects: WorkspaceProject[];
   apiKeys: WorkspaceApiKey[];
 }
+
+export type WorkspaceIdentity = Pick<WorkspaceRecord, "id" | "name" | "organization">;
 
 interface WorkspaceFile {
   workspaces: WorkspaceRecord[];
@@ -127,20 +131,46 @@ export function createProject(email: string, workspaceId: string, name: string):
   return project;
 }
 
-export function createApiKey(email: string, workspaceId: string, name: string): { key: string; record: WorkspaceApiKey } {
+export async function createApiKey(
+  email: string,
+  workspaceId: string,
+  name: string,
+  options: { expiresInDays?: number } = {},
+): Promise<{ key: string; record: WorkspaceApiKey }> {
   const cleanName = name.trim();
   if (cleanName.length < 2 || cleanName.length > 60) throw new Error("Key name must be 2-60 characters");
+  const workspace = selectedWorkspace(email, workspaceId);
+  if (workspace.id !== workspaceId) throw new Error("Workspace not found");
   const secret = crypto.randomBytes(24).toString("base64url");
-  const key = `rv_live_${secret}`;
+  // Hosted keys carry a non-secret workspace locator so RLS can be established
+  // before the hash lookup. The secret portion remains random and is never stored.
+  const key = hostedDatabaseEnabled()
+    ? `rv_live_${Buffer.from(workspace.id).toString("base64url")}.${secret}`
+    : `rv_live_${secret}`;
+  const expiresInDays = options.expiresInDays;
+  if (expiresInDays !== undefined && (!Number.isInteger(expiresInDays) || expiresInDays < 1 || expiresInDays > 365)) {
+    throw new Error("API key expiration must be between 1 and 365 days");
+  }
   const record: WorkspaceApiKey = {
     id: id("key"), name: cleanName, prefix: key.slice(0, 15),
     hash: crypto.createHash("sha256").update(key).digest("hex"), createdAt: Date.now(),
+    expiresAt: expiresInDays ? Date.now() + expiresInDays * 24 * 60 * 60 * 1000 : undefined,
   };
-  updateWorkspace(email, workspaceId, (workspace) => workspace.apiKeys.push(record));
+  await saveHostedApiKey({
+    workspace: {
+      id: workspace.id,
+      name: workspace.name,
+      organization: workspace.organization,
+      ownerEmail: workspace.ownerEmail,
+    },
+    ...record,
+  });
+  updateWorkspace(email, workspaceId, (current) => current.apiKeys.push(record));
   return { key, record };
 }
 
-export function revokeApiKey(email: string, workspaceId: string, keyId: string): void {
+export async function revokeApiKey(email: string, workspaceId: string, keyId: string): Promise<void> {
+  await revokeHostedApiKey(workspaceId, keyId);
   updateWorkspace(email, workspaceId, (workspace) => {
     const key = workspace.apiKeys.find((item) => item.id === keyId);
     if (!key) throw new Error("API key not found");
@@ -156,13 +186,15 @@ export function publicWorkspace(workspace: WorkspaceRecord) {
 }
 
 /** Resolve a raw API key (Bearer rv_live_…) to its workspace. Constant-time hash compare; touches lastUsedAt. */
-export function workspaceForApiKey(rawKey: string): WorkspaceRecord | null {
+export async function workspaceForApiKey(rawKey: string): Promise<WorkspaceIdentity | null> {
   if (!rawKey || !rawKey.startsWith("rv_")) return null;
+  if (hostedDatabaseEnabled()) return authenticateHostedApiKey(rawKey);
   const digest = crypto.createHash("sha256").update(rawKey).digest();
   const data = read();
   for (const workspace of data.workspaces) {
     for (const key of workspace.apiKeys) {
       if (key.revokedAt) continue;
+      if (key.expiresAt && key.expiresAt <= Date.now()) continue;
       const stored = Buffer.from(key.hash, "hex");
       if (stored.length === digest.length && crypto.timingSafeEqual(stored, digest)) {
         key.lastUsedAt = Date.now();
