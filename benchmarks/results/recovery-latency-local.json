@@ -1,0 +1,15 @@
+{
+  "scope": "local single-node harness against the control-plane API",
+  "caveat": "control-plane transition latency only; excludes human reauthorization time; NOT production MTTR, availability, or recovery-rate evidence",
+  "store": "postgres",
+  "recordedAt": "2026-07-02T19:52:17.890Z",
+  "caseWalkMs": {
+    "opened": 2820,
+    "awaiting_authorization": 4387,
+    "identity_verified": 6534,
+    "resumed": 8097,
+    "completed": 9652
+  },
+  "detectionToParkedMs": 2820,
+  "controlPlaneOverheadMs": 9652
+}

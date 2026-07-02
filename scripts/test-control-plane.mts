@@ -5,6 +5,7 @@
 // state-machine completion edges, stale versions, and SDK-level execute-skip.
 import { ReviveClient } from "../sdk/typescript/src/index";
 import { createSession, SESSION_COOKIE } from "../lib/auth";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { getCase, openCase, transition } from "../lib/control-plane";
 import { deliverRuntimeResumeJob, verifyWebhook } from "../lib/webhooks";
@@ -130,15 +131,35 @@ async function main() {
   const escape = await fetch(`${BASE}/v1/recovery-cases/${opened.id}/transition`, { method: "POST", headers, body: JSON.stringify({ to: "escalated", expectedVersion: opened.version }) });
   check("cases: parked → escalated (escape terminal) allowed", escape.status === 200);
 
-  // 5. legal completion path on a fresh case
+  // 5. legal completion path on a fresh case — timed, so every suite run also
+  // leaves a control-plane latency snapshot (harness timing, NOT prod MTTR).
+  const walkStarted = Date.now();
+  const stageMs: Record<string, number> = {};
   const second = await (await fetch(`${BASE}/v1/recovery-cases`, { method: "POST", headers, body: JSON.stringify({ runId: `${run}-b`, connectionId: connection, actionKey: "sendMail", idempotencyKey: "k3", policy: "interactive_reauth", reason: "AADSTS50173 itest" }) })).json();
+  stageMs.opened = Date.now() - walkStarted;
   let version = second.version;
   for (const to of ["awaiting_authorization", "identity_verified", "resumed", "completed"]) {
     const response = await fetch(`${BASE}/v1/recovery-cases/${second.id}/transition`, { method: "POST", headers, body: JSON.stringify({ to, expectedVersion: version }) });
     const payload = await response.json();
     if (response.status !== 200) { check(`cases: legal walk ${to}`, false, payload); break; }
+    stageMs[to] = Date.now() - walkStarted;
     version = payload.version;
     if (to === "completed") check("cases: resumed → completed allowed", payload.state === "completed");
+  }
+  try {
+    mkdirSync("benchmarks/results", { recursive: true });
+    writeFileSync("benchmarks/results/recovery-latency-local.json", JSON.stringify({
+      scope: "local single-node harness against the control-plane API",
+      caveat: "control-plane transition latency only; excludes human reauthorization time; NOT production MTTR, availability, or recovery-rate evidence",
+      store: process.env.DATABASE_URL ? "postgres" : "local-json",
+      recordedAt: new Date().toISOString(),
+      caseWalkMs: stageMs,
+      detectionToParkedMs: stageMs.opened,
+      controlPlaneOverheadMs: stageMs.completed,
+    }, null, 2) + "\n");
+    check("evidence: latency snapshot written", typeof stageMs.completed === "number", stageMs);
+  } catch (error) {
+    check("evidence: latency snapshot written", false, error);
   }
 
   // 6. stale version rejected
