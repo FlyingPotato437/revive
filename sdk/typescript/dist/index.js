@@ -1,7 +1,16 @@
+import { createHash } from "node:crypto";
 export class ReviveClient {
     transport;
     constructor(options = {}) {
-        this.transport = options.transport || new MemoryReviveTransport();
+        if (options.transport) {
+            this.transport = options.transport;
+        }
+        else if (options.baseUrl) {
+            this.transport = new HttpReviveTransport({ baseUrl: options.baseUrl, apiKey: options.apiKey });
+        }
+        else {
+            this.transport = new MemoryReviveTransport();
+        }
     }
     async protectAction(input) {
         const idempotencyKey = input.idempotencyKey || createIdempotencyKey(input.runId, input.actionKey, input.checkpointId);
@@ -13,6 +22,47 @@ export class ReviveClient {
             idempotencyKey,
             metadata: input.metadata,
         });
+        // Ledger verdict gate: never execute an action the control plane already
+        // knows the outcome of. Only "new" may run the side effect.
+        if (action.state === "completed" || action.state === "reconciled") {
+            return {
+                status: "completed",
+                value: parseResultRef(action.resultRef),
+                idempotencyKey,
+                actionId: action.id,
+                recoveredFromReconcile: action.state === "reconciled",
+                deduplicated: true,
+            };
+        }
+        if (action.state === "uncertain") {
+            // A previous attempt may have committed remotely. Reconcile before any replay.
+            if (!input.reconcile)
+                throw new AmbiguousCommitError();
+            const reconciled = await input.reconcile({
+                runId: input.runId,
+                checkpointId: input.checkpointId,
+                connectionId: input.connectionId,
+                actionKey: input.actionKey,
+                idempotencyKey,
+                signal: input.signal,
+            });
+            if (reconciled.committed) {
+                await this.transport.markReconciled({
+                    actionId: action.id,
+                    idempotencyKey,
+                    remoteId: reconciled.remoteId,
+                    note: reconciled.note,
+                });
+                return {
+                    status: "completed",
+                    value: reconciled.value,
+                    idempotencyKey,
+                    actionId: action.id,
+                    recoveredFromReconcile: true,
+                };
+            }
+            // Confirmed not committed upstream: safe to execute below.
+        }
         let lease;
         try {
             lease = await input.credential();
@@ -32,6 +82,11 @@ export class ReviveClient {
             credential: lease.credential,
             signal: input.signal,
         };
+        // Recorded immediately before the side effect. Everything up to here
+        // (registration, credential acquisition, parking) leaves the action
+        // "prepared", so those failures replay as safe "new" — not as an
+        // ambiguous commit.
+        await this.transport.markStarted({ actionId: action.id, idempotencyKey });
         try {
             const value = await input.execute(context);
             await this.transport.completeAction({ actionId: action.id, idempotencyKey, result: value });
@@ -107,6 +162,9 @@ export class HttpReviveTransport {
     registerAction(input) {
         return this.request("/v1/actions", input);
     }
+    markStarted(input) {
+        return this.request(`/v1/actions/${encodeURIComponent(input.actionId)}/started`, input);
+    }
     completeAction(input) {
         return this.request(`/v1/actions/${encodeURIComponent(input.actionId)}/complete`, input);
     }
@@ -139,9 +197,26 @@ export class MemoryReviveTransport {
     recoveryCases = new Map();
     async registerAction(input) {
         const id = `act_${hash(`${input.runId}:${input.actionKey}:${input.idempotencyKey}`)}`;
-        const action = { ...input, id };
-        this.actions.set(id, action);
-        return { id, idempotencyKey: input.idempotencyKey };
+        const existing = this.actions.get(id);
+        if (existing) {
+            const previous = existing.state;
+            if (previous === "completed" || previous === "reconciled") {
+                return {
+                    id, idempotencyKey: input.idempotencyKey, state: previous,
+                    resultRef: existing.result !== undefined ? JSON.stringify(existing.result) : existing.resultRef,
+                };
+            }
+            // A prior attempt started but never finished: outcome is unknown.
+            this.actions.set(id, { ...existing, state: "uncertain" });
+            return { id, idempotencyKey: input.idempotencyKey, state: "uncertain" };
+        }
+        this.actions.set(id, { ...input, id, state: "started", idempotencyKey: input.idempotencyKey });
+        return { id, idempotencyKey: input.idempotencyKey, state: "new" };
+    }
+    async markStarted(input) {
+        const current = this.actions.get(input.actionId);
+        if (current)
+            this.actions.set(input.actionId, { ...current, state: "started" });
     }
     async completeAction(input) {
         const current = this.actions.get(input.actionId) || {
@@ -186,7 +261,10 @@ export class MemoryReviveTransport {
     }
 }
 export function createIdempotencyKey(runId, actionKey, checkpointId = "checkpoint") {
-    return `revive_${hash(`${runId}:${checkpointId}:${actionKey}`)}`;
+    // Deterministic SHA-256 over the action coordinates. 32-bit hashes collide
+    // at real workloads; a collision here means a skipped side effect.
+    const digest = createHash("sha256").update(`${runId}:${checkpointId}:${actionKey}`).digest("base64url");
+    return `revive_${digest.slice(0, 43)}`;
 }
 export function defaultCredentialFailureClassifier(error) {
     if (!isRecord(error))
@@ -213,6 +291,16 @@ function classifyWith(input, error) {
 }
 function isRecord(value) {
     return typeof value === "object" && value !== null;
+}
+function parseResultRef(resultRef) {
+    if (resultRef === undefined)
+        return undefined;
+    try {
+        return JSON.parse(resultRef);
+    }
+    catch {
+        return resultRef;
+    }
 }
 function hash(value) {
     let state = 2166136261;

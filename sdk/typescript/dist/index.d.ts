@@ -20,9 +20,14 @@ export interface RecoveryCase {
     url?: string;
     leaseGeneration?: number;
 }
+export type ActionRegistrationState = "new" | "completed" | "uncertain" | "reconciled";
 export interface ActionRegistration {
     id: string;
     idempotencyKey: string;
+    /** Ledger verdict for this idempotency key. Only "new" may execute. */
+    state: ActionRegistrationState;
+    /** Stored result reference for completed/reconciled actions. */
+    resultRef?: string;
 }
 export interface ReconcileResult<TResult = unknown> {
     committed: boolean;
@@ -65,6 +70,8 @@ export type ProtectActionResult<TResult> = {
     idempotencyKey: string;
     actionId: string;
     recoveredFromReconcile?: boolean;
+    /** True when the ledger already held the outcome and execute() was skipped. */
+    deduplicated?: boolean;
 } | {
     status: "parked";
     recoveryCase: RecoveryCase;
@@ -80,6 +87,10 @@ export interface ReviveTransport {
         idempotencyKey: string;
         metadata?: Record<string, unknown>;
     }): Promise<ActionRegistration>;
+    markStarted(input: {
+        actionId: string;
+        idempotencyKey: string;
+    }): Promise<void>;
     completeAction(input: {
         actionId: string;
         idempotencyKey: string;
@@ -106,6 +117,10 @@ export interface ReviveTransport {
 }
 export interface ReviveClientOptions {
     transport?: ReviveTransport;
+    /** Hosted control-plane base URL, e.g. https://console.revive.dev */
+    baseUrl?: string;
+    /** Workspace API key (rv_live_…). With baseUrl, selects the HTTP transport. */
+    apiKey?: string;
 }
 export declare class ReviveClient {
     private transport;
@@ -127,6 +142,7 @@ export declare class HttpReviveTransport implements ReviveTransport {
     private fetchImpl;
     constructor(options: HttpReviveTransportOptions);
     registerAction(input: Parameters<ReviveTransport["registerAction"]>[0]): Promise<ActionRegistration>;
+    markStarted(input: Parameters<ReviveTransport["markStarted"]>[0]): Promise<void>;
     completeAction(input: Parameters<ReviveTransport["completeAction"]>[0]): Promise<void>;
     markReconciled(input: Parameters<ReviveTransport["markReconciled"]>[0]): Promise<void>;
     openRecoveryCase(input: Parameters<ReviveTransport["openRecoveryCase"]>[0]): Promise<RecoveryCase>;
@@ -136,6 +152,7 @@ export declare class MemoryReviveTransport implements ReviveTransport {
     readonly actions: Map<string, ActionRegistration & Record<string, unknown>>;
     readonly recoveryCases: Map<string, RecoveryCase>;
     registerAction(input: Parameters<ReviveTransport["registerAction"]>[0]): Promise<ActionRegistration>;
+    markStarted(input: Parameters<ReviveTransport["markStarted"]>[0]): Promise<void>;
     completeAction(input: Parameters<ReviveTransport["completeAction"]>[0]): Promise<void>;
     markReconciled(input: Parameters<ReviveTransport["markReconciled"]>[0]): Promise<void>;
     openRecoveryCase(input: Parameters<ReviveTransport["openRecoveryCase"]>[0]): Promise<RecoveryCase>;

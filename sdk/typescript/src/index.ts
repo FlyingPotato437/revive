@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 export type RecoveryPolicy =
   | "interactive_reauth"
   | "step_up"
@@ -27,9 +28,15 @@ export interface RecoveryCase {
   leaseGeneration?: number;
 }
 
+export type ActionRegistrationState = "new" | "completed" | "uncertain" | "reconciled";
+
 export interface ActionRegistration {
   id: string;
   idempotencyKey: string;
+  /** Ledger verdict for this idempotency key. Only "new" may execute. */
+  state: ActionRegistrationState;
+  /** Stored result reference for completed/reconciled actions. */
+  resultRef?: string;
 }
 
 export interface ReconcileResult<TResult = unknown> {
@@ -78,6 +85,8 @@ export type ProtectActionResult<TResult> =
       idempotencyKey: string;
       actionId: string;
       recoveredFromReconcile?: boolean;
+      /** True when the ledger already held the outcome and execute() was skipped. */
+      deduplicated?: boolean;
     }
   | {
       status: "parked";
@@ -95,6 +104,7 @@ export interface ReviveTransport {
     idempotencyKey: string;
     metadata?: Record<string, unknown>;
   }): Promise<ActionRegistration>;
+  markStarted(input: { actionId: string; idempotencyKey: string }): Promise<void>;
   completeAction(input: {
     actionId: string;
     idempotencyKey: string;
@@ -122,13 +132,23 @@ export interface ReviveTransport {
 
 export interface ReviveClientOptions {
   transport?: ReviveTransport;
+  /** Hosted control-plane base URL, e.g. https://console.revive.dev */
+  baseUrl?: string;
+  /** Workspace API key (rv_live_…). With baseUrl, selects the HTTP transport. */
+  apiKey?: string;
 }
 
 export class ReviveClient {
   private transport: ReviveTransport;
 
   constructor(options: ReviveClientOptions = {}) {
-    this.transport = options.transport || new MemoryReviveTransport();
+    if (options.transport) {
+      this.transport = options.transport;
+    } else if (options.baseUrl) {
+      this.transport = new HttpReviveTransport({ baseUrl: options.baseUrl, apiKey: options.apiKey });
+    } else {
+      this.transport = new MemoryReviveTransport();
+    }
   }
 
   async protectAction<TCredential, TResult>(
@@ -144,6 +164,47 @@ export class ReviveClient {
       idempotencyKey,
       metadata: input.metadata,
     });
+
+    // Ledger verdict gate: never execute an action the control plane already
+    // knows the outcome of. Only "new" may run the side effect.
+    if (action.state === "completed" || action.state === "reconciled") {
+      return {
+        status: "completed",
+        value: parseResultRef<TResult>(action.resultRef),
+        idempotencyKey,
+        actionId: action.id,
+        recoveredFromReconcile: action.state === "reconciled",
+        deduplicated: true,
+      };
+    }
+    if (action.state === "uncertain") {
+      // A previous attempt may have committed remotely. Reconcile before any replay.
+      if (!input.reconcile) throw new AmbiguousCommitError();
+      const reconciled = await input.reconcile({
+        runId: input.runId,
+        checkpointId: input.checkpointId,
+        connectionId: input.connectionId,
+        actionKey: input.actionKey,
+        idempotencyKey,
+        signal: input.signal,
+      });
+      if (reconciled.committed) {
+        await this.transport.markReconciled({
+          actionId: action.id,
+          idempotencyKey,
+          remoteId: reconciled.remoteId,
+          note: reconciled.note,
+        });
+        return {
+          status: "completed",
+          value: reconciled.value as TResult,
+          idempotencyKey,
+          actionId: action.id,
+          recoveredFromReconcile: true,
+        };
+      }
+      // Confirmed not committed upstream: safe to execute below.
+    }
 
     let lease: CredentialLease<TCredential>;
     try {
@@ -163,6 +224,12 @@ export class ReviveClient {
       credential: lease.credential,
       signal: input.signal,
     };
+
+    // Recorded immediately before the side effect. Everything up to here
+    // (registration, credential acquisition, parking) leaves the action
+    // "prepared", so those failures replay as safe "new" — not as an
+    // ambiguous commit.
+    await this.transport.markStarted({ actionId: action.id, idempotencyKey });
 
     try {
       const value = await input.execute(context);
@@ -256,6 +323,10 @@ export class HttpReviveTransport implements ReviveTransport {
     return this.request("/v1/actions", input);
   }
 
+  markStarted(input: Parameters<ReviveTransport["markStarted"]>[0]): Promise<void> {
+    return this.request(`/v1/actions/${encodeURIComponent(input.actionId)}/started`, input);
+  }
+
   completeAction(input: Parameters<ReviveTransport["completeAction"]>[0]): Promise<void> {
     return this.request(`/v1/actions/${encodeURIComponent(input.actionId)}/complete`, input);
   }
@@ -292,9 +363,26 @@ export class MemoryReviveTransport implements ReviveTransport {
 
   async registerAction(input: Parameters<ReviveTransport["registerAction"]>[0]): Promise<ActionRegistration> {
     const id = `act_${hash(`${input.runId}:${input.actionKey}:${input.idempotencyKey}`)}`;
-    const action = { ...input, id };
-    this.actions.set(id, action);
-    return { id, idempotencyKey: input.idempotencyKey };
+    const existing = this.actions.get(id);
+    if (existing) {
+      const previous = existing.state as ActionRegistrationState | "started" | undefined;
+      if (previous === "completed" || previous === "reconciled") {
+        return {
+          id, idempotencyKey: input.idempotencyKey, state: previous,
+          resultRef: existing.result !== undefined ? JSON.stringify(existing.result) : (existing.resultRef as string | undefined),
+        };
+      }
+      // A prior attempt started but never finished: outcome is unknown.
+      this.actions.set(id, { ...existing, state: "uncertain" });
+      return { id, idempotencyKey: input.idempotencyKey, state: "uncertain" };
+    }
+    this.actions.set(id, { ...input, id, state: "started", idempotencyKey: input.idempotencyKey } as unknown as ActionRegistration & Record<string, unknown>);
+    return { id, idempotencyKey: input.idempotencyKey, state: "new" };
+  }
+
+  async markStarted(input: Parameters<ReviveTransport["markStarted"]>[0]): Promise<void> {
+    const current = this.actions.get(input.actionId);
+    if (current) this.actions.set(input.actionId, { ...current, state: "started" } as unknown as ActionRegistration & Record<string, unknown>);
   }
 
   async completeAction(input: Parameters<ReviveTransport["completeAction"]>[0]): Promise<void> {
@@ -343,7 +431,10 @@ export class MemoryReviveTransport implements ReviveTransport {
 }
 
 export function createIdempotencyKey(runId: string, actionKey: string, checkpointId = "checkpoint"): string {
-  return `revive_${hash(`${runId}:${checkpointId}:${actionKey}`)}`;
+  // Deterministic SHA-256 over the action coordinates. 32-bit hashes collide
+  // at real workloads; a collision here means a skipped side effect.
+  const digest = createHash("sha256").update(`${runId}:${checkpointId}:${actionKey}`).digest("base64url");
+  return `revive_${digest.slice(0, 43)}`;
 }
 
 export function defaultCredentialFailureClassifier(error: unknown): CredentialFailure | null {
@@ -378,6 +469,15 @@ function classifyWith<TCredential, TResult>(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function parseResultRef<T>(resultRef?: string): T {
+  if (resultRef === undefined) return undefined as T;
+  try {
+    return JSON.parse(resultRef) as T;
+  } catch {
+    return resultRef as T;
+  }
 }
 
 function hash(value: string): string {
