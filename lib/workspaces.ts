@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { authenticateHostedApiKey, hostedDatabaseEnabled, revokeHostedApiKey, saveHostedApiKey } from "./hosted";
+import { authenticateHostedApiKey, ensureHostedWorkspace, hostedDatabaseEnabled, revokeHostedApiKey, saveHostedApiKey, sqlClient, withWorkspaceTransaction } from "./hosted";
 
 export const WORKSPACE_COOKIE = "revive_workspace";
 
@@ -79,7 +79,7 @@ function defaultWorkspace(email: string): WorkspaceRecord {
   };
 }
 
-export function listWorkspaces(email: string): WorkspaceRecord[] {
+function listLocalWorkspaces(email: string): WorkspaceRecord[] {
   const normalized = email.trim().toLowerCase();
   const data = read();
   let workspaces = data.workspaces.filter((workspace) => workspace.ownerEmail === normalized);
@@ -92,12 +92,72 @@ export function listWorkspaces(email: string): WorkspaceRecord[] {
   return workspaces;
 }
 
-export function selectedWorkspace(email: string, requestedId?: string): WorkspaceRecord {
-  const workspaces = listWorkspaces(email);
+export async function listWorkspaces(email: string): Promise<WorkspaceRecord[]> {
+  const normalized = email.trim().toLowerCase();
+  if (!hostedDatabaseEnabled()) return listLocalWorkspaces(normalized);
+  const sql = sqlClient();
+  let rows = [...await sql<{
+    id: string; name: string; organization: string; owner_email: string; created_at: Date;
+  }[]>`
+    select workspaces.id, workspaces.name, organizations.name as organization,
+      coalesce(owner_membership.user_email, ${normalized}) as owner_email,
+      workspaces.created_at
+    from revive_workspaces workspaces
+    join revive_organizations organizations on organizations.id = workspaces.organization_id
+    join revive_memberships membership on membership.organization_id = organizations.id
+      and membership.user_email = ${normalized}
+    left join lateral (
+      select user_email from revive_memberships
+      where organization_id = organizations.id and role = 'owner'
+      order by created_at limit 1
+    ) owner_membership on true
+    order by workspaces.created_at
+  `];
+  if (!rows.length) {
+    const initial = defaultWorkspace(normalized);
+    await ensureHostedWorkspace(initial);
+    await withWorkspaceTransaction(initial.id, async (tx) => {
+      await tx`
+        insert into revive_projects (id, workspace_id, name, created_at)
+        values (${initial.projects[0].id}, ${initial.id}, ${initial.projects[0].name}, ${new Date(initial.projects[0].createdAt)})
+        on conflict (id) do nothing
+      `;
+    });
+    rows = [{ id: initial.id, name: initial.name, organization: initial.organization, owner_email: normalized, created_at: new Date(initial.createdAt) }];
+  }
+  return Promise.all(rows.map(async (row) => withWorkspaceTransaction(row.id, async (tx) => {
+    const projects = await tx<{ id: string; name: string; created_at: Date }[]>`
+      select id, name, created_at from revive_projects where workspace_id = ${row.id} order by created_at
+    `;
+    const keys = await tx<{
+      id: string; name: string; prefix: string; hash: string; created_at: Date;
+      last_used_at: Date | null; expires_at: Date | null; revoked_at: Date | null;
+    }[]>`
+      select id, name, prefix, hash, created_at, last_used_at, expires_at, revoked_at
+      from revive_api_keys where workspace_id = ${row.id} order by created_at desc
+    `;
+    return {
+      id: row.id,
+      name: row.name,
+      organization: row.organization,
+      ownerEmail: row.owner_email,
+      createdAt: row.created_at.getTime(),
+      projects: projects.map((project) => ({ id: project.id, name: project.name, createdAt: project.created_at.getTime() })),
+      apiKeys: keys.map((key) => ({
+        id: key.id, name: key.name, prefix: key.prefix, hash: key.hash,
+        createdAt: key.created_at.getTime(), lastUsedAt: key.last_used_at?.getTime(),
+        expiresAt: key.expires_at?.getTime(), revokedAt: key.revoked_at?.getTime(),
+      })),
+    };
+  })));
+}
+
+export async function selectedWorkspace(email: string, requestedId?: string): Promise<WorkspaceRecord> {
+  const workspaces = await listWorkspaces(email);
   return workspaces.find((workspace) => workspace.id === requestedId) || workspaces[0];
 }
 
-export function createWorkspace(email: string, input: { name: string; organization: string }): WorkspaceRecord {
+export async function createWorkspace(email: string, input: { name: string; organization: string }): Promise<WorkspaceRecord> {
   const normalized = email.trim().toLowerCase();
   const name = input.name.trim();
   const organization = input.organization.trim();
@@ -108,6 +168,16 @@ export function createWorkspace(email: string, input: { name: string; organizati
     id: id("ws"), name, organization, ownerEmail: normalized, createdAt: Date.now(),
     projects: [{ id: id("prj"), name: "Recovery sandbox", createdAt: Date.now() }], apiKeys: [],
   };
+  if (hostedDatabaseEnabled()) {
+    await ensureHostedWorkspace(workspace);
+    await withWorkspaceTransaction(workspace.id, async (tx) => {
+      await tx`
+        insert into revive_projects (id, workspace_id, name, created_at)
+        values (${workspace.projects[0].id}, ${workspace.id}, ${workspace.projects[0].name}, ${new Date(workspace.projects[0].createdAt)})
+      `;
+    });
+    return workspace;
+  }
   data.workspaces.push(workspace);
   write(data);
   return workspace;
@@ -124,10 +194,19 @@ function updateWorkspace(email: string, workspaceId: string, update: (workspace:
   return workspace;
 }
 
-export function createProject(email: string, workspaceId: string, name: string): WorkspaceProject {
+export async function createProject(email: string, workspaceId: string, name: string): Promise<WorkspaceProject> {
   const project: WorkspaceProject = { id: id("prj"), name: name.trim(), createdAt: Date.now() };
   if (project.name.length < 2 || project.name.length > 60) throw new Error("Project name must be 2-60 characters");
-  updateWorkspace(email, workspaceId, (workspace) => workspace.projects.push(project));
+  if (hostedDatabaseEnabled()) {
+    await withWorkspaceTransaction(workspaceId, async (sql) => {
+      await sql`
+        insert into revive_projects (id, workspace_id, name, created_at)
+        values (${project.id}, ${workspaceId}, ${project.name}, ${new Date(project.createdAt)})
+      `;
+    });
+  } else {
+    updateWorkspace(email, workspaceId, (workspace) => workspace.projects.push(project));
+  }
   return project;
 }
 
@@ -139,7 +218,7 @@ export async function createApiKey(
 ): Promise<{ key: string; record: WorkspaceApiKey }> {
   const cleanName = name.trim();
   if (cleanName.length < 2 || cleanName.length > 60) throw new Error("Key name must be 2-60 characters");
-  const workspace = selectedWorkspace(email, workspaceId);
+  const workspace = await selectedWorkspace(email, workspaceId);
   if (workspace.id !== workspaceId) throw new Error("Workspace not found");
   const secret = crypto.randomBytes(24).toString("base64url");
   // Hosted keys carry a non-secret workspace locator so RLS can be established
@@ -165,13 +244,13 @@ export async function createApiKey(
     },
     ...record,
   });
-  updateWorkspace(email, workspaceId, (current) => current.apiKeys.push(record));
+  if (!hostedDatabaseEnabled()) updateWorkspace(email, workspaceId, (current) => current.apiKeys.push(record));
   return { key, record };
 }
 
 export async function revokeApiKey(email: string, workspaceId: string, keyId: string): Promise<void> {
   await revokeHostedApiKey(workspaceId, keyId);
-  updateWorkspace(email, workspaceId, (workspace) => {
+  if (!hostedDatabaseEnabled()) updateWorkspace(email, workspaceId, (workspace) => {
     const key = workspace.apiKeys.find((item) => item.id === keyId);
     if (!key) throw new Error("API key not found");
     key.revokedAt = Date.now();

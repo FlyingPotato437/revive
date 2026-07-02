@@ -1,22 +1,30 @@
 import crypto from "node:crypto";
-import { encryptionKey } from "./secrets";
+import { activeEncryptionKey, encryptionKey, encryptionKeyById } from "./secrets";
 
-const VERSION = "v1";
+const VERSION = "v2";
 
 export function sealJson(value: unknown, purpose: string): string {
+  const active = activeEncryptionKey();
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey(), iv);
-  cipher.setAAD(Buffer.from(`${VERSION}:${purpose}`));
+  const cipher = crypto.createCipheriv("aes-256-gcm", active.key, iv);
+  cipher.setAAD(Buffer.from(`${VERSION}:${active.id}:${purpose}`));
   const plaintext = Buffer.from(JSON.stringify(value));
   const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
-  return [VERSION, iv.toString("base64url"), cipher.getAuthTag().toString("base64url"), encrypted.toString("base64url")].join(".");
+  return [VERSION, active.id, iv.toString("base64url"), cipher.getAuthTag().toString("base64url"), encrypted.toString("base64url")].join(".");
 }
 
 export function openJson<T>(envelope: string, purpose: string): T {
-  const [version, ivRaw, tagRaw, ciphertextRaw] = envelope.split(".");
-  if (version !== VERSION || !ivRaw || !tagRaw || !ciphertextRaw) throw new Error("invalid secure envelope");
-  const decipher = crypto.createDecipheriv("aes-256-gcm", encryptionKey(), Buffer.from(ivRaw, "base64url"));
-  decipher.setAAD(Buffer.from(`${VERSION}:${purpose}`));
+  const parts = envelope.split(".");
+  const version = parts[0];
+  const legacy = version === "v1";
+  const keyId = legacy ? "legacy" : parts[1];
+  const ivRaw = legacy ? parts[1] : parts[2];
+  const tagRaw = legacy ? parts[2] : parts[3];
+  const ciphertextRaw = legacy ? parts[3] : parts[4];
+  if ((version !== "v1" && version !== VERSION) || !keyId || !ivRaw || !tagRaw || !ciphertextRaw) throw new Error("invalid secure envelope");
+  const key = legacy ? encryptionKey() : encryptionKeyById(keyId);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(ivRaw, "base64url"));
+  decipher.setAAD(Buffer.from(legacy ? `v1:${purpose}` : `${VERSION}:${keyId}:${purpose}`));
   decipher.setAuthTag(Buffer.from(tagRaw, "base64url"));
   const plaintext = Buffer.concat([decipher.update(Buffer.from(ciphertextRaw, "base64url")), decipher.final()]);
   return JSON.parse(plaintext.toString("utf8")) as T;

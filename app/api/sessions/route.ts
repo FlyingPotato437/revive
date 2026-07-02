@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const auth = sessionFromCookies(req.cookies);
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const workspace = selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
+  const workspace = await selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
   const sessions = listSessions().filter((session) => !session.workspaceId || session.workspaceId === workspace.id).map((session) => ({
     id: session.id,
     createdAt: session.createdAt,
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   }
   failureStep = Math.max(0, Math.min(RUN_SCRIPT.length - 1, failureStep));
 
-  const workspace = selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
+  const workspace = await selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
   const session = startSession(failureStep, deathCode, workspace.id);
   return NextResponse.json({
     sessionId: session.id,

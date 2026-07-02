@@ -239,18 +239,20 @@ Required:
 
 ## Open production gates
 
-These are not optional for a hosted credential service:
+Repository controls now include workspace RLS for control-plane, credential,
+project and API-key data; operator RBAC; versioned encryption envelopes;
+identified audit events; signed retryable runtime callbacks; dead-letter APIs;
+and executable retention. The remaining gates require operated infrastructure
+or independent evidence:
 
-1. Tenant isolation across every hosted table and API route.
-2. Managed KMS and secret-manager deployment.
-3. Key rotation and envelope versioning.
-4. Audit identity for every recovery action.
-5. RBAC for recovery operators and viewers.
-6. Continuously operated queue workers with dead-letter review.
-7. Managed Postgres backups and recovery drills.
-8. External penetration test or security architecture review.
-9. Data retention controls and deletion workflow.
-10. Design partner staging tenants for Entra, Nango and Auth0.
+1. Deploy the queue worker continuously and connect health/dead-letter alerts.
+2. Inject the versioned encryption keyring from managed KMS/secret manager.
+3. Configure hosted SSO/MFA, password recovery, and session revocation.
+4. Run and record a restore into an isolated managed-Postgres target.
+5. Commission an external penetration test and architecture review.
+6. Define the customer deletion workflow, including audit-retention exceptions.
+7. Repeat live recovery certification in design-partner staging tenants.
+8. Certify Auth0 and Temporal before marketing them as supported production paths.
 
 ## Current status
 
@@ -267,6 +269,11 @@ Implemented in this repository:
 - provider subject and tenant binding before recovery consumption
 - SQLite and Postgres credential-generation fencing
 - TypeScript SDK package surface
+- Nango reconnect sessions joined to hosted recovery cases
+- live LangGraph/Nango/Microsoft Graph single-draft correctness certification
+- Postgres-backed workspace discovery, projects, memberships and operator RBAC
+- signed runtime resume requests that require run/checkpoint acknowledgement
+- worker health, dead-letter retry, retention and deployment definitions
 
 Not yet proven:
 

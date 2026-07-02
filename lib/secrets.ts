@@ -40,3 +40,31 @@ export function encryptionKey(): Buffer {
   }
   return crypto.createHash("sha256").update(`revive:credentials:${applicationSecret()}`).digest();
 }
+
+export function activeEncryptionKey(): { id: string; key: Buffer } {
+  const raw = process.env.REVIVE_ENCRYPTION_KEYS;
+  if (!raw) return { id: "legacy", key: encryptionKey() };
+  let entries: Record<string, string>;
+  try {
+    entries = JSON.parse(raw) as Record<string, string>;
+  } catch {
+    throw new Error("REVIVE_ENCRYPTION_KEYS must be a JSON object of key IDs to base64 keys");
+  }
+  const id = process.env.REVIVE_ACTIVE_ENCRYPTION_KEY_ID || Object.keys(entries)[0];
+  if (!id || !entries[id]) throw new Error("REVIVE_ACTIVE_ENCRYPTION_KEY_ID is not present in REVIVE_ENCRYPTION_KEYS");
+  const key = Buffer.from(entries[id], "base64");
+  if (key.length !== 32) throw new Error(`encryption key ${id} must decode to 32 bytes`);
+  return { id, key };
+}
+
+export function encryptionKeyById(id: string): Buffer {
+  if (id === "legacy") return encryptionKey();
+  const raw = process.env.REVIVE_ENCRYPTION_KEYS;
+  if (!raw) throw new Error(`encryption key ${id} is not configured`);
+  const entries = JSON.parse(raw) as Record<string, string>;
+  const encoded = entries[id];
+  if (!encoded) throw new Error(`encryption key ${id} is not configured`);
+  const key = Buffer.from(encoded, "base64");
+  if (key.length !== 32) throw new Error(`encryption key ${id} must decode to 32 bytes`);
+  return key;
+}

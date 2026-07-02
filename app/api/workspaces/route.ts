@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const session = sessionFromCookies(request.cookies);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  return NextResponse.json({ workspaces: listWorkspaces(session.email).map(publicWorkspace) });
+  return NextResponse.json({ workspaces: (await listWorkspaces(session.email)).map(publicWorkspace) });
 }
 
 export async function POST(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
     const body = await request.json();
-    const workspace = createWorkspace(session.email, {
+    const workspace = await createWorkspace(session.email, {
       name: String(body.name || ""), organization: String(body.organization || ""),
     });
     const response = NextResponse.json({ workspace: publicWorkspace(workspace) }, { status: 201 });

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function OverviewPage() {
   const jar = await cookies();
   const auth = verifySession(jar.get(SESSION_COOKIE)?.value)!;
-  const workspace = selectedWorkspace(auth.email, jar.get(WORKSPACE_COOKIE)?.value);
+  const workspace = await selectedWorkspace(auth.email, jar.get(WORKSPACE_COOKIE)?.value);
   const sessions = listSessions().filter((session) => !session.workspaceId || session.workspaceId === workspace.id);
   const recovered = sessions.filter((session) => session.revive.status === "completed").length;
   const actions = sessions.flatMap((session) => session.revive.actions);

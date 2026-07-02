@@ -20,7 +20,7 @@ classifiers = [
 dependencies = []  # core is stdlib-only
 
 [project.optional-dependencies]
-langgraph = ["langgraph>=0.2"]
+langgraph = ["langgraph>=1.2,<2", "langgraph-checkpoint-sqlite>=3.1,<4"]
 temporal = ["temporalio>=1.7"]
 postgres = ["psycopg[binary]>=3.2"]
 hosted = ["temporalio>=1.7", "psycopg[binary]>=3.2"]

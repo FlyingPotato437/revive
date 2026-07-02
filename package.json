@@ -8,14 +8,19 @@
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "node scripts/migrate.mjs",
+    "db:backup": "sh scripts/db-backup.sh",
+    "db:restore": "sh scripts/db-restore.sh",
     "sdk:build": "npm --prefix sdk/typescript run build",
     "bench:revive": "python3 sidecar/benchmarks/revivebench.py",
+    "certify:live": ".venv/bin/python sidecar/benchmarks/live_langgraph_nango.py",
     "worker": "node scripts/worker.mjs",
+    "retention": "node scripts/retention.mjs",
     "migrate": "node scripts/migrate.mjs",
-    "test:api": "tsx scripts/test-control-plane.mts"
+    "test:api": "node --env-file-if-exists=.env.local --import tsx scripts/test-control-plane.mts"
   },
   "dependencies": {
     "@lobehub/icons-static-svg": "^1.91.0",
+    "@nangohq/frontend": "^0.70.9",
     "@phosphor-icons/react": "^2.1.10",
     "framer-motion": "11.18.2",
     "next": "^15.5.19",

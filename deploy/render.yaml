@@ -1,0 +1,16 @@
+services:
+  - type: worker
+    name: revive-queue-worker
+    runtime: docker
+    dockerfilePath: ./deploy/worker.Dockerfile
+    dockerContext: .
+    autoDeploy: false
+    envVars:
+      - key: REVIVE_BASE_URL
+        value: https://revivelabs.app
+      - key: REVIVE_WORKER_SECRET
+        sync: false
+      - key: REVIVE_WORKER_ID
+        value: render-primary
+      - key: REVIVE_WORKER_STALL_ALERT_MS
+        value: "120000"

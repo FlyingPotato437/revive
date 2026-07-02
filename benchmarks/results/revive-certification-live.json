@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "live-provider-correctness-certification",
+  "generatedAt": "2026-07-02T18:18:03.964411+00:00",
+  "sourceCommit": "207b3ed",
+  "runtime": {
+    "name": "LangGraph",
+    "checkpointer": "SQLiteSaver",
+    "threadId": "live-cert-f9661040a69a"
+  },
+  "credentialSystem": {
+    "name": "Nango",
+    "integrationId": "microsoft-tenant-specific",
+    "connectionHash": "a929c0d8d581374c"
+  },
+  "provider": {
+    "name": "Microsoft Graph",
+    "operation": "create draft"
+  },
+  "failureInjection": {
+    "credential": "controlled credential-unavailable interrupt after live Graph preflight",
+    "sideEffect": "controlled transport loss after Graph returned HTTP 201"
+  },
+  "claimsExcluded": [
+    "provider-wide recovery rate",
+    "availability",
+    "throughput",
+    "customer MTTR"
+  ],
+  "passed": true,
+  "durationMs": 1914.032,
+  "assertions": {
+    "sameThreadResumed": true,
+    "leaseGenerationAdvanced": true,
+    "sideEffectReconciled": true,
+    "singleMutationCall": true,
+    "singleRemoteDraft": true,
+    "transportLossInjected": true
+  },
+  "observed": {
+    "mutationCalls": 1,
+    "remoteDraftCount": 1,
+    "finalGeneration": 2
+  },
+  "cleanup": {
+    "attempted": true,
+    "succeeded": true
+  }
+}

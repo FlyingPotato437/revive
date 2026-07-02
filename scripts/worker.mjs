@@ -14,6 +14,7 @@ const BATCH = Number(process.env.REVIVE_WORKER_BATCH || 10);
 const IDLE_MS = Number(process.env.REVIVE_WORKER_IDLE_MS || 5_000);
 const BUSY_MS = Number(process.env.REVIVE_WORKER_BUSY_MS || 250);
 const STALL_ALERT_MS = Number(process.env.REVIVE_WORKER_STALL_ALERT_MS || 120_000);
+const WORKER_ID = process.env.REVIVE_WORKER_ID || `worker-${process.pid}`;
 
 if (!SECRET) {
   console.error("REVIVE_WORKER_SECRET is required");
@@ -32,7 +33,7 @@ function log(level, message, extra = {}) {
 async function drainOnce() {
   const response = await fetch(`${BASE}/api/internal/jobs/drain?limit=${BATCH}`, {
     method: "POST",
-    headers: { authorization: `Bearer ${SECRET}` },
+    headers: { authorization: `Bearer ${SECRET}`, "x-revive-worker-id": WORKER_ID },
     signal: AbortSignal.timeout(30_000),
   });
   if (response.status === 503) return { claimed: 0, degraded: "database not configured" };
@@ -41,7 +42,7 @@ async function drainOnce() {
 }
 
 async function loop() {
-  log("info", "worker started", { base: BASE, batch: BATCH });
+  log("info", "worker started", { base: BASE, batch: BATCH, workerId: WORKER_ID });
   while (running) {
     try {
       inFlight = drainOnce();

@@ -61,6 +61,11 @@ Nango connect sessions are exposed at
 `POST /api/integrations/nango/connect-session`. Auth0 Token Vault exchange is a
 server-only adapter so subject tokens are not returned through the browser.
 
+Hosted recovery cases use signed, expiring recovery capabilities. A Nango
+reconnect session reauthorizes the existing connection, Microsoft Graph `/me`
+verifies the provider subject, and the control plane advances the credential
+lease before a runtime can resume.
+
 ## Run the sidecar tests
 
 ```bash
@@ -90,6 +95,20 @@ that file as a whitepaper. If the report is missing, the page shows no numbers.
 The methodology explicitly excludes customer recovery rate, provider-wide
 compatibility, cost savings and availability claims.
 
+The opt-in live certification uses a configured Nango connection, a durable
+LangGraph SQLite checkpointer, and one temporary Microsoft Graph draft:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e 'sidecar[langgraph]'
+npm run certify:live
+```
+
+It injects transport loss after Graph accepts the draft, reconciles upstream,
+asserts one mutation and one remote draft, then deletes the draft. The result is
+written to `benchmarks/results/revive-certification-live.json` and is presented
+separately from local ReviveBench counts.
+
 ## TypeScript SDK
 
 The packageable TypeScript SDK lives in `sdk/typescript` and exposes the
@@ -107,6 +126,9 @@ optional side-effect reconciliation.
 
 Read `docs/trust-boundaries.md` for the token custody model, recovery state
 machine, threat model, deployment options and hosted production gates.
+Use `docs/production-runbook.md` for worker, backup, retention and key-rotation
+operations. `docs/security-review-packet.md` defines the independent review
+that remains required before general availability.
 
 ## Architecture
 
@@ -129,7 +151,11 @@ sidecar/revive/
   adapters/           framework-native integrations
 ```
 
-The repository contains these integration paths, but external provisioning is
-still required: owned Entra/Nango/Auth0 tenants, managed Postgres, a secret
-manager/KMS, a continuously scheduled queue worker and a Temporal namespace.
-Exercise the paths against staging tenants before accepting customer credentials.
+This development environment now has a live Entra/Nango connection and hosted
+Postgres, and the checked-in certification artifact records one controlled
+LangGraph/Microsoft Graph correctness run. External production gates remain:
+deploy the queue worker, inject encryption keys from a managed secret manager
+or KMS, configure hosted SSO/MFA, complete an isolated backup restore drill,
+commission an independent security review, and repeat certification in a
+design-partner staging tenant. Auth0 and a deployed Temporal namespace remain
+uncertified integration options.

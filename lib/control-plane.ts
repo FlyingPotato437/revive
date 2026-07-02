@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Sql } from "postgres";
 import { hostedDatabaseEnabled, withWorkspaceTransaction } from "./hosted";
+import { createRecoveryAccessUrl } from "./recovery-access";
 
 export type CaseState =
   | "detected"
@@ -445,7 +446,7 @@ export async function openCase(workspaceId: string, input: OpenCaseInput): Promi
       idempotencyKey: input.idempotencyKey, provider: input.provider,
       policy: input.policy || "interactive_reauth", reason: String(input.reason).slice(0, 400),
       state: "detected", version: 1, leaseGeneration: input.leaseGeneration,
-      url: `/reauthorize/${caseId}`,
+      url: createRecoveryAccessUrl(caseId, workspaceId),
       events: [{ at: now, from: null, to: "detected", actor: input.actor || "sdk", note: input.reason.slice(0, 200) }],
       openedAt: now, updatedAt: now,
     };
@@ -476,7 +477,7 @@ export async function openCase(workspaceId: string, input: OpenCaseInput): Promi
         (${caseId}, ${workspaceId}, ${input.runId}, ${input.checkpointId || null}, ${input.connectionId},
          ${input.actionKey}, ${input.idempotencyKey}, ${input.provider || null},
          ${input.policy || "interactive_reauth"}, ${input.reason.slice(0, 400)}, 'detected', 1,
-         ${input.leaseGeneration ?? null}, ${`/reauthorize/${caseId}`}, ${sql.json(jsonEvents)})
+         ${input.leaseGeneration ?? null}, ${createRecoveryAccessUrl(caseId, workspaceId)}, ${sql.json(jsonEvents)})
       on conflict (workspace_id, run_id, action_key)
         where state not in ('completed','rejected','expired','escalated','manual_review')
       do nothing

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { approveReconsent } from "@/lib/engine";
-import { sessionForTicket } from "@/lib/store";
 import { entraConfigured } from "@/lib/oauth/entra";
+import { nangoConfigured } from "@/lib/integrations/nango";
+import { loadConnectionBinding } from "@/lib/hosted";
+import { resolveRecoveryTarget } from "@/lib/recovery-target";
 
 export const dynamic = "force-dynamic";
 
@@ -11,22 +13,40 @@ export async function GET(
   { params }: { params: Promise<{ ticket: string }> },
 ) {
   const { ticket } = await params;
-  const session = sessionForTicket(ticket);
-  if (!session) return NextResponse.json({ error: "unknown ticket" }, { status: 404 });
-  const t = session.revive.ticket;
-  if (!t || t.id !== ticket) {
-    return NextResponse.json({ error: "ticket not active" }, { status: 410 });
+  const target = await resolveRecoveryTarget(ticket);
+  if (!target) return NextResponse.json({ error: "ticket expired, consumed, or unknown" }, { status: 410 });
+  if (target.kind === "sandbox") {
+    const realEntra = target.ticket.provider === "microsoft" && entraConfigured();
+    return NextResponse.json({
+      ticket: target.ticket,
+      classifier: target.session.revive.classifier,
+      authorization: {
+        mode: realEntra ? "entra_pkce" : "sandbox",
+        url: realEntra ? `/api/oauth/entra/start?ticket=${encodeURIComponent(ticket)}` : null,
+      },
+    });
   }
-  if (Date.now() >= t.expiresAt || t.status !== "open") {
-    return NextResponse.json({ error: "ticket expired or consumed" }, { status: 410 });
-  }
-  const realEntra = t.provider === "microsoft" && entraConfigured();
+
+  const binding = await loadConnectionBinding(target.record.connectionId, target.record.workspaceId);
+  const expiresAt = target.claims.exp * 1000;
   return NextResponse.json({
-    ticket: t,
-    classifier: session.revive.classifier,
+    ticket: {
+      id: ticket,
+      runId: target.record.runId,
+      sessionId: `control:${target.record.id}`,
+      provider: target.record.provider === "google" ? "google" : "microsoft",
+      account: binding?.accountId || target.record.connectionId,
+      scopes: binding?.scopes?.length ? binding.scopes : ["offline_access", "User.Read", "Mail.ReadWrite"],
+      url: target.record.url || `/reauthorize/${ticket}`,
+      reason: target.record.reason,
+      code: target.record.reason.split(":", 1)[0] || "credential_rejected",
+      createdAt: target.record.openedAt,
+      expiresAt,
+      status: "open",
+    },
     authorization: {
-      mode: realEntra ? "entra_pkce" : "sandbox",
-      url: realEntra ? `/api/oauth/entra/start?ticket=${encodeURIComponent(ticket)}` : null,
+      mode: nangoConfigured() ? "nango_connect" : "unavailable",
+      url: null,
     },
   });
 }
@@ -37,8 +57,12 @@ export async function POST(
   { params }: { params: Promise<{ ticket: string }> },
 ) {
   const { ticket } = await params;
-  const session = sessionForTicket(ticket);
-  if (session?.revive.ticket?.provider === "microsoft" && entraConfigured()) {
+  const target = await resolveRecoveryTarget(ticket);
+  if (!target) return NextResponse.json({ ok: false, reason: "recovery request is inactive" }, { status: 410 });
+  if (target.kind === "control") {
+    return NextResponse.json({ ok: false, reason: "complete authorization through the configured credential vault" }, { status: 409 });
+  }
+  if (target.ticket.provider === "microsoft" && entraConfigured()) {
     return NextResponse.json({ ok: false, reason: "complete Microsoft Entra authorization" }, { status: 409 });
   }
   const result = approveReconsent(ticket);

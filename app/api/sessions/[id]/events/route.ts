@@ -14,7 +14,7 @@ export async function GET(
   if (!auth) return new Response("unauthorized", { status: 401 });
   const { id } = await params;
   const session = getSession(id);
-  const workspace = selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
+  const workspace = await selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
   if (session?.workspaceId && session.workspaceId !== workspace.id) return new Response("not found", { status: 404 });
 
   const encoder = new TextEncoder();

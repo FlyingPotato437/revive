@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   const session = sessionFromCookies(request.cookies);
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const body = await request.json().catch(() => ({}));
-  const workspace = listWorkspaces(session.email).find((item) => item.id === body.workspaceId);
+  const workspace = (await listWorkspaces(session.email)).find((item) => item.id === body.workspaceId);
   if (!workspace) return NextResponse.json({ error: "workspace not found" }, { status: 404 });
   const response = NextResponse.json({ ok: true, workspaceId: workspace.id });
   response.cookies.set(WORKSPACE_COOKIE, workspace.id, {

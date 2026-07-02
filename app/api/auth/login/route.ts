@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSession, sessionCookieOptions, SESSION_COOKIE, verifyUser } from "@/lib/auth";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceRateLimit(req, "auth:login", 10, 60);
+  if (limited) return limited;
   let body: { email?: string; password?: string } = {};
   try {
     body = await req.json();

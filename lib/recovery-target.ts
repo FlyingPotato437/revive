@@ -1,0 +1,22 @@
+import { getCase, TERMINAL_STATES, type ControlCase } from "./control-plane";
+import { sessionForTicket } from "./store";
+import { verifyRecoveryAccessToken, type RecoveryAccessClaims } from "./recovery-access";
+import type { ReconsentTicket, SessionState } from "./types";
+
+export type RecoveryTarget =
+  | { kind: "sandbox"; session: SessionState; ticket: ReconsentTicket }
+  | { kind: "control"; record: ControlCase; claims: RecoveryAccessClaims };
+
+export async function resolveRecoveryTarget(token: string): Promise<RecoveryTarget | null> {
+  const sandbox = sessionForTicket(token);
+  const sandboxTicket = sandbox?.revive.ticket;
+  if (sandbox && sandboxTicket?.id === token && sandboxTicket.status === "open" && sandboxTicket.expiresAt > Date.now()) {
+    return { kind: "sandbox", session: sandbox, ticket: sandboxTicket };
+  }
+
+  const claims = verifyRecoveryAccessToken(token);
+  if (!claims) return null;
+  const record = await getCase(claims.workspaceId, claims.caseId);
+  if (!record || TERMINAL_STATES.has(record.state)) return null;
+  return { kind: "control", record, claims };
+}

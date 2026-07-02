@@ -4,8 +4,8 @@
 //   atomic 0600 JSON file under .revive/ (survives restarts either way).
 // - scrypt-hashed passwords, constant-time compares.
 // - HMAC-signed session cookie.
-// Production gaps that remain (tracked in ENGINEERING-GAPS.md): SSO/MFA, RBAC,
-// password reset, and session revocation lists.
+// Production gaps that remain: hosted SSO/MFA, password reset, and server-side
+// session revocation. Workspace RBAC is enforced separately in lib/rbac.ts.
 // ---------------------------------------------------------------------------
 
 import crypto from "node:crypto";

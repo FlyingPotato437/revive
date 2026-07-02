@@ -12,8 +12,8 @@ export default async function AppLayout({
   const jar = await cookies();
   const session = verifySession(jar.get(SESSION_COOKIE)?.value);
   if (!session) redirect("/login");
-  const workspaces = listWorkspaces(session.email);
-  const currentWorkspace = selectedWorkspace(session.email, jar.get(WORKSPACE_COOKIE)?.value);
+  const workspaces = await listWorkspaces(session.email);
+  const currentWorkspace = await selectedWorkspace(session.email, jar.get(WORKSPACE_COOKIE)?.value);
 
   return <AppChrome
     email={session.email}

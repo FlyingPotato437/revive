@@ -2,6 +2,20 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import postgres from "postgres";
 
+if (!process.env.DATABASE_URL) {
+  try {
+    const local = await fs.readFile(path.join(process.cwd(), ".env.local"), "utf8");
+    for (const line of local.split(/\r?\n/)) {
+      const index = line.indexOf("=");
+      if (index < 1) continue;
+      const key = line.slice(0, index).trim();
+      if (key !== "DATABASE_URL" && key !== "REVIVE_DATABASE_SSL") continue;
+      process.env[key] = line.slice(index + 1).trim().replace(/^['\"]|['\"]$/g, "");
+    }
+  } catch {
+    // The explicit error below remains the source of truth.
+  }
+}
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
 const sql = postgres(process.env.DATABASE_URL, {
   max: 1,

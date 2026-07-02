@@ -24,6 +24,12 @@ export interface QueueJob {
   maxAttempts: number;
 }
 
+export interface DeadQueueJob extends QueueJob {
+  workspaceId?: string;
+  lastError?: string;
+  updatedAt: string;
+}
+
 export function hostedDatabaseEnabled(): boolean {
   return Boolean(process.env.DATABASE_URL);
 }
@@ -160,23 +166,27 @@ export async function saveCredentialConnection(input: CredentialConnectionInput)
   const encrypted = sealJson(input.tokenSet, `credential:${input.id}`);
   const fingerprint = crypto.createHash("sha256").update(String(input.tokenSet.access_token || "")).digest("hex").slice(0, 16);
   if (hostedDatabaseEnabled()) {
-    const sql = sqlClient();
+    if (!input.workspaceId) throw new Error("workspaceId is required for hosted credential connections");
+    const workspaceId = input.workspaceId;
     const metadata = JSON.parse(JSON.stringify(input.metadata || {}));
-    await sql`
-      insert into revive_connections
-        (id, workspace_id, provider, account_id, scopes, encrypted_token_set, token_fingerprint, metadata, generation, status, created_at, updated_at)
-      values
-        (${input.id}, ${input.workspaceId || null}, ${input.provider}, ${input.accountId || null}, ${input.scopes}, ${encrypted}, ${fingerprint}, ${sql.json(metadata)}, 1, 'active', now(), now())
-      on conflict (id) do update set
-        account_id = excluded.account_id,
-        scopes = excluded.scopes,
-        encrypted_token_set = excluded.encrypted_token_set,
-        token_fingerprint = excluded.token_fingerprint,
-        metadata = excluded.metadata,
-        generation = revive_connections.generation + 1,
-        status = 'active',
-        updated_at = now()
-    `;
+    await withWorkspaceTransaction(workspaceId, async (sql) => {
+      await sql`
+        insert into revive_connections
+          (id, workspace_id, provider, account_id, scopes, encrypted_token_set, token_fingerprint, metadata, generation, status, created_at, updated_at)
+        values
+          (${input.id}, ${workspaceId}, ${input.provider}, ${input.accountId || null}, ${input.scopes}, ${encrypted}, ${fingerprint}, ${sql.json(metadata)}, 1, 'active', now(), now())
+        on conflict (id) do update set
+          account_id = excluded.account_id,
+          scopes = excluded.scopes,
+          encrypted_token_set = excluded.encrypted_token_set,
+          token_fingerprint = excluded.token_fingerprint,
+          metadata = excluded.metadata,
+          generation = revive_connections.generation + 1,
+          status = 'active',
+          updated_at = now()
+        where revive_connections.workspace_id = excluded.workspace_id
+      `;
+    });
     return;
   }
 
@@ -193,10 +203,51 @@ export async function saveCredentialConnection(input: CredentialConnectionInput)
   fs.renameSync(temporary, file);
 }
 
+/** Store an external-vault reference and immutable provider identity, never raw provider tokens. */
+export async function saveExternalVaultConnection(input: {
+  id: string;
+  workspaceId?: string;
+  provider: string;
+  accountId: string;
+  scopes: string[];
+  vault: "nango" | "auth0";
+  integrationId: string;
+  providerSubject: string;
+  providerTenant: string;
+  displayName?: string;
+}): Promise<void> {
+  await saveCredentialConnection({
+    id: input.id,
+    workspaceId: input.workspaceId,
+    provider: input.provider,
+    accountId: input.accountId,
+    scopes: input.scopes,
+    tokenSet: {
+      custody: "external",
+      vault: input.vault,
+      connectionId: input.id,
+      integrationId: input.integrationId,
+    },
+    metadata: {
+      source: `${input.vault}_external_vault`,
+      issuer: `https://login.microsoftonline.com/${input.providerTenant}/v2.0`,
+      providerSubject: input.providerSubject,
+      providerTenant: input.providerTenant,
+      displayName: input.displayName,
+      integrationId: input.integrationId,
+    },
+  });
+}
+
 export interface ConnectionIdentity {
   issuer?: string;
   subject?: string;
   tenant?: string;
+}
+
+export interface ConnectionBinding extends ConnectionIdentity {
+  accountId?: string;
+  scopes: string[];
 }
 
 /**
@@ -205,33 +256,44 @@ export interface ConnectionIdentity {
  * recovery when the connection already exists.
  */
 export async function loadConnectionIdentity(connectionId: string, workspaceId?: string): Promise<ConnectionIdentity | null> {
+  const binding = await loadConnectionBinding(connectionId, workspaceId);
+  if (!binding) return null;
+  return { issuer: binding.issuer, subject: binding.subject, tenant: binding.tenant };
+}
+
+export async function loadConnectionBinding(connectionId: string, workspaceId?: string): Promise<ConnectionBinding | null> {
   if (!connectionId) return null;
   if (hostedDatabaseEnabled()) {
-    const sql = sqlClient();
-    const rows = await sql<{ metadata: Record<string, unknown> }[]>`
-      select metadata from revive_connections
-      where id = ${connectionId}
-        and (${workspaceId || null}::text is null or workspace_id = ${workspaceId || null})
+    if (!workspaceId) throw new Error("workspaceId is required to load a hosted connection");
+    const rows = await withWorkspaceTransaction(workspaceId, async (sql) => sql<{
+      metadata: Record<string, unknown>; account_id: string | null; scopes: string[] | null;
+    }[]>`
+      select metadata, account_id, scopes from revive_connections
+      where id = ${connectionId} and workspace_id = ${workspaceId}
       limit 1
-    `;
+    `);
     if (!rows.length) return null;
     const metadata = rows[0].metadata || {};
     return {
       issuer: metadata.issuer as string | undefined,
       subject: metadata.providerSubject as string | undefined,
       tenant: metadata.providerTenant as string | undefined,
+      accountId: rows[0].account_id || undefined,
+      scopes: rows[0].scopes || [],
     };
   }
   const directory = process.env.REVIVE_STATE_DIR || path.join(process.cwd(), ".revive");
   try {
     const records = JSON.parse(fs.readFileSync(path.join(directory, "credential-connections.json"), "utf8")) as
-      { id: string; workspaceId?: string; metadata?: Record<string, unknown> }[];
+      { id: string; workspaceId?: string; accountId?: string; scopes?: string[]; metadata?: Record<string, unknown> }[];
     const record = records.find((item) => item.id === connectionId && (!workspaceId || item.workspaceId === workspaceId));
     if (!record) return null;
     return {
       issuer: record.metadata?.issuer as string | undefined,
       subject: record.metadata?.providerSubject as string | undefined,
       tenant: record.metadata?.providerTenant as string | undefined,
+      accountId: record.accountId,
+      scopes: record.scopes || [],
     };
   } catch {
     return null;
@@ -272,7 +334,7 @@ export async function claimJobs(limit = 10): Promise<QueueJob[]> {
 }
 
 export async function completeJob(id: string): Promise<void> {
-  await sqlClient()`update revive_jobs set status = 'completed', locked_at = null, updated_at = now() where id = ${id}`;
+  await sqlClient()`update revive_jobs set status = 'completed', locked_at = null, completed_at = now(), updated_at = now() where id = ${id}`;
 }
 
 export async function failJob(job: QueueJob, message: string): Promise<void> {
@@ -282,9 +344,119 @@ export async function failJob(job: QueueJob, message: string): Promise<void> {
     update revive_jobs
     set status = ${terminal ? "dead" : "pending"},
         last_error = ${message.slice(0, 2000)},
+        dead_at = case when ${terminal} then now() else null end,
         run_at = case when ${terminal} then run_at else now() + (${delaySeconds} * interval '1 second') end,
         locked_at = null,
         updated_at = now()
     where id = ${job.id}
   `;
+}
+
+export async function recordWorkerHeartbeat(input: {
+  workerId: string;
+  success: boolean;
+  consecutiveFailures?: number;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  if (!hostedDatabaseEnabled()) return;
+  const workerId = input.workerId.replace(/[^a-zA-Z0-9_.:-]/g, "").slice(0, 120) || "worker";
+  const metadata = JSON.parse(JSON.stringify(input.metadata || {}));
+  const sql = sqlClient();
+  await sql`
+    insert into revive_worker_heartbeats
+      (worker_id, last_seen_at, last_success_at, consecutive_failures, metadata)
+    values
+      (${workerId}, now(), ${input.success ? new Date() : null}, ${input.consecutiveFailures || 0}, ${sql.json(metadata)})
+    on conflict (worker_id) do update set
+      last_seen_at = now(),
+      last_success_at = case when ${input.success} then now() else revive_worker_heartbeats.last_success_at end,
+      consecutive_failures = ${input.consecutiveFailures || 0},
+      metadata = excluded.metadata
+  `;
+}
+
+export async function queueHealth(): Promise<{
+  pending: number;
+  running: number;
+  dead: number;
+  oldestPendingAt?: string;
+  workers: { workerId: string; lastSeenAt: string; lastSuccessAt?: string; consecutiveFailures: number }[];
+}> {
+  const sql = sqlClient();
+  const counts = await sql<{ status: string; count: number | string; oldest: Date | null }[]>`
+    select status, count(*) as count, min(created_at) as oldest
+    from revive_jobs where status in ('pending','running','dead') group by status
+  `;
+  const workers = await sql<{ worker_id: string; last_seen_at: Date; last_success_at: Date | null; consecutive_failures: number }[]>`
+    select worker_id, last_seen_at, last_success_at, consecutive_failures
+    from revive_worker_heartbeats order by last_seen_at desc limit 20
+  `;
+  const byStatus = Object.fromEntries(counts.map((row) => [row.status, Number(row.count)]));
+  const pending = counts.find((row) => row.status === "pending");
+  return {
+    pending: byStatus.pending || 0,
+    running: byStatus.running || 0,
+    dead: byStatus.dead || 0,
+    oldestPendingAt: pending?.oldest?.toISOString(),
+    workers: workers.map((row) => ({
+      workerId: row.worker_id,
+      lastSeenAt: row.last_seen_at.toISOString(),
+      lastSuccessAt: row.last_success_at?.toISOString(),
+      consecutiveFailures: row.consecutive_failures,
+    })),
+  };
+}
+
+export async function listDeadJobs(workspaceId: string): Promise<DeadQueueJob[]> {
+  const rows = await sqlClient()<{
+    id: string; kind: string; payload: Record<string, unknown>; attempts: number; max_attempts: number;
+    workspace_id: string | null; last_error: string | null; updated_at: Date;
+  }[]>`
+    select id, kind, payload, attempts, max_attempts, workspace_id, last_error, updated_at
+    from revive_jobs where status = 'dead' and workspace_id = ${workspaceId}
+    order by updated_at desc limit 100
+  `;
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    payload: row.payload,
+    attempts: row.attempts,
+    maxAttempts: row.max_attempts,
+    workspaceId: row.workspace_id || undefined,
+    lastError: row.last_error || undefined,
+    updatedAt: row.updated_at.toISOString(),
+  }));
+}
+
+export async function retryDeadJob(workspaceId: string, jobId: string): Promise<boolean> {
+  const rows = await sqlClient()<{ id: string }[]>`
+    update revive_jobs set status = 'pending', attempts = 0, run_at = now(), locked_at = null,
+      last_error = null, dead_at = null, updated_at = now()
+    where id = ${jobId} and workspace_id = ${workspaceId} and status = 'dead'
+    returning id
+  `;
+  return Boolean(rows[0]);
+}
+
+export async function runRetention(): Promise<Record<string, number>> {
+  const completedDays = Math.max(1, Number(process.env.REVIVE_COMPLETED_JOB_RETENTION_DAYS || 14));
+  const deadDays = Math.max(7, Number(process.env.REVIVE_DEAD_JOB_RETENTION_DAYS || 90));
+  const resolvedCaseDays = Math.max(30, Number(process.env.REVIVE_CASE_RETENTION_DAYS || 365));
+  const sql = sqlClient();
+  const completed = await sql`delete from revive_jobs where status = 'completed' and completed_at < now() - (${completedDays} * interval '1 day') returning id`;
+  const dead = await sql`delete from revive_jobs where status = 'dead' and dead_at < now() - (${deadDays} * interval '1 day') returning id`;
+  const workspaces = await sql<{ id: string }[]>`select id from revive_workspaces`;
+  let recoveryCases = 0;
+  for (const workspace of workspaces) {
+    const cases = await withWorkspaceTransaction(workspace.id, async (tx) => tx`
+      delete from revive_recovery_cases
+      where workspace_id = ${workspace.id}
+        and resolved_at < now() - (${resolvedCaseDays} * interval '1 day')
+        and state in ('completed','rejected','expired','escalated','manual_review')
+      returning id
+    `);
+    recoveryCases += cases.count;
+  }
+  await sql`delete from revive_rate_limits where expires_at < now()`;
+  return { completedJobs: completed.count, deadJobs: dead.count, recoveryCases };
 }

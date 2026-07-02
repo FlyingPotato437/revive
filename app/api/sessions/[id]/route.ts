@@ -14,7 +14,7 @@ export async function GET(
   const { id } = await params;
   const session = getSession(id);
   if (!session) return NextResponse.json({ error: "not found" }, { status: 404 });
-  const workspace = selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
+  const workspace = await selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
   if (session.workspaceId && session.workspaceId !== workspace.id) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json({ session });
 }

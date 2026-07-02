@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import benchmarkReport from "@/benchmarks/results/revivebench-local.json";
+import liveCertification from "@/benchmarks/results/revive-certification-live.json";
 import { EvidenceReveal } from "@/components/marketing/EvidenceReveal";
 
 export const metadata: Metadata = {
@@ -44,6 +45,21 @@ type Report = {
   };
   summary: { executions: number; passed: number; failed: number };
   cases: CaseResult[];
+};
+
+type LiveCertification = {
+  generatedAt: string;
+  sourceCommit: string;
+  passed: boolean;
+  durationMs: number;
+  runtime: { name: string; checkpointer: string; threadId: string };
+  credentialSystem: { name: string; integrationId: string; connectionHash: string };
+  provider: { name: string; operation: string };
+  failureInjection: { credential: string; sideEffect: string };
+  assertions: Record<string, boolean>;
+  observed: { mutationCalls: number; remoteDraftCount: number; finalGeneration: number };
+  cleanup: { attempted: boolean; succeeded: boolean };
+  claimsExcluded: string[];
 };
 
 const caseDetails: Record<string, { failure: string; acceptance: string; evidence: string }> = {
@@ -107,6 +123,7 @@ function displayValue(value: ObservationValue) {
 
 export default function BenchmarkWhitepaperPage() {
   const report = benchmarkReport as Report;
+  const live = liveCertification as LiveCertification;
   const allRuns = report.cases.flatMap((item) => item.runs);
   const representative = report.cases.find((item) => item.id === "same-run-resume")?.exampleRun;
   const representativeTags = Array.isArray(representative?.observed?.eventTags)
@@ -138,7 +155,7 @@ export default function BenchmarkWhitepaperPage() {
               <dt className="font-mono text-[#8a929d]">Generated</dt><dd>{formatDate(report.generatedAt)}</dd>
               <dt className="font-mono text-[#8a929d]">Commit</dt><dd className="font-mono">{report.sourceCommit ?? "unavailable"}</dd>
               <dt className="font-mono text-[#8a929d]">Source</dt><dd>{report.sourceTreeDirty ? "Uncommitted changes present" : "Clean tree"}</dd>
-              <dt className="font-mono text-[#8a929d]">Scope</dt><dd>Local correctness only</dd>
+              <dt className="font-mono text-[#8a929d]">Scope</dt><dd>Local suite plus one live certification</dd>
             </dl>
           </EvidenceReveal>
         </div>
@@ -159,6 +176,7 @@ export default function BenchmarkWhitepaperPage() {
             <p className="mb-5 font-mono text-[9px] text-[#8a929d]">CONTENTS</p>
             {[
               ["abstract", "Abstract"],
+              ["live-certification", "Live certification"],
               ["apparatus", "System under test"],
               ["method", "Method"],
               ["results", "Results"],
@@ -179,8 +197,40 @@ export default function BenchmarkWhitepaperPage() {
               Revive coordinates recovery after an OAuth grant can no longer be refreshed. The benchmark asks a narrower question than a product demo: does the recovery engine preserve the original run, enforce account identity, fence stale workers, and prevent an ambiguous mutation from being repeated?
             </p>
             <div className="mt-8 border-l-[4px] border-[#4967f2] bg-[#e9ecff] px-5 py-4 text-[12px] leading-6 text-[#414b5b]">
-              Result: all {report.summary.executions} local executions satisfied their assertions. This is evidence of deterministic recovery invariants, not evidence of Microsoft Graph compatibility or production availability.
+              Result: all {report.summary.executions} local executions satisfied their assertions. A separate live certification below covers one Nango, Microsoft Graph, and LangGraph path.
             </div>
+          </ReportSection>
+
+          <ReportSection id="live-certification" title="Live provider certification">
+            <div className="border border-[#151922] bg-[#fbfcf8] shadow-[7px_7px_0_#d9ddd6]">
+              <div className="flex flex-col gap-3 border-b border-[#151922] bg-[#e9ecff] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="font-mono text-[9px] text-[#596273]">NANGO / MICROSOFT GRAPH / LANGGRAPH</div>
+                  <h3 className="mt-2 text-[19px] font-semibold tracking-[-0.03em]">One real draft. One recovered thread. No duplicate write.</h3>
+                </div>
+                <span className={`font-mono text-[9px] font-semibold ${live.passed ? "text-[#18724e]" : "text-[#a23d34]"}`}>
+                  {live.passed ? "PASSED" : "FAILED"}
+                </span>
+              </div>
+              <div className="grid gap-px bg-[#cfd4da] sm:grid-cols-2 lg:grid-cols-4">
+                <MethodDatum label="Runtime" value={`${live.runtime.name}, ${live.runtime.checkpointer}`} />
+                <MethodDatum label="Credential custody" value={`${live.credentialSystem.name}, ${live.credentialSystem.integrationId}`} />
+                <MethodDatum label="Provider action" value={`${live.provider.name}, ${live.provider.operation}`} />
+                <MethodDatum label="Observed result" value={`${live.observed.mutationCalls} mutation, ${live.observed.remoteDraftCount} remote draft, generation ${live.observed.finalGeneration}`} />
+              </div>
+              <div className="grid gap-7 px-5 py-6 md:grid-cols-2">
+                <div><h4 className="font-mono text-[9px] text-[#8a929d]">Credential boundary</h4><p className="mt-3 text-[11px] leading-5 text-[#596273]">{live.failureInjection.credential}</p></div>
+                <div><h4 className="font-mono text-[9px] text-[#8a929d]">Side-effect boundary</h4><p className="mt-3 text-[11px] leading-5 text-[#596273]">{live.failureInjection.sideEffect}</p></div>
+              </div>
+              <dl className="grid gap-px border-t border-[#cfd4da] bg-[#cfd4da] sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(live.assertions).map(([key, value]) => <div key={key} className="bg-[#f4f5f1] p-4"><dt className="font-mono text-[8px] text-[#8a929d]">{key}</dt><dd className={`mt-2 font-mono text-[9px] ${value ? "text-[#18724e]" : "text-[#a23d34]"}`}>{value ? "passed" : "failed"}</dd></div>)}
+              </dl>
+              <div className="flex flex-col gap-3 border-t border-[#151922] px-5 py-4 text-[10px] text-[#687180] sm:flex-row sm:items-center sm:justify-between">
+                <span>Temporary draft cleanup: {live.cleanup.succeeded ? "confirmed" : "not confirmed"}. Generated {formatDate(live.generatedAt)}.</span>
+                <a href="/api/evidence/revivebench?artifact=live&download=1" className="font-semibold text-[#2e49c8]">Download live JSON</a>
+              </div>
+            </div>
+            <p className="mt-5 text-[10px] leading-5 text-[#7b8491]">This certifies one controlled path. It does not establish provider-wide recovery rates, availability, throughput, or customer MTTR.</p>
           </ReportSection>
 
           <ReportSection id="apparatus" title="System under test">
@@ -291,24 +341,25 @@ export default function BenchmarkWhitepaperPage() {
                   <li>File-backed recovery after replacing the worker instance.</li>
                   <li>Provider-subject binding and credential-generation fencing.</li>
                   <li>Reconciliation before repeating an ambiguous mutation.</li>
+                  <li>One live Nango, Microsoft Graph draft, and durable LangGraph recovery path.</li>
                 </ul>
               </div>
               <div className="border-l border-[#bfc5cc] pl-6">
                 <h3 className="text-[18px] font-semibold">Not measured yet</h3>
                 <ul className="mt-5 space-y-4 text-[12px] leading-5 text-[#687180]">
                   {report.methodology.exclusions.map((item) => <li key={item}>{item}</li>)}
-                  <li>Nango, Microsoft Graph, and production LangGraph recovery.</li>
+                  <li>Naturally occurring revoked-grant recovery across customer tenants.</li>
                 </ul>
               </div>
             </div>
             <div className="mt-10 border border-[#c98c42] bg-[#fff3dd] p-5 text-[11px] leading-5 text-[#6e4c20]">
-              The next report revision should replace the local provider fixture with the certified Nango, Microsoft Graph, and LangGraph path. Until then, the page does not claim live-provider recovery.
+              The live certification is a controlled correctness result from one tenant and one connection. Broader production claims require repeated design-partner runs and operated service history.
             </div>
           </ReportSection>
 
           <ReportSection id="reproduce" title="Reproduce the report">
             <p className="max-w-[680px] text-[13px] leading-6 text-[#687180]">The runner rewrites the artifact from fresh executions. Any unmet assertion is retained in the JSON and produces a non-zero exit code.</p>
-            <pre className="mt-7 overflow-x-auto border border-[#151922] bg-[#151922] p-5 font-mono text-[11px] leading-6 text-[#f4f5f1]"><code>{"npm run bench:revive\npython3 -m unittest discover -s sidecar/tests -v"}</code></pre>
+            <pre className="mt-7 overflow-x-auto border border-[#151922] bg-[#151922] p-5 font-mono text-[11px] leading-6 text-[#f4f5f1]"><code>{"npm run bench:revive\npython3 -m unittest discover -s sidecar/tests -v\nnpm run certify:live"}</code></pre>
             <div className="mt-7 flex flex-wrap gap-3">
               <a href="/api/evidence/revivebench?download=1" className="inline-flex h-10 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">Download raw JSON</a>
               <a href="https://github.com/revive-labs/revive/blob/main/sidecar/benchmarks/revivebench.py" className="inline-flex h-10 items-center border border-[#151922] bg-transparent px-4 text-[10.5px] font-semibold text-[#151922] transition hover:bg-white active:translate-y-px">Read the runner</a>
