@@ -184,6 +184,30 @@ async function main() {
   const freshWorker = await fetch(`${BASE}/v1/actions`, { method: "POST", headers, body: JSON.stringify({ runId: `${run}-f2`, connectionId: fenceConn, actionKey: "b", idempotencyKey: "kf3", leaseGeneration: 2 }) });
   check("fence: rotated worker (generation 2) accepted", freshWorker.status === 200);
 
+  // 7b. replay verdicts: the explicit answer to "should this run again?"
+  const verdictConn = `conn-verdict-${Date.now()}`;
+  const verdictNew = await (await fetch(`${BASE}/v1/actions`, { method: "POST", headers, body: JSON.stringify({ runId: `${run}-v`, connectionId: verdictConn, actionKey: "createTicket", idempotencyKey: "kv1" }) })).json();
+  check("verdict: fresh registration → safe_to_execute", verdictNew.replayVerdict === "safe_to_execute", verdictNew);
+  await fetch(`${BASE}/v1/actions/${verdictNew.id}/started`, { method: "POST", headers, body: "{}" });
+  const verdictStarted = await (await fetch(`${BASE}/v1/actions`, { method: "POST", headers, body: JSON.stringify({ runId: `${run}-v`, connectionId: verdictConn, actionKey: "createTicket", idempotencyKey: "kv1" }) })).json();
+  check("verdict: started replay → reconcile_first", verdictStarted.replayVerdict === "reconcile_first", verdictStarted);
+  await fetch(`${BASE}/v1/actions/${verdictNew.id}/complete`, { method: "POST", headers, body: JSON.stringify({ result: { ok: true } }) });
+  const verdictDone = await (await fetch(`${BASE}/v1/actions`, { method: "POST", headers, body: JSON.stringify({ runId: `${run}-v`, connectionId: verdictConn, actionKey: "createTicket", idempotencyKey: "kv1" }) })).json();
+  check("verdict: completed replay → already_committed", verdictDone.replayVerdict === "already_committed", verdictDone);
+
+  // 7c. policy engine: high-risk action (email) → approval_required; approve releases it.
+  const policyCase = await (await fetch(`${BASE}/v1/recovery-cases`, { method: "POST", headers, body: JSON.stringify({ runId: `${run}-p`, connectionId: connection, actionKey: "sendMail", idempotencyKey: "kp1", policy: "interactive_reauth", reason: "AADSTS700082 policy itest" }) })).json();
+  check("policy: credential failure on email action → approval_required", policyCase.resumeDecision === "approval_required" && policyCase.failureClass === "credential_rejected", policyCase);
+  const approved = await (await fetch(`${BASE}/v1/recovery-cases/${policyCase.id}/approve`, { method: "POST", headers, body: JSON.stringify({ expectedVersion: policyCase.version, approver: "itest-approver" }) })).json();
+  check("approval: approve releases parked → awaiting_authorization", approved.state === "awaiting_authorization" && approved.approvedBy === "itest-approver", approved);
+  const denyCase = await (await fetch(`${BASE}/v1/recovery-cases`, { method: "POST", headers, body: JSON.stringify({ runId: `${run}-p2`, connectionId: connection, actionKey: "sendMail", idempotencyKey: "kp2", policy: "interactive_reauth", reason: "AADSTS700082 deny itest" }) })).json();
+  const denied = await (await fetch(`${BASE}/v1/recovery-cases/${denyCase.id}/deny`, { method: "POST", headers, body: JSON.stringify({ expectedVersion: denyCase.version, note: "not authorized" }) })).json();
+  check("approval: deny terminates case as rejected", denied.state === "rejected", denied);
+
+  // 7d. read-only failure auto-resumes (no approval needed)
+  const readCase = await (await fetch(`${BASE}/v1/recovery-cases`, { method: "POST", headers, body: JSON.stringify({ runId: `${run}-p3`, connectionId: connection, actionKey: "readCalendar", idempotencyKey: "kp3", policy: "interactive_reauth", reason: "AADSTS700082 readonly itest" }) })).json();
+  check("policy: read-only failure → auto_resume", readCase.resumeDecision === "auto_resume", readCase);
+
   // 8. A runtime resume is accepted only after a signed, matching checkpoint acknowledgement.
   const resumeSecret = `runtime-test-${Date.now()}`;
   process.env.REVIVE_RUNTIME_RESUME_SECRET = resumeSecret;

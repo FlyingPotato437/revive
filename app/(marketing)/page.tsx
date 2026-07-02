@@ -30,9 +30,9 @@ export default function Home() {
       <div className="hero-index" aria-hidden="true">RECOVERY<br />WITHOUT<br />REPLAY</div>
       <div className="relative mx-auto grid min-h-[calc(100dvh-63px)] max-w-[1380px] items-center gap-12 px-5 py-12 sm:px-8 lg:grid-cols-[.94fr_1.06fr] lg:gap-16 lg:py-14">
         <div className="relative z-10 max-w-[690px]">
-          <div className="flex items-center gap-3 text-[10px] font-semibold tracking-[.08em] text-[#2e49c8]"><span className="h-[6px] w-[6px] bg-[#4967f2]" />Credential recovery infrastructure</div>
+          <div className="flex items-center gap-3 text-[10px] font-semibold tracking-[.08em] text-[#2e49c8]"><span className="h-[6px] w-[6px] bg-[#4967f2]" />Agent recovery control plane</div>
           <h1 className="mt-7 text-[clamp(48px,5.5vw,78px)] font-semibold leading-[.91] tracking-[-.07em] text-[#151922]"><span className="block">Keep the run.</span><span className="block sm:whitespace-nowrap">Replace the credential.</span></h1>
-          <p className="mt-7 max-w-[540px] text-[16px] leading-7 text-[#5f6876]">Your agents and automations run on other people&rsquo;s logins. When one expires mid-run, the work stops and retries make it worse. Revive brings the account owner back, restores access, and resumes the same run &mdash; without repeating work that already happened.</p>
+          <p className="mt-7 max-w-[540px] text-[16px] leading-7 text-[#5f6876]">Production agents fail mid-run: a login expires, a tool times out, an approval stalls &mdash; after step four already committed. Revive makes failed agents recoverable without duplicating real-world side effects: it parks the run, checks what already happened, brings the right person back, and resumes only when safe.</p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link href="/app" className="inline-flex h-12 items-center border border-[#151922] bg-[#151922] px-5 text-[12px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">See it recover</Link>
             <Link href="#architecture" className="inline-flex h-12 items-center border border-[#151922] px-5 text-[12px] font-semibold text-[#151922] transition hover:bg-white active:translate-y-px">Read architecture</Link>
