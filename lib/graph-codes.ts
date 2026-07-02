@@ -87,6 +87,29 @@ export const CODE_TABLE: CodeEntry[] = [
     remediation: "Run an interactive authorization flow or request admin consent.",
     source: "https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes",
   },
+  {
+    provider: "microsoft",
+    code: "AADSTS90094",
+    oauthError: "invalid_grant",
+    verdict: "dead",
+    title: "Administrator consent is required",
+    reason:
+      "The requested permissions are admin-restricted in this tenant. The signed-in user cannot grant them; a tenant administrator must approve.",
+    remediation:
+      "Route the recovery to an organization administrator (admin-consent flow), not the run owner. Regular re-consent by the user will keep failing.",
+    source: "https://learn.microsoft.com/en-us/entra/identity-platform/v2-admin-consent",
+  },
+  {
+    provider: "microsoft",
+    code: "AADSTS650052",
+    oauthError: "invalid_grant",
+    verdict: "dead",
+    title: "The app needs access to a service your organization has not subscribed to",
+    reason:
+      "Consent cannot be completed because the tenant lacks a required service principal or subscription; an administrator must resolve it.",
+    remediation: "Escalate to an organization administrator.",
+    source: "https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes",
+  },
 
   // --- Microsoft: refreshable (do NOT bother a human) ---------------------
   {

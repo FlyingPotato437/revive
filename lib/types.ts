@@ -78,6 +78,11 @@ export interface TokenInfo {
   scopes: string[];
   generation: number; // fencing generation; stale workers cannot use older generations
   state: "active" | "revoked" | "rotating";
+  /** Bound provider identity (Entra oid / tid). Set on first authorization
+   * (trust-on-first-use); later recoveries must present the same identity.
+   * Email is display metadata only and never used for binding. */
+  subject?: string;
+  tenant?: string;
 }
 
 export interface ReconsentTicket {
@@ -118,6 +123,8 @@ export interface RecoveryCase {
   openedAt: number;
   updatedAt: number;
   resolvedAt?: number;
+  /** Real control-plane transition history (present for hosted /v1 cases). */
+  events?: { at: number; from: string | null; to: string; note?: string; actor: string }[];
 }
 
 export interface ActionAttempt {

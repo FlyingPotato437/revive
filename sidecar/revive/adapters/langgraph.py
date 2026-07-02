@@ -50,17 +50,40 @@ def reconsent_payload(result: ClassifierResult, scopes) -> dict:
     }
 
 
-def revive_refresh(provider: Provider, refresh_token: str, scopes=()) -> Token:
+def revive_refresh(provider: Provider, refresh_token: str, scopes=(),
+                   credential_resolver=None) -> Token:
     """Refresh; on a truly-dead refresh token, durably pause for re-consent and
-    splice the freshly minted token. A still-refreshable error refreshes silently;
-    a transient error is re-raised for the framework's retry policy."""
+    resume with the rotated credential. A still-refreshable error refreshes
+    silently; a transient error is re-raised for the framework's retry policy.
+
+    Resume payload contract — the Command payload is persisted in LangGraph's
+    checkpoint history, so it must stay OPAQUE:
+
+        Command(resume={"connection_id": "...", "lease_generation": 2})
+
+    `credential_resolver(connection_id, lease_generation)` is supplied by the
+    host process and returns the refresh token from the credential store; the
+    raw token never enters workflow history. Passing a raw ``refresh_token`` in
+    the resume payload is supported for local sandbox drills only.
+    """
     try:
         return provider.refresh(refresh_token)
     except TokenError as te:
         result = classify(te.payload)
         if not result.needs_human:
             raise
-        # durable pause via LangGraph's checkpointer; resumes with the new token
+        # durable pause via LangGraph's checkpointer
         reply = interrupt(reconsent_payload(result, scopes))
-        new_refresh = reply["refresh_token"] if isinstance(reply, dict) else reply
+        if isinstance(reply, dict) and reply.get("connection_id"):
+            if credential_resolver is None:
+                raise RuntimeError(
+                    "resume payload references a connection, but no "
+                    "credential_resolver was configured"
+                )
+            new_refresh = credential_resolver(
+                reply["connection_id"], int(reply.get("lease_generation") or 1)
+            )
+        else:
+            # Sandbox-only fallback: raw token in the resume payload.
+            new_refresh = reply["refresh_token"] if isinstance(reply, dict) else reply
         return provider.refresh(new_refresh)

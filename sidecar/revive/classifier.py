@@ -49,6 +49,17 @@ CORPUS: list[CodeEntry] = [
               "Consent has not been granted",
               "The user or tenant administrator has not granted the requested scopes.",
               "Run interactive authorization or request admin consent."),
+    CodeEntry("microsoft", "AADSTS90094", "invalid_grant", Verdict.DEAD,
+              "Administrator consent is required",
+              "The requested permissions are admin-restricted; the signed-in user "
+              "cannot grant them.",
+              "Route recovery to an organization administrator (admin-consent flow); "
+              "user re-consent will keep failing."),
+    CodeEntry("microsoft", "AADSTS650052", "invalid_grant", Verdict.DEAD,
+              "Tenant is missing a required service subscription",
+              "Consent cannot complete without an administrator resolving a missing "
+              "service principal or subscription.",
+              "Escalate to an organization administrator."),
     # Microsoft — refreshable (do NOT bother a human)
     CodeEntry("microsoft", "InvalidAuthenticationToken", "invalid_token", Verdict.REFRESHABLE,
               "Access token expired",

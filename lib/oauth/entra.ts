@@ -7,6 +7,7 @@ const FLOW_TTL_MS = 10 * 60 * 1000;
 export interface EntraFlow {
   state: string;
   verifier: string;
+  nonce: string;
   ticketId: string;
   createdAt: number;
 }
@@ -17,6 +18,76 @@ export interface EntraTokenSet {
   expires_in: number;
   access_token: string;
   refresh_token?: string;
+  id_token?: string;
+}
+
+export interface EntraIdentityClaims {
+  issuer: string;
+  subject: string; // oid — the immutable directory object id
+  tenant: string;  // tid
+}
+
+// --- id_token verification ---------------------------------------------------
+// Full verification: RS256 signature against Microsoft's JWKS, exact issuer for
+// the token's tenant, audience = our client id, exp/nbf window, and the nonce
+// bound to this PKCE flow.
+
+interface Jwk { kid: string; kty: string; n: string; e: string; x5c?: string[] }
+
+const jwksCache = new Map<string, { keys: Jwk[]; fetchedAt: number }>();
+const JWKS_TTL_MS = 60 * 60 * 1000;
+
+async function fetchJwks(tenantId: string): Promise<Jwk[]> {
+  const cached = jwksCache.get(tenantId);
+  if (cached && Date.now() - cached.fetchedAt < JWKS_TTL_MS) return cached.keys;
+  const response = await fetch(
+    `https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`,
+    { signal: AbortSignal.timeout(10_000), cache: "no-store" },
+  );
+  const payload = await response.json() as { keys?: Jwk[] };
+  if (!response.ok || !payload.keys?.length) throw new Error(`Entra JWKS fetch failed (${response.status})`);
+  jwksCache.set(tenantId, { keys: payload.keys, fetchedAt: Date.now() });
+  return payload.keys;
+}
+
+export async function verifyEntraIdToken(idToken: string, expectedNonce: string): Promise<EntraIdentityClaims> {
+  const parts = idToken.split(".");
+  if (parts.length !== 3) throw new Error("id_token is not a JWT");
+  const header = JSON.parse(Buffer.from(parts[0], "base64url").toString()) as { alg?: string; kid?: string };
+  const claims = JSON.parse(Buffer.from(parts[1], "base64url").toString()) as Record<string, unknown>;
+  if (header.alg !== "RS256" || !header.kid) throw new Error("id_token must be RS256 with a key id");
+
+  const tenantId = String(claims.tid || "");
+  const subject = String(claims.oid || claims.sub || "");
+  const issuer = String(claims.iss || "");
+  if (!tenantId || !subject) throw new Error("id_token is missing oid/tid claims");
+  if (issuer !== `https://login.microsoftonline.com/${tenantId}/v2.0`) {
+    throw new Error("id_token issuer does not match its tenant");
+  }
+  if (String(claims.aud || "") !== process.env.ENTRA_CLIENT_ID) {
+    throw new Error("id_token audience is not this application");
+  }
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof claims.exp !== "number" || claims.exp < now - 60) throw new Error("id_token is expired");
+  if (typeof claims.nbf === "number" && claims.nbf > now + 60) throw new Error("id_token is not yet valid");
+  if (!expectedNonce || !timingSafeTextEqual(String(claims.nonce || ""), expectedNonce)) {
+    throw new Error("id_token nonce does not match this authorization flow");
+  }
+
+  // Signature against the tenant's JWKS.
+  const keys = await fetchJwks(tenantId);
+  const jwk = keys.find((key) => key.kid === header.kid);
+  if (!jwk) throw new Error("id_token key id is not in the tenant JWKS");
+  const publicKey = crypto.createPublicKey({ key: jwk as unknown as crypto.JsonWebKey, format: "jwk" });
+  const valid = crypto.verify(
+    "RSA-SHA256",
+    Buffer.from(`${parts[0]}.${parts[1]}`),
+    publicKey,
+    Buffer.from(parts[2], "base64url"),
+  );
+  if (!valid) throw new Error("id_token signature verification failed");
+
+  return { issuer, subject, tenant: tenantId };
 }
 
 export interface EntraProfile {
@@ -38,7 +109,9 @@ function tenant(): string {
 
 export function requestedScopes(): string[] {
   const value = process.env.ENTRA_SCOPES || "offline_access User.Read Mail.ReadWrite Calendars.Read Files.Read.All";
-  return [...new Set(value.split(/\s+/).filter(Boolean))];
+  // openid guarantees an id_token, which carries the oid/tid claims that
+  // recovery identity binding verifies against. Never bind on email.
+  return [...new Set(["openid", ...value.split(/\s+/).filter(Boolean)])];
 }
 
 export function createEntraAuthorization(ticketId: string): { url: string; cookie: string } {
@@ -47,6 +120,7 @@ export function createEntraAuthorization(ticketId: string): { url: string; cooki
   const flow: EntraFlow = {
     state: crypto.randomBytes(32).toString("base64url"),
     verifier,
+    nonce: crypto.randomBytes(32).toString("base64url"),
     ticketId,
     createdAt: Date.now(),
   };
@@ -57,6 +131,7 @@ export function createEntraAuthorization(ticketId: string): { url: string; cooki
     response_mode: "query",
     scope: requestedScopes().join(" "),
     state: flow.state,
+    nonce: flow.nonce,
     code_challenge: sha256Base64Url(verifier),
     code_challenge_method: "S256",
     prompt: "consent",

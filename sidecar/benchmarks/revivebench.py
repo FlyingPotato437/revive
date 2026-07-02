@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import platform
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -24,12 +24,12 @@ ROOT = SIDECAR.parent
 sys.path.insert(0, str(SIDECAR))
 
 from examples.mock_idp import IdP, make_server
-from revive import (AmbiguousSideEffect, AuthError, CheckpointStore, Completed,
+from revive import (AuthError, CheckpointStore, Completed,
                     Engine, Parked, Provider, StaleCredentialGeneration, Step,
                     Token, WrongRecoveryIdentity)
 
 SCOPES = ["offline_access", "Mail.ReadWrite"]
-ITERATIONS = 8
+ITERATIONS = 20
 
 
 def percentile(values: list[float], q: float) -> float:
@@ -63,9 +63,14 @@ class Bench:
         self.server = make_server(self.idp, port=0, refresh_uses=100)
         self.base = f"http://127.0.0.1:{self.server.server_address[1]}"
         self.sequence = 0
+        self.databases = tempfile.TemporaryDirectory(prefix="revivebench-")
 
     def close(self) -> None:
         self.server.shutdown()
+        self.databases.cleanup()
+
+    def database(self, label: str) -> str:
+        return str(Path(self.databases.name) / f"{label}-{self.sequence}.sqlite")
 
     def resource(self, access_token: str) -> None:
         request = urllib.request.Request(
@@ -100,82 +105,150 @@ class Bench:
 
         return [make(step_id) for step_id in ("read", "classify", "compose", "deliver")]
 
-    def setup(self, label: str) -> tuple[CheckpointStore, Provider, Engine, Token, list[Step], str]:
+    def setup(self, label: str, store_path: str = ":memory:") -> tuple[CheckpointStore, Provider, Engine, Token, list[Step], str, list[dict]]:
         self.sequence += 1
-        store = CheckpointStore(":memory:")
+        events: list[dict] = []
+        store = CheckpointStore(store_path)
         provider = Provider("microsoft", f"{self.base}/oauth2/token", scopes=tuple(SCOPES))
-        engine = Engine(provider, store, base_url=self.base, channel=lambda _rendezvous: None)
+        engine = Engine(
+            provider,
+            store,
+            base_url=self.base,
+            channel=lambda _rendezvous: None,
+            on_event=lambda tag, message: events.append({"tag": tag, "message": message}),
+        )
         dead_refresh = self.idp.issue_refresh(SCOPES, dead=True)
         token = Token(
             self.idp.mint_access(2), dead_refresh,
             subject="alice@company.com", tenant="company-tenant",
             lease_id=f"lease_{label}_{self.sequence}", generation=1,
         )
-        return store, provider, engine, token, self.steps(), dead_refresh
+        return store, provider, engine, token, self.steps(), dead_refresh, events
 
-    def same_run_resume(self) -> None:
-        _, _, engine, token, steps, dead_refresh = self.setup("resume")
+    def same_run_resume(self) -> dict:
+        store, _, engine, token, steps, dead_refresh, events = self.setup("resume")
         run_id = f"run_resume_{self.sequence}"
-        parked = engine.run(run_id, steps, token, SCOPES)
-        assert isinstance(parked, Parked)
-        assert parked.checkpoint.run_id == run_id
-        new_refresh = self.reconsent(dead_refresh)
-        completed = engine.resume(run_id, steps, {
-            "refresh_token": new_refresh,
-            "provider_subject": "alice@company.com",
-            "provider_tenant": "company-tenant",
-        })
-        assert isinstance(completed, Completed)
-        assert completed.steps_done == 4
-        assert completed.state["_lease_generation"] == 2
-
-    def restart_resume(self) -> None:
-        store, provider, engine, token, steps, dead_refresh = self.setup("restart")
-        run_id = f"run_restart_{self.sequence}"
-        assert isinstance(engine.run(run_id, steps, token, SCOPES), Parked)
-        replacement_worker = Engine(provider, store, base_url=self.base, channel=lambda _rendezvous: None)
-        completed = replacement_worker.resume(run_id, steps, {
-            "refresh_token": self.reconsent(dead_refresh),
-            "provider_subject": "alice@company.com",
-            "provider_tenant": "company-tenant",
-        })
-        assert isinstance(completed, Completed)
-
-    def wrong_account_blocked(self) -> None:
-        _, _, engine, token, steps, dead_refresh = self.setup("identity")
-        run_id = f"run_identity_{self.sequence}"
-        assert isinstance(engine.run(run_id, steps, token, SCOPES), Parked)
-        new_refresh = self.reconsent(dead_refresh)
         try:
-            engine.resume(run_id, steps, {
+            parked = engine.run(run_id, steps, token, SCOPES)
+            assert isinstance(parked, Parked)
+            assert parked.checkpoint.run_id == run_id
+            checkpoint_step = parked.checkpoint.step_id
+            new_refresh = self.reconsent(dead_refresh)
+            completed = engine.resume(run_id, steps, {
                 "refresh_token": new_refresh,
-                "provider_subject": "bob@company.com",
+                "provider_subject": "alice@company.com",
                 "provider_tenant": "company-tenant",
             })
-        except WrongRecoveryIdentity:
-            return
-        raise AssertionError("wrong provider subject was accepted")
+            assert isinstance(completed, Completed)
+            assert completed.steps_done == 4
+            assert completed.state["_lease_generation"] == 2
+            return {
+                "runId": run_id,
+                "checkpointStep": checkpoint_step,
+                "stepsCompleted": completed.steps_done,
+                "finalGeneration": completed.state["_lease_generation"],
+                "eventTags": [event["tag"] for event in events],
+            }
+        finally:
+            store.close()
 
-    def stale_worker_fenced(self) -> None:
-        _, _, engine, token, steps, dead_refresh = self.setup("fence")
-        run_id = f"run_fence_{self.sequence}"
-        assert isinstance(engine.run(run_id, steps, token, SCOPES), Parked)
-        completed = engine.resume(run_id, steps, {
-            "refresh_token": self.reconsent(dead_refresh),
-            "provider_subject": "alice@company.com",
-            "provider_tenant": "company-tenant",
-        })
-        assert isinstance(completed, Completed)
+    def restart_resume(self) -> dict:
+        db_path = str(Path(self.databases.name) / f"restart-{self.sequence + 1}.sqlite")
+        store, provider, engine, token, steps, dead_refresh, events = self.setup("restart", db_path)
+        run_id = f"run_restart_{self.sequence}"
+        replacement_store = None
+        original_store_closed = False
         try:
-            engine.run(f"old_worker_{self.sequence}", [], token, SCOPES)
-        except StaleCredentialGeneration:
-            return
-        raise AssertionError("old credential generation was accepted")
+            assert isinstance(engine.run(run_id, steps, token, SCOPES), Parked)
+            store.close()
+            original_store_closed = True
+            replacement_store = CheckpointStore(db_path)
+            replacement_worker = Engine(
+                provider,
+                replacement_store,
+                base_url=self.base,
+                channel=lambda _rendezvous: None,
+                on_event=lambda tag, message: events.append({"tag": tag, "message": message}),
+            )
+            completed = replacement_worker.resume(run_id, steps, {
+                "refresh_token": self.reconsent(dead_refresh),
+                "provider_subject": "alice@company.com",
+                "provider_tenant": "company-tenant",
+            })
+            assert isinstance(completed, Completed)
+            return {
+                "runId": run_id,
+                "storeReopened": True,
+                "stepsCompleted": completed.steps_done,
+                "eventTags": [event["tag"] for event in events],
+            }
+        finally:
+            if replacement_store is not None:
+                replacement_store.close()
+            if not original_store_closed:
+                store.close()
 
-    def side_effect_reconciled(self) -> None:
+    def wrong_account_blocked(self) -> dict:
+        store, _, engine, token, steps, dead_refresh, events = self.setup("identity")
+        run_id = f"run_identity_{self.sequence}"
+        try:
+            assert isinstance(engine.run(run_id, steps, token, SCOPES), Parked)
+            new_refresh = self.reconsent(dead_refresh)
+            try:
+                engine.resume(run_id, steps, {
+                    "refresh_token": new_refresh,
+                    "provider_subject": "bob@company.com",
+                    "provider_tenant": "company-tenant",
+                })
+            except WrongRecoveryIdentity:
+                return {
+                    "runId": run_id,
+                    "expectedSubject": "alice@company.com",
+                    "attemptedSubject": "bob@company.com",
+                    "mismatchRejected": True,
+                    "eventTags": [event["tag"] for event in events],
+                }
+            raise AssertionError("wrong provider subject was accepted")
+        finally:
+            store.close()
+
+    def stale_worker_fenced(self) -> dict:
+        store, _, engine, token, steps, dead_refresh, events = self.setup("fence")
+        run_id = f"run_fence_{self.sequence}"
+        try:
+            assert isinstance(engine.run(run_id, steps, token, SCOPES), Parked)
+            completed = engine.resume(run_id, steps, {
+                "refresh_token": self.reconsent(dead_refresh),
+                "provider_subject": "alice@company.com",
+                "provider_tenant": "company-tenant",
+            })
+            assert isinstance(completed, Completed)
+            try:
+                engine.run(f"old_worker_{self.sequence}", [], token, SCOPES)
+            except StaleCredentialGeneration:
+                return {
+                    "runId": run_id,
+                    "staleGeneration": token.generation,
+                    "activeGeneration": completed.state["_lease_generation"],
+                    "staleWorkerRejected": True,
+                    "eventTags": [event["tag"] for event in events],
+                }
+            raise AssertionError("old credential generation was accepted")
+        finally:
+            store.close()
+
+    def side_effect_reconciled(self) -> dict:
+        self.sequence += 1
         store = CheckpointStore(":memory:")
         provider = Provider("microsoft", f"{self.base}/oauth2/token", scopes=tuple(SCOPES))
-        engine = Engine(provider, store, base_url=self.base, channel=lambda _rendezvous: None)
+        events: list[dict] = []
+        engine = Engine(
+            provider,
+            store,
+            base_url=self.base,
+            channel=lambda _rendezvous: None,
+            on_event=lambda tag, message: events.append({"tag": tag, "message": message}),
+        )
         token = Token(self.idp.mint_access(10), self.idp.issue_refresh(SCOPES))
         executed = {"count": 0}
 
@@ -185,31 +258,62 @@ class Bench:
         step = Step("send", mutate, side_effect=True, reconcile=lambda _context: True)
         action_id = f"run_effect_{self.sequence}:send"
         store.start_action(action_id, f"run_effect_{self.sequence}", "send")
-        result = engine.run(f"run_effect_{self.sequence}", [step], token, SCOPES)
-        assert isinstance(result, Completed)
-        assert executed["count"] == 0
-        assert store.action_state(action_id) == "completed"
+        try:
+            result = engine.run(f"run_effect_{self.sequence}", [step], token, SCOPES)
+            assert isinstance(result, Completed)
+            assert executed["count"] == 0
+            assert store.action_state(action_id) == "completed"
+            return {
+                "runId": f"run_effect_{self.sequence}",
+                "mutationCalls": executed["count"],
+                "actionState": store.action_state(action_id),
+                "reconciledBeforeReplay": True,
+                "eventTags": [event["tag"] for event in events],
+            }
+        finally:
+            store.close()
 
 
 def run_case(bench: Bench, case_id: str, title: str, fn) -> dict:
     durations: list[float] = []
     failures: list[str] = []
-    for _ in range(ITERATIONS):
+    runs: list[dict] = []
+    for iteration in range(1, ITERATIONS + 1):
         started = time.perf_counter()
+        observation = None
+        failure = None
         try:
-            fn()
+            observation = fn()
         except Exception as error:  # recorded in the report, not hidden
-            failures.append(f"{type(error).__name__}: {error}")
-        durations.append((time.perf_counter() - started) * 1000)
+            failure = f"{type(error).__name__}: {error}"
+            failures.append(failure)
+        duration = (time.perf_counter() - started) * 1000
+        durations.append(duration)
+        runs.append({
+            "executionId": f"{case_id}-{iteration:03d}",
+            "passed": failure is None,
+            "durationMs": round(duration, 3),
+            "failure": failure,
+            "observed": observation,
+        })
+    p50 = round(median(durations), 3)
+    successful_runs = [run for run in runs if run["passed"]]
+    representative = min(
+        successful_runs,
+        key=lambda run: abs(run["durationMs"] - p50),
+        default=None,
+    )
     return {
         "id": case_id,
         "title": title,
         "iterations": ITERATIONS,
         "passed": ITERATIONS - len(failures),
         "failed": len(failures),
-        "p50Ms": round(median(durations), 3),
+        "p50Ms": p50,
         "p95Ms": round(percentile(durations, 0.95), 3),
         "failures": failures,
+        "runs": runs,
+        "exampleRun": representative,
     }
 
 
@@ -246,6 +350,9 @@ def main() -> int:
         "methodology": {
             "iterationsPerCase": ITERATIONS,
             "scope": "local correctness and latency only",
+            "assertionModel": "Each execution fails closed on an unmet recovery invariant",
+            "providerTransport": "HTTP requests to an isolated local OAuth fixture",
+            "restartPersistence": "File-backed SQLite closed and reopened by a replacement worker",
             "exclusions": [
                 "customer production recovery rate",
                 "provider-wide compatibility",
