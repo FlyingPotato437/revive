@@ -49,6 +49,29 @@ mistakes a demo for a product. Updated 2026-07-01.
 - Production recovery no longer permits first-use identity binding: a connection
   must already have subject + tenant identity. First-use remains local-sandbox only.
 
+## Design-partner review remainder (2026-07-02)
+
+Blocked on accounts/infra the team must provision (not code):
+
+- **Continuous worker deployment.** `npm run worker` blueprint exists; needs a
+  deploy target (Render/Fly/Railway) running it 24/7 next to Postgres.
+- **Hosted SSO/MFA with session revocation.** Login is Postgres+scrypt. Plan:
+  Clerk. Needs `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY` before
+  wiring.
+- **Managed KMS.** Envelope keys are injectable/versioned but no cloud KMS is
+  provisioned (AWS KMS or GCP Cloud KMS + key id in env).
+- **Isolated restore drill** of the Postgres backup, and an **independent
+  security assessment** — both organizational, not code.
+- **Deployed golden-path certification.** One live revoked-grant → browser
+  reauthorization → deployed LangGraph callback run. Blocked on: valid Entra
+  client secret (current one fails AADSTS7000215 — the secret VALUE, not the
+  secret ID) and a deployed environment.
+- **Temporal certification.** Adapter is preview; needs a Temporal cluster.
+- **Evidence breadth.** Current evidence is correctness + local control-plane
+  latency (`benchmarks/results/recovery-latency-local.json`, honestly caveated).
+  Latency/availability/MTTR/recovery-rate under load require the staging
+  campaign (item 8 below).
+
 ## Open — ordered
 
 1. **One certified path: LangGraph Python + Nango + Microsoft Graph.**
