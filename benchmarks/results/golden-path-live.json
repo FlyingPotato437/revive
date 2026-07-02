@@ -1,0 +1,29 @@
+{
+  "certification": "single live golden path — Nango + Microsoft Graph + Revive control plane",
+  "recordedAt": "2026-07-02",
+  "scope": "real Entra OAuth connection via Nango connect-session; real Microsoft Graph identity; live control-plane recovery on Postgres (Neon). Runtime resume NOT included (no deployed LangGraph endpoint).",
+  "connection": {
+    "vault": "nango",
+    "integrationId": "microsoft-tenant-specific",
+    "connectionId": "eb9f03af-2540-4d43-b73e-194585c05256",
+    "tokens": { "access_token": true, "refresh_token": true }
+  },
+  "identity": {
+    "source": "GET https://graph.microsoft.com/v1.0/me (HTTP 200)",
+    "oid": "c929470a-70c3-45c0-94b9-e402f5cd643c",
+    "upn": "srikanth@revivelabs.app",
+    "tenant": "1c263647-b03d-4e75-9557-078c27c780c2",
+    "verificationMode": "matched creation-time binding (production path, not first-use)"
+  },
+  "caseWalk": {
+    "caseId": "case_riOP0z1zlE6k",
+    "runId": "golden-live-1",
+    "states": ["detected", "classified", "parked", "awaiting_authorization", "identity_verified"],
+    "leaseGeneration": { "before": 1, "after": 2 }
+  },
+  "fencing": {
+    "staleWorkerGeneration1": "HTTP 409 (rejected)",
+    "freshWorkerGeneration2": "HTTP 200 (accepted)"
+  },
+  "remaining": "deployed LangGraph callback to advance identity_verified -> resumed -> completed (resumeQueued was false: no runtime endpoint configured)"
+}

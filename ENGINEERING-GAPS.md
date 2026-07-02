@@ -62,10 +62,17 @@ Blocked on accounts/infra the team must provision (not code):
   provisioned (AWS KMS or GCP Cloud KMS + key id in env).
 - **Isolated restore drill** of the Postgres backup, and an **independent
   security assessment** — both organizational, not code.
-- **Deployed golden-path certification.** One live revoked-grant → browser
-  reauthorization → deployed LangGraph callback run. Blocked on: valid Entra
-  client secret (current one fails AADSTS7000215 — the secret VALUE, not the
-  secret ID) and a deployed environment.
+- **Golden path — live identity half DONE (2026-07-02).** Real Entra OAuth via
+  Nango connect-session → real `GET /v1.0/me` (oid c929470a, upn
+  srikanth@revivelabs.app, tenant 1c263647) → case walked
+  detected→classified→parked→awaiting_authorization→identity_verified against
+  the creation-time binding (production path) → lease rotated 1→2 → stale gen-1
+  worker fenced (409), gen-2 accepted. Evidence:
+  `benchmarks/results/golden-path-live.json`. NOTE: uses Nango's own valid Entra
+  secret, so the direct-PKCE `ENTRA_CLIENT_SECRET` (fails AADSTS7000215 — secret
+  VALUE vs ID) is no longer a blocker for this path.
+  REMAINING: deployed LangGraph callback to take identity_verified→resumed→
+  completed (resumeQueued was false — no runtime endpoint yet).
 - **Temporal certification.** Adapter is preview; needs a Temporal cluster.
 - **Evidence breadth.** Current evidence is correctness + local control-plane
   latency (`benchmarks/results/recovery-latency-local.json`, honestly caveated).
