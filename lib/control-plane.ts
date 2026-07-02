@@ -417,6 +417,18 @@ function mutateActionLocal(
   return action;
 }
 
+export async function getAction(workspaceId: string, actionId: string): Promise<ControlAction | null> {
+  if (!hostedDatabaseEnabled()) {
+    return readLocal().actions.find((action) => action.id === actionId && action.workspaceId === workspaceId) ?? null;
+  }
+  return withWorkspaceTransaction(workspaceId, async (sql) => {
+    const rows = await sql<DbAction[]>`
+      select * from revive_actions where id = ${actionId} and workspace_id = ${workspaceId}
+    `;
+    return rows[0] ? mapAction(rows[0]) : null;
+  });
+}
+
 export async function listActions(workspaceId: string): Promise<ControlAction[]> {
   if (!hostedDatabaseEnabled()) {
     return readLocal().actions.filter((action) => action.workspaceId === workspaceId)

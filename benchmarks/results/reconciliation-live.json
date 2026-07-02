@@ -1,0 +1,17 @@
+{
+  "certification": "provider reconciliation — Microsoft Graph sentitems (live)",
+  "recordedAt": "2026-07-02",
+  "scope": "real Nango connection eb9f03af; real Graph mailbox queries via Nango proxy (Revive never held the raw token)",
+  "positive": {
+    "setup": "message created in sentitems (Mail.ReadWrite), then action registered + marked started (worker-death simulation)",
+    "before": "replayVerdict reconcile_first",
+    "reconcile": { "strategy": "subject_window", "outcome": "committed", "remoteIdPrefix": "AAMkAGNkNjc5NzY1", "sentAt": "2026-07-02T20:31:00Z" },
+    "after": "replayVerdict already_committed, ledger state reconciled — duplicate send blocked"
+  },
+  "negative": {
+    "probe": "subject never sent, 30-minute window",
+    "outcome": "not_found",
+    "verdict": "safe_to_execute"
+  },
+  "caveats": "sendMail itself requires the Mail.Send scope (current grant is Mail.ReadWrite; provider returned ErrorAccessDenied) — reconciliation reads are fully covered by current scopes"
+}
