@@ -54,12 +54,12 @@ export default function RecoveryLab() {
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
-      <PageHeader eyebrow="Recovery lab" title="Drill a credential failure before production does" description="A drill is a controlled fault injection: break a grant on purpose, in a sandbox, and verify your recovery path end to end — the same way a fire drill verifies the exits. Classifier verdict, checkpoint, one-time reauthorization and fenced resume all run for real and are recorded as a recovery case." actions={<><StatusBadge tone="ok"><span className="h-1.5 w-1.5 rounded-full bg-current" />event store online</StatusBadge><span className="font-mono text-[9px] text-[#95989d]">policy v0.2</span></>} />
+      <PageHeader eyebrow="Playground · local sandbox" title="Drill a credential failure before production does" description="A drill is a controlled fault injection: break a grant on purpose, in a sandbox, and verify your recovery path end to end — the same way a fire drill verifies the exits. Classifier verdict, checkpoint, one-time reauthorization and fenced resume all run for real and are recorded as a recovery case." actions={<><StatusBadge tone="ok"><span className="h-1.5 w-1.5 rounded-full bg-current" />local sandbox store</StatusBadge><span className="font-mono text-[9px] text-[#95989d]">policy v0.2</span></>} />
 
       <div className="mt-5"><SummaryStrip items={[
         { label: "Recovery case", value: caseStatus.replaceAll("_", " "), detail: revive?.recoveryCase?.id ?? "No open case", tone: awaiting ? "warn" : revive?.recoveryCase?.status === "recovered" ? "ok" : undefined },
         { label: "Credential lease", value: `Generation ${leaseGeneration}`, detail: revive?.token.leaseId ?? "Created on run", tone: leaseGeneration > 1 ? "cobalt" : undefined },
-        { label: "Action ledger", value: `${committedActions} committed`, detail: revive?.actions[0]?.idempotencyKey ?? "Exactly-once guard ready", tone: committedActions ? "ok" : undefined },
+        { label: "Action ledger", value: `${committedActions} committed`, detail: revive?.actions[0]?.idempotencyKey ?? "Duplicate-prevention guard ready", tone: committedActions ? "ok" : undefined },
         { label: "Run continuity", value: revive?.metrics.resumes ? `${revive.metrics.resumes} resume` : "Checkpoint ready", detail: "Process-independent logical run", tone: revive?.metrics.resumes ? "cobalt" : undefined },
       ]} /></div>
 

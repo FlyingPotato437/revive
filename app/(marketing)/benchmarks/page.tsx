@@ -1,78 +1,355 @@
-import fs from "node:fs";
-import path from "node:path";
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
+import benchmarkReport from "@/benchmarks/results/revivebench-local.json";
+import { EvidenceReveal } from "@/components/marketing/EvidenceReveal";
 
-type CaseResult = { id: string; title: string; iterations: number; passed: number; failed: number; p50Ms: number; p95Ms: number };
+export const metadata: Metadata = {
+  title: "ReviveBench | Recovery correctness report",
+  description: "Methodology, raw runs, and limitations for Revive's executable credential recovery benchmark.",
+};
+
+type ObservationValue = string | number | boolean | string[] | null | undefined;
+type RunRecord = {
+  executionId: string;
+  passed: boolean;
+  durationMs: number;
+  failure: string | null;
+  observed: Record<string, ObservationValue> | null;
+};
+type CaseResult = {
+  id: string;
+  title: string;
+  iterations: number;
+  passed: number;
+  failed: number;
+  p50Ms: number;
+  p95Ms: number;
+  failures: string[];
+  runs: RunRecord[];
+  exampleRun: RunRecord | null;
+};
 type Report = {
   generatedAt: string;
   sourceCommit: string | null;
   sourceTreeDirty?: boolean | null;
   environment: { python: string; platform: string; fixture: string };
-  methodology: { iterationsPerCase: number; scope: string; exclusions: string[] };
+  methodology: {
+    iterationsPerCase: number;
+    scope: string;
+    assertionModel: string;
+    providerTransport: string;
+    restartPersistence: string;
+    exclusions: string[];
+  };
   summary: { executions: number; passed: number; failed: number };
   cases: CaseResult[];
 };
 
-const caseDetails: Record<string, { failure: string; pass: string }> = {
+const caseDetails: Record<string, { failure: string; acceptance: string; evidence: string }> = {
   "same-run-resume": {
-    failure: "The access token expires and the refresh token is rejected after two completed workflow steps.",
-    pass: "The engine parks at the failed step, accepts a new provider grant and completes the original run ID.",
+    failure: "A protected call rejects the access token, then the refresh grant is rejected after two workflow steps have completed.",
+    acceptance: "The run parks at the failing step and completes under the original run ID after reauthorization.",
+    evidence: "Checkpoint identity, completed step count, and the advanced lease generation are asserted in every execution.",
   },
   "worker-restart": {
-    failure: "The worker that created the checkpoint is replaced before reauthorization completes.",
-    pass: "A new engine instance reads SQLite state and resumes without in-memory routing data.",
+    failure: "The original worker is removed after the checkpoint is written and before the recovery reply arrives.",
+    acceptance: "A replacement worker opens the same file-backed store and resumes the parked run.",
+    evidence: "The first SQLite connection is closed before a new store and engine instance perform the resume.",
   },
   "identity-binding": {
-    failure: "A reauthorization reply returns a different provider subject from the original connection.",
-    pass: "The reply is rejected before the one-time recovery capability is consumed.",
+    failure: "The recovery reply identifies Bob while the failed connection is bound to Alice.",
+    acceptance: "The reply is rejected before the one-time recovery rendezvous is consumed.",
+    evidence: "Expected and attempted provider subjects are recorded with a true mismatchRejected observation.",
   },
   "generation-fencing": {
-    failure: "An old worker wakes up with credential generation 1 after recovery advanced the lease to generation 2.",
-    pass: "The durable lease store rejects generation 1 before the worker can execute a step.",
+    failure: "A worker holding generation 1 wakes after recovery has advanced the credential lease to generation 2.",
+    acceptance: "Generation 1 is rejected before the old worker executes another step.",
+    evidence: "Both generations and the stale-worker rejection are captured in the run record.",
   },
   "side-effect-reconcile": {
-    failure: "An action is marked started, but the worker cannot tell whether the remote mutation committed.",
-    pass: "The reconciliation callback confirms the remote action and the mutation function is not called again.",
+    failure: "An action is already marked started, but the worker cannot know whether the remote mutation committed.",
+    acceptance: "The reconciliation callback confirms the action and the mutation function is not called again.",
+    evidence: "Each run records zero mutation calls and a completed action ledger entry.",
   },
 };
 
-function readReport(): Report | null {
-  try { return JSON.parse(fs.readFileSync(path.join(process.cwd(), "benchmarks/results/revivebench-local.json"), "utf8")) as Report; } catch { return null; }
+const traceLabels: Record<string, string> = {
+  ok: "step committed",
+  auth: "access rejected",
+  classify: "grant classified",
+  checkpoint: "checkpoint written",
+  rendezvous: "recovery opened",
+  rotate: "generation advanced",
+  resume: "same run resumed",
+  reconcile: "action reconciled",
+  dedupe: "duplicate skipped",
+};
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  }).format(new Date(value));
 }
 
-export const dynamic = "force-dynamic";
+function displayValue(value: ObservationValue) {
+  if (Array.isArray(value)) return value.join(" > ");
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (value === null) return "null";
+  return String(value);
+}
 
 export default function BenchmarkWhitepaperPage() {
-  const report = readReport();
-  return <div className="bg-[#f4f5f1] text-[#151922]">
-    <section className="border-b border-[#151922]"><div className="mx-auto max-w-[1180px] px-5 py-20 sm:px-8 lg:py-28"><p className="text-[11px] font-semibold text-[#4967f2]">ReviveBench</p><h1 className="mt-5 max-w-[920px] text-[clamp(44px,6vw,76px)] font-semibold leading-[.93] tracking-[-.065em]">What happens when OAuth dies mid-run?</h1><p className="mt-7 max-w-[760px] text-[15px] leading-7 text-[#5f6876]">An executable study of checkpoint recovery, account binding, stale-worker fencing and side-effect safety.</p></div></section>
+  const report = benchmarkReport as Report;
+  const allRuns = report.cases.flatMap((item) => item.runs);
+  const representative = report.cases.find((item) => item.id === "same-run-resume")?.exampleRun;
+  const representativeTags = Array.isArray(representative?.observed?.eventTags)
+    ? representative.observed.eventTags
+    : [];
 
-    {!report ? <section className="mx-auto max-w-[1180px] px-5 py-24 sm:px-8"><div className="border border-[#151922] bg-[#fbfcf8] p-8"><h2 className="text-[24px] font-semibold">No benchmark report is available.</h2><p className="mt-3 text-[13px] text-[#687180]">Run <code className="font-mono">npm run bench:revive</code>. Revive does not display placeholder results.</p></div></section> : <>
-      <section className="border-b border-[#151922] bg-[#eef0eb]"><div className="mx-auto grid max-w-[1180px] sm:grid-cols-3"><Metric label="Executions" value={report.summary.executions} detail="five recovery cases" /><Metric label="Passed" value={report.summary.passed} detail="observed invariant checks" /><Metric label="Failed" value={report.summary.failed} detail="retained in the report" /></div></section>
+  return (
+    <article className="min-h-[100dvh] bg-[#f4f5f1] text-[#151922]">
+      <header className="border-b border-[#151922]">
+        <div className="mx-auto grid max-w-[1240px] gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_320px] lg:items-end lg:py-24">
+          <EvidenceReveal>
+            <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-[#4967f2]">REVIVEBENCH TECHNICAL REPORT</p>
+            <h1 className="mt-6 max-w-[820px] text-[clamp(42px,6.2vw,78px)] font-semibold leading-[0.94] tracking-[-0.065em]">
+              Recovery correctness at the failure boundary.
+            </h1>
+            <p className="mt-7 max-w-[650px] text-[15px] leading-7 text-[#5f6876]">
+              A reproducible local study of five invariants between credentials and durable execution.
+            </p>
+          </EvidenceReveal>
 
-      <section className="mx-auto max-w-[1180px] px-5 py-20 sm:px-8 lg:py-28"><div className="grid gap-12 lg:grid-cols-[.75fr_1.25fr]"><div><h2 className="text-[36px] font-semibold tracking-[-.05em]">The product under test</h2><p className="mt-5 text-[13px] leading-6 text-[#687180]">A credential provider can issue a new token. A workflow runtime can resume a checkpoint. Revive connects those events to the same account, run and pending action.</p></div><div className="border border-[#151922] bg-[#fbfcf8] p-5 sm:p-7"><RecoveryFlow /></div></div></section>
+          <EvidenceReveal delay={0.08} className="border border-[#151922] bg-[#fbfcf8] p-5 shadow-[7px_7px_0_#d9ddd6]">
+            <div className="flex items-center justify-between gap-4 border-b border-[#ccd1d6] pb-4">
+              <span className="font-mono text-[9px] text-[#737d8a]">REPORT RECORD</span>
+              <span className={`font-mono text-[9px] font-semibold ${report.summary.failed === 0 ? "text-[#18724e]" : "text-[#a23d34]"}`}>
+                {report.summary.failed === 0 ? "ALL ASSERTIONS PASSED" : `${report.summary.failed} FAILURES`}
+              </span>
+            </div>
+            <dl className="mt-4 grid grid-cols-[96px_1fr] gap-x-4 gap-y-3 text-[10px] leading-4">
+              <dt className="font-mono text-[#8a929d]">Generated</dt><dd>{formatDate(report.generatedAt)}</dd>
+              <dt className="font-mono text-[#8a929d]">Commit</dt><dd className="font-mono">{report.sourceCommit ?? "unavailable"}</dd>
+              <dt className="font-mono text-[#8a929d]">Source</dt><dd>{report.sourceTreeDirty ? "Uncommitted changes present" : "Clean tree"}</dd>
+              <dt className="font-mono text-[#8a929d]">Scope</dt><dd>Local correctness only</dd>
+            </dl>
+          </EvidenceReveal>
+        </div>
+      </header>
 
-      <section className="border-y border-[#151922] bg-[#eef0eb]"><div className="mx-auto max-w-[1180px] px-5 py-20 sm:px-8 lg:py-28"><h2 className="text-[36px] font-semibold tracking-[-.05em]">Evaluation setup</h2><p className="mt-4 max-w-[720px] text-[13px] leading-6 text-[#687180]">Every case invokes the repository's real engine, durable SQLite store and HTTP provider client. The provider is a local OAuth fixture, not Microsoft Entra production.</p><div className="mt-10 grid border border-[#151922] bg-[#fbfcf8] sm:grid-cols-2 lg:grid-cols-3"><Setup label="Runner" value="sidecar/benchmarks/revivebench.py" /><Setup label="Provider transport" value="Real localhost HTTP requests" /><Setup label="Durable state" value="SQLite checkpoints and leases" /><Setup label="Iterations" value={`${report.methodology.iterationsPerCase} per recovery case`} /><Setup label="Source" value={`${report.sourceCommit || "unavailable"}${report.sourceTreeDirty ? " with local changes" : ""}`} /><Setup label="Generated" value={new Date(report.generatedAt).toLocaleString()} /></div></div></section>
+      <section aria-label="Report summary" className="border-b border-[#151922] bg-[#e9ecff]">
+        <div className="mx-auto grid max-w-[1240px] grid-cols-2 sm:grid-cols-4">
+          <SummaryDatum label="Recorded executions" value={report.summary.executions} />
+          <SummaryDatum label="Scenarios" value={report.cases.length} />
+          <SummaryDatum label="Passed" value={report.summary.passed} />
+          <SummaryDatum label="Failed" value={report.summary.failed} />
+        </div>
+      </section>
 
-      <section className="mx-auto max-w-[1180px] px-5 py-20 sm:px-8 lg:py-28"><h2 className="text-[36px] font-semibold tracking-[-.05em]">Five failures, forty executions.</h2><div className="mt-10 space-y-4">{report.cases.map((item) => <CaseStudy key={item.id} result={item} />)}</div></section>
+      <div className="mx-auto grid max-w-[1240px] gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-20 lg:py-24">
+        <aside className="hidden lg:block">
+          <nav aria-label="Report contents" className="sticky top-24 border-l border-[#aeb5bd] pl-5">
+            <p className="mb-5 font-mono text-[9px] text-[#8a929d]">CONTENTS</p>
+            {[
+              ["abstract", "Abstract"],
+              ["apparatus", "System under test"],
+              ["method", "Method"],
+              ["results", "Results"],
+              ["observed-run", "Observed run"],
+              ["limits", "Limitations"],
+              ["reproduce", "Reproduce"],
+            ].map(([href, label]) => (
+              <a key={href} href={`#${href}`} className="block py-1.5 text-[10.5px] text-[#687180] transition-colors hover:text-[#2e49c8]">
+                {label}
+              </a>
+            ))}
+          </nav>
+        </aside>
 
-      <section className="border-y border-[#151922] bg-[#eef0eb]"><div className="mx-auto grid max-w-[1180px] gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[1fr_1fr] lg:py-28"><div><h2 className="text-[32px] font-semibold tracking-[-.045em]">What the result shows</h2><p className="mt-5 max-w-[500px] text-[13px] leading-6 text-[#596273]">In this harness, Revive preserved the logical run, rejected the wrong account and stale credential generation, survived worker replacement, and reconciled an ambiguous mutation before replay.</p></div><div><h2 className="text-[32px] font-semibold tracking-[-.045em]">What it does not show</h2><ul className="mt-5 space-y-3">{report.methodology.exclusions.map((item) => <li key={item} className="border-l-[3px] border-[#9a5c15] pl-4 text-[12px] leading-5 text-[#687180]">{item}</li>)}</ul><p className="mt-5 text-[11px] leading-5 text-[#7b8491]">The millisecond timings below describe a local process. They are included for reproducibility, not as a production latency claim.</p></div></div></section>
+        <div className="min-w-0">
+          <ReportSection id="abstract" title="Abstract">
+            <p className="max-w-[760px] text-[17px] leading-8 text-[#3f4855]">
+              Revive coordinates recovery after an OAuth grant can no longer be refreshed. The benchmark asks a narrower question than a product demo: does the recovery engine preserve the original run, enforce account identity, fence stale workers, and prevent an ambiguous mutation from being repeated?
+            </p>
+            <div className="mt-8 border-l-[4px] border-[#4967f2] bg-[#e9ecff] px-5 py-4 text-[12px] leading-6 text-[#414b5b]">
+              Result: all {report.summary.executions} local executions satisfied their assertions. This is evidence of deterministic recovery invariants, not evidence of Microsoft Graph compatibility or production availability.
+            </div>
+          </ReportSection>
 
-      <section className="mx-auto max-w-[1180px] px-5 py-20 sm:px-8"><h2 className="text-[28px] font-semibold tracking-[-.04em]">Reproduce every run</h2><p className="mt-4 max-w-[620px] text-[12px] leading-6 text-[#687180]">The command rewrites the JSON report from fresh executions. A failed assertion is recorded and returns a non-zero exit code.</p><pre className="mt-6 overflow-x-auto border border-[#151922] bg-[#151922] p-5 font-mono text-[11px] leading-6 text-[#f4f5f1]"><code>{`npm run bench:revive\npython3 -m unittest discover -s sidecar/tests -v`}</code></pre><div className="mt-6 flex flex-wrap gap-5"><Link href="/app/quickstart" className="text-[11px] font-semibold text-[#2e49c8]">Read the integration guide</Link><Link href="/app" className="text-[11px] font-semibold text-[#2e49c8]">Run the recovery lab</Link></div></section>
-    </>}
-  </div>;
+          <ReportSection id="apparatus" title="System under test">
+            <p className="max-w-[720px] text-[13px] leading-6 text-[#687180]">
+              The harness exercises the real Python recovery engine, its HTTP provider client, durable checkpoint store, recovery rendezvous, lease fencing, and action ledger.
+            </p>
+            <div className="mt-9 overflow-hidden border border-[#151922] bg-[#151922] text-[#f4f5f1]">
+              <div className="grid md:grid-cols-5">
+                {[
+                  ["Provider", "Reject access and refresh"],
+                  ["Classifier", "Route the grant failure"],
+                  ["Checkpoint", "Persist the exact step"],
+                  ["Lease", "Verify identity and advance"],
+                  ["Runtime", "Resume the original run"],
+                ].map(([title, body], index) => (
+                  <div key={title} className="relative border-b border-[#3a404a] p-5 last:border-b-0 md:min-h-[156px] md:border-b-0 md:border-r md:last:border-r-0">
+                    <div className="font-mono text-[9px] text-[#91a3ff]">{String(index + 1).padStart(2, "0")}</div>
+                    <h3 className="mt-7 text-[13px] font-semibold">{title}</h3>
+                    <p className="mt-2 text-[10px] leading-4 text-[#aeb6c1]">{body}</p>
+                    {index < 4 && <span aria-hidden className="absolute -right-[5px] top-1/2 hidden h-2 w-2 rotate-45 border-r border-t border-[#91a3ff] bg-[#151922] md:block" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </ReportSection>
+
+          <ReportSection id="method" title="Method">
+            <div className="grid gap-px border border-[#bfc5cc] bg-[#bfc5cc] sm:grid-cols-2">
+              <MethodDatum label="Runner" value="sidecar/benchmarks/revivebench.py" />
+              <MethodDatum label="Iterations" value={`${report.methodology.iterationsPerCase} per scenario`} />
+              <MethodDatum label="Provider transport" value={report.methodology.providerTransport} />
+              <MethodDatum label="Restart persistence" value={report.methodology.restartPersistence} />
+              <MethodDatum label="Assertion model" value={report.methodology.assertionModel} />
+              <MethodDatum label="Environment" value={`Python ${report.environment.python}, ${report.environment.fixture}`} />
+            </div>
+            <p className="mt-5 font-mono text-[9px] leading-5 text-[#858d98]">Host: {report.environment.platform}</p>
+          </ReportSection>
+
+          <ReportSection id="results" title="Results">
+            <div className="overflow-x-auto border border-[#151922] bg-[#fbfcf8]">
+              <table className="w-full min-w-[680px] border-collapse text-left">
+                <thead className="bg-[#e9ecff] font-mono text-[9px] text-[#596273]">
+                  <tr><th className="px-5 py-4 font-medium">Scenario</th><th className="px-4 py-4 font-medium">Executions</th><th className="px-4 py-4 font-medium">Passed</th><th className="px-4 py-4 font-medium">Failed</th><th className="px-5 py-4 text-right font-medium">Local p50</th></tr>
+                </thead>
+                <tbody>
+                  {report.cases.map((item) => (
+                    <tr key={item.id} className="border-t border-[#d8dde3] text-[11px]">
+                      <td className="px-5 py-4 font-semibold">{item.title}</td>
+                      <td className="px-4 py-4 font-mono text-[#596273]">{item.iterations}</td>
+                      <td className="px-4 py-4 font-mono text-[#18724e]">{item.passed}</td>
+                      <td className="px-4 py-4 font-mono text-[#596273]">{item.failed}</td>
+                      <td className="px-5 py-4 text-right font-mono text-[#596273]">{item.p50Ms.toFixed(3)} ms</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-4 text-[10px] leading-5 text-[#7b8491]">Timing measures a local process and is included only to make run records comparable. It is not a latency claim.</p>
+
+            <div className="mt-12">
+              <h3 className="text-[22px] font-semibold tracking-[-0.035em]">Every recorded execution</h3>
+              <p className="mt-3 max-w-[620px] text-[12px] leading-6 text-[#687180]">Each cell maps to one run in the raw JSON artifact. Green means every assertion for that execution passed.</p>
+              <div className="mt-6 grid grid-cols-10 gap-1.5 border border-[#bfc5cc] bg-[#fbfcf8] p-4 sm:grid-cols-20">
+                {allRuns.map((run) => (
+                  <span key={run.executionId} title={`${run.executionId}: ${run.passed ? "passed" : "failed"}`} className={`aspect-square min-h-2 ${run.passed ? "bg-[#2d8a63]" : "bg-[#b94c43]"}`} />
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-12 space-y-5">
+              {report.cases.map((item) => <ScenarioEvidence key={item.id} result={item} />)}
+            </div>
+          </ReportSection>
+
+          <ReportSection id="observed-run" title="One observed recovery">
+            {representative ? (
+              <div className="border border-[#151922] bg-[#151922] text-[#eef0eb]">
+                <div className="flex flex-col gap-2 border-b border-[#3a404a] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div><span className="font-mono text-[9px] text-[#91a3ff]">REPRESENTATIVE RUN</span><span className="ml-3 font-mono text-[9px] text-[#7f8997]">closest to scenario p50</span></div>
+                  <span className="font-mono text-[9px] text-[#aeb6c1]">{representative.executionId} / {representative.durationMs.toFixed(3)} ms</span>
+                </div>
+                <ol className="grid md:grid-cols-5">
+                  {representativeTags.map((tag, index) => (
+                    <li key={`${tag}-${index}`} className="border-b border-[#3a404a] px-4 py-5 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
+                      <span className="font-mono text-[8px] text-[#687484]">{String(index + 1).padStart(2, "0")}</span>
+                      <div className="mt-3 font-mono text-[9px] text-[#91a3ff]">{tag}</div>
+                      <div className="mt-2 text-[10px] leading-4 text-[#c4cad2]">{traceLabels[tag] ?? tag}</div>
+                    </li>
+                  ))}
+                </ol>
+                {representative.observed && (
+                  <dl className="grid gap-px border-t border-[#3a404a] bg-[#3a404a] sm:grid-cols-2 lg:grid-cols-4">
+                    {Object.entries(representative.observed).filter(([key]) => key !== "eventTags").map(([key, value]) => (
+                      <div key={key} className="bg-[#1d222b] px-4 py-4"><dt className="font-mono text-[8px] text-[#7f8997]">{key}</dt><dd className="mt-2 break-words font-mono text-[10px] text-[#eef0eb]">{displayValue(value)}</dd></div>
+                    ))}
+                  </dl>
+                )}
+              </div>
+            ) : <p className="text-[13px] text-[#687180]">No successful run is available.</p>}
+          </ReportSection>
+
+          <ReportSection id="limits" title="Claim boundary">
+            <div className="grid gap-8 md:grid-cols-2">
+              <div>
+                <h3 className="text-[18px] font-semibold">Supported by this report</h3>
+                <ul className="mt-5 space-y-4 text-[12px] leading-5 text-[#596273]">
+                  <li>Same-run checkpoint recovery in the Python engine.</li>
+                  <li>File-backed recovery after replacing the worker instance.</li>
+                  <li>Provider-subject binding and credential-generation fencing.</li>
+                  <li>Reconciliation before repeating an ambiguous mutation.</li>
+                </ul>
+              </div>
+              <div className="border-l border-[#bfc5cc] pl-6">
+                <h3 className="text-[18px] font-semibold">Not measured yet</h3>
+                <ul className="mt-5 space-y-4 text-[12px] leading-5 text-[#687180]">
+                  {report.methodology.exclusions.map((item) => <li key={item}>{item}</li>)}
+                  <li>Nango, Microsoft Graph, and production LangGraph recovery.</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-10 border border-[#c98c42] bg-[#fff3dd] p-5 text-[11px] leading-5 text-[#6e4c20]">
+              The next report revision should replace the local provider fixture with the certified Nango, Microsoft Graph, and LangGraph path. Until then, the page does not claim live-provider recovery.
+            </div>
+          </ReportSection>
+
+          <ReportSection id="reproduce" title="Reproduce the report">
+            <p className="max-w-[680px] text-[13px] leading-6 text-[#687180]">The runner rewrites the artifact from fresh executions. Any unmet assertion is retained in the JSON and produces a non-zero exit code.</p>
+            <pre className="mt-7 overflow-x-auto border border-[#151922] bg-[#151922] p-5 font-mono text-[11px] leading-6 text-[#f4f5f1]"><code>{"npm run bench:revive\npython3 -m unittest discover -s sidecar/tests -v"}</code></pre>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <a href="/api/evidence/revivebench?download=1" className="inline-flex h-10 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">Download raw JSON</a>
+              <a href="https://github.com/revive-labs/revive/blob/main/sidecar/benchmarks/revivebench.py" className="inline-flex h-10 items-center border border-[#151922] bg-transparent px-4 text-[10.5px] font-semibold text-[#151922] transition hover:bg-white active:translate-y-px">Read the runner</a>
+              <Link href="/app/quickstart" className="inline-flex h-10 items-center px-2 text-[10.5px] font-semibold text-[#2e49c8]">Integration guide</Link>
+            </div>
+          </ReportSection>
+        </div>
+      </div>
+    </article>
+  );
 }
 
-function RecoveryFlow() {
-  const stages = [["Detect", "Provider rejects refresh"], ["Park", "Save run and action"], ["Verify", "Match provider identity"], ["Fence", "Advance lease generation"], ["Resume", "Signal the same run"]];
-  return <div className="grid gap-0 md:grid-cols-5">{stages.map(([title, body], index) => <div key={title} className="relative border-b border-[#d8dde3] px-3 py-4 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"><div className="font-mono text-[8px] text-[#2e49c8]">{String(index + 1).padStart(2, "0")}</div><div className="mt-3 text-[12px] font-semibold">{title}</div><div className="mt-2 text-[9px] leading-4 text-[#7b8491]">{body}</div></div>)}</div>;
+function ReportSection({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  return <EvidenceReveal><section id={id} className="scroll-mt-24 border-t border-[#151922] py-14 first:border-t-0 first:pt-0 sm:py-20"><h2 className="mb-8 text-[clamp(28px,4vw,42px)] font-semibold tracking-[-0.05em]">{title}</h2>{children}</section></EvidenceReveal>;
 }
 
-function CaseStudy({ result }: { result: CaseResult }) {
+function SummaryDatum({ label, value }: { label: string; value: number }) {
+  return <div className="border-b border-r border-[#151922] px-5 py-6 even:border-r-0 sm:border-b-0 sm:even:border-r sm:last:border-r-0"><div className="font-mono text-[9px] text-[#687180]">{label}</div><div className="mt-2 text-[36px] font-semibold tracking-[-0.055em]">{value}</div></div>;
+}
+
+function MethodDatum({ label, value }: { label: string; value: string }) {
+  return <div className="min-h-[118px] bg-[#fbfcf8] p-5"><div className="font-mono text-[9px] text-[#858d98]">{label}</div><div className="mt-4 max-w-[42ch] text-[11px] font-semibold leading-5 text-[#303741]">{value}</div></div>;
+}
+
+function ScenarioEvidence({ result }: { result: CaseResult }) {
   const detail = caseDetails[result.id];
-  return <article className="grid gap-5 border border-[#bfc5cc] bg-[#fbfcf8] p-5 sm:p-6 lg:grid-cols-[1fr_1fr_auto]"><div><div className="font-mono text-[8px] text-[#7b8491]">{result.id}</div><h3 className="mt-2 text-[16px] font-semibold tracking-[-.025em]">{result.title}</h3><p className="mt-3 text-[10.5px] leading-5 text-[#687180]">{detail?.failure}</p></div><div className="border-l-[3px] border-[#4967f2] pl-4"><div className="text-[9px] font-semibold text-[#2e49c8]">Pass condition</div><p className="mt-2 text-[10.5px] leading-5 text-[#596273]">{detail?.pass}</p></div><div className="grid grid-cols-3 gap-5 lg:grid-cols-1 lg:content-center lg:border-l lg:border-[#d8dde3] lg:pl-6"><Result label="Passed" value={`${result.passed}/${result.iterations}`} /><Result label="P50" value={`${result.p50Ms} ms`} /><Result label="P95" value={`${result.p95Ms} ms`} /></div></article>;
-}
+  const observations = result.exampleRun?.observed
+    ? Object.entries(result.exampleRun.observed).filter(([key]) => key !== "eventTags")
+    : [];
 
-function Metric({ label, value, detail }: { label: string; value: number; detail: string }) { return <div className="border-b border-[#151922] px-5 py-7 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0"><div className="font-mono text-[8px] tracking-[.1em] text-[#7b8491]">{label.toUpperCase()}</div><div className="mt-2 text-[36px] font-semibold tracking-[-.055em]">{value}</div><div className="mt-1 text-[10px] text-[#687180]">{detail}</div></div>; }
-function Setup({ label, value }: { label: string; value: string }) { return <div className="border-b border-[#d8dde3] p-5 last:border-b-0 sm:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 lg:[&:nth-child(3n)]:border-r-0 lg:[&:nth-last-child(-n+3)]:border-b-0"><div className="font-mono text-[8px] tracking-[.08em] text-[#8a929d]">{label.toUpperCase()}</div><div className="mt-3 break-words text-[11px] font-semibold leading-5">{value}</div></div>; }
-function Result({ label, value }: { label: string; value: string }) { return <div className="min-w-[74px]"><div className="font-mono text-[8px] tracking-[.08em] text-[#8a929d]">{label.toUpperCase()}</div><div className="mt-1 whitespace-nowrap text-[12px] font-semibold">{value}</div></div>; }
+  return (
+    <details className="group border border-[#bfc5cc] bg-[#fbfcf8] open:border-[#151922]">
+      <summary className="grid cursor-pointer list-none gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
+        <div><div className="font-mono text-[9px] text-[#7b8491]">{result.id}</div><h3 className="mt-2 text-[17px] font-semibold tracking-[-0.025em]">{result.title}</h3></div>
+        <div className="flex items-center gap-5"><span className="font-mono text-[10px] text-[#18724e]">{result.passed}/{result.iterations} passed</span><span aria-hidden className="text-[18px] text-[#4967f2] transition-transform group-open:rotate-45">+</span></div>
+      </summary>
+      <div className="border-t border-[#d8dde3] p-5 sm:p-6">
+        <div className="grid gap-7 md:grid-cols-2"><div><h4 className="font-mono text-[9px] text-[#8a929d]">Injected failure</h4><p className="mt-3 text-[11px] leading-5 text-[#596273]">{detail.failure}</p></div><div><h4 className="font-mono text-[9px] text-[#8a929d]">Acceptance condition</h4><p className="mt-3 text-[11px] leading-5 text-[#596273]">{detail.acceptance}</p></div></div>
+        <p className="mt-6 border-l-[3px] border-[#4967f2] pl-4 text-[10.5px] leading-5 text-[#596273]">{detail.evidence}</p>
+        {observations.length > 0 && <dl className="mt-6 grid gap-px border border-[#d8dde3] bg-[#d8dde3] sm:grid-cols-2 lg:grid-cols-4">{observations.map(([key, value]) => <div key={key} className="bg-[#f4f5f1] p-4"><dt className="font-mono text-[8px] text-[#8a929d]">{key}</dt><dd className="mt-2 break-words font-mono text-[9px] text-[#303741]">{displayValue(value)}</dd></div>)}</dl>}
+      </div>
+    </details>
+  );
+}

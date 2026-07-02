@@ -37,7 +37,7 @@ export function HeroVisual() {
       <div className="relative border border-[#bfc5ce] bg-[#fbfcf8] shadow-[0_24px_55px_-42px_rgba(24,31,44,.65)]">
         <header className="grid grid-cols-[1fr_auto] border-b border-[#151922]">
           <div className="p-5 sm:p-6">
-            <p className="font-mono text-[9px] font-medium tracking-[.12em] text-[#596273]">RECOVERY INCIDENT RECORD</p>
+            <p className="font-mono text-[9px] font-medium tracking-[.12em] text-[#596273]">ILLUSTRATIVE RECOVERY TRACE</p>
             <p className="mt-2 text-[13px] font-semibold tracking-[-.02em] text-[#151922]">Nightly executive briefing</p>
           </div>
           <div className="flex min-w-[108px] flex-col justify-center border-l border-[#151922] bg-[#edf0ff] px-4 text-right">

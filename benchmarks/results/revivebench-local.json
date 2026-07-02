@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "name": "ReviveBench local recovery invariants",
-  "generatedAt": "2026-07-01T18:24:02.461806+00:00",
-  "sourceCommit": "b2ea69d",
+  "generatedAt": "2026-07-02T01:05:34.613123+00:00",
+  "sourceCommit": "6cb1ac7",
   "sourceTreeDirty": true,
   "environment": {
     "python": "3.14.2",
@@ -10,8 +10,11 @@
     "fixture": "local HTTP OAuth provider"
   },
   "methodology": {
-    "iterationsPerCase": 8,
+    "iterationsPerCase": 20,
     "scope": "local correctness and latency only",
+    "assertionModel": "Each execution fails closed on an unmet recovery invariant",
+    "providerTransport": "HTTP requests to an isolated local OAuth fixture",
+    "restartPersistence": "File-backed SQLite closed and reopened by a replacement worker",
     "exclusions": [
       "customer production recovery rate",
       "provider-wide compatibility",
@@ -20,60 +23,2317 @@
     ]
   },
   "summary": {
-    "executions": 40,
-    "passed": 40,
+    "executions": 100,
+    "passed": 100,
     "failed": 0
   },
   "cases": [
     {
       "id": "same-run-resume",
       "title": "Same logical run resumes",
-      "iterations": 8,
-      "passed": 8,
+      "iterations": 20,
+      "passed": 20,
       "failed": 0,
-      "p50Ms": 2.589,
-      "p95Ms": 2.765,
-      "failures": []
+      "p50Ms": 2.593,
+      "p95Ms": 3.004,
+      "failures": [],
+      "runs": [
+        {
+          "executionId": "same-run-resume-001",
+          "passed": true,
+          "durationMs": 13.089,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_1",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-002",
+          "passed": true,
+          "durationMs": 2.823,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_2",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-003",
+          "passed": true,
+          "durationMs": 2.796,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_3",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-004",
+          "passed": true,
+          "durationMs": 2.581,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_4",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-005",
+          "passed": true,
+          "durationMs": 2.433,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_5",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-006",
+          "passed": true,
+          "durationMs": 3.004,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_6",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-007",
+          "passed": true,
+          "durationMs": 2.733,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_7",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-008",
+          "passed": true,
+          "durationMs": 2.605,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_8",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-009",
+          "passed": true,
+          "durationMs": 2.556,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_9",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-010",
+          "passed": true,
+          "durationMs": 2.681,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_10",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-011",
+          "passed": true,
+          "durationMs": 2.556,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_11",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-012",
+          "passed": true,
+          "durationMs": 2.609,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_12",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-013",
+          "passed": true,
+          "durationMs": 2.63,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_13",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-014",
+          "passed": true,
+          "durationMs": 2.669,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_14",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-015",
+          "passed": true,
+          "durationMs": 2.463,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_15",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-016",
+          "passed": true,
+          "durationMs": 2.45,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_16",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-017",
+          "passed": true,
+          "durationMs": 2.45,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_17",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-018",
+          "passed": true,
+          "durationMs": 2.228,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_18",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-019",
+          "passed": true,
+          "durationMs": 2.183,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_19",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "same-run-resume-020",
+          "passed": true,
+          "durationMs": 2.199,
+          "failure": null,
+          "observed": {
+            "runId": "run_resume_20",
+            "checkpointStep": "compose",
+            "stepsCompleted": 4,
+            "finalGeneration": 2,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        }
+      ],
+      "exampleRun": {
+        "executionId": "same-run-resume-004",
+        "passed": true,
+        "durationMs": 2.581,
+        "failure": null,
+        "observed": {
+          "runId": "run_resume_4",
+          "checkpointStep": "compose",
+          "stepsCompleted": 4,
+          "finalGeneration": 2,
+          "eventTags": [
+            "ok",
+            "ok",
+            "auth",
+            "classify",
+            "checkpoint",
+            "rendezvous",
+            "rotate",
+            "resume",
+            "ok",
+            "ok"
+          ]
+        }
+      }
     },
     {
       "id": "worker-restart",
       "title": "Recovery survives worker replacement",
-      "iterations": 8,
-      "passed": 8,
+      "iterations": 20,
+      "passed": 20,
       "failed": 0,
-      "p50Ms": 2.483,
-      "p95Ms": 2.528,
-      "failures": []
+      "p50Ms": 5.867,
+      "p95Ms": 7.957,
+      "failures": [],
+      "runs": [
+        {
+          "executionId": "worker-restart-001",
+          "passed": true,
+          "durationMs": 6.904,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_21",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-002",
+          "passed": true,
+          "durationMs": 7.957,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_22",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-003",
+          "passed": true,
+          "durationMs": 5.718,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_23",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-004",
+          "passed": true,
+          "durationMs": 6.825,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_24",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-005",
+          "passed": true,
+          "durationMs": 6.672,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_25",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-006",
+          "passed": true,
+          "durationMs": 6.316,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_26",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-007",
+          "passed": true,
+          "durationMs": 5.675,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_27",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-008",
+          "passed": true,
+          "durationMs": 5.411,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_28",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-009",
+          "passed": true,
+          "durationMs": 5.351,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_29",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-010",
+          "passed": true,
+          "durationMs": 5.828,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_30",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-011",
+          "passed": true,
+          "durationMs": 5.536,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_31",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-012",
+          "passed": true,
+          "durationMs": 6.011,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_32",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-013",
+          "passed": true,
+          "durationMs": 6.18,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_33",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-014",
+          "passed": true,
+          "durationMs": 5.78,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_34",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-015",
+          "passed": true,
+          "durationMs": 7.894,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_35",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-016",
+          "passed": true,
+          "durationMs": 15.379,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_36",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-017",
+          "passed": true,
+          "durationMs": 5.331,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_37",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-018",
+          "passed": true,
+          "durationMs": 5.596,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_38",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-019",
+          "passed": true,
+          "durationMs": 5.906,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_39",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "worker-restart-020",
+          "passed": true,
+          "durationMs": 5.166,
+          "failure": null,
+          "observed": {
+            "runId": "run_restart_40",
+            "storeReopened": true,
+            "stepsCompleted": 4,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        }
+      ],
+      "exampleRun": {
+        "executionId": "worker-restart-010",
+        "passed": true,
+        "durationMs": 5.828,
+        "failure": null,
+        "observed": {
+          "runId": "run_restart_30",
+          "storeReopened": true,
+          "stepsCompleted": 4,
+          "eventTags": [
+            "ok",
+            "ok",
+            "auth",
+            "classify",
+            "checkpoint",
+            "rendezvous",
+            "rotate",
+            "resume",
+            "ok",
+            "ok"
+          ]
+        }
+      }
     },
     {
       "id": "identity-binding",
       "title": "Wrong provider subject is rejected",
-      "iterations": 8,
-      "passed": 8,
+      "iterations": 20,
+      "passed": 20,
       "failed": 0,
-      "p50Ms": 1.669,
-      "p95Ms": 1.748,
-      "failures": []
+      "p50Ms": 1.542,
+      "p95Ms": 1.581,
+      "failures": [],
+      "runs": [
+        {
+          "executionId": "identity-binding-001",
+          "passed": true,
+          "durationMs": 1.543,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_41",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-002",
+          "passed": true,
+          "durationMs": 1.508,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_42",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-003",
+          "passed": true,
+          "durationMs": 1.506,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_43",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-004",
+          "passed": true,
+          "durationMs": 1.444,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_44",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-005",
+          "passed": true,
+          "durationMs": 1.459,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_45",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-006",
+          "passed": true,
+          "durationMs": 1.514,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_46",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-007",
+          "passed": true,
+          "durationMs": 1.566,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_47",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-008",
+          "passed": true,
+          "durationMs": 1.551,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_48",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-009",
+          "passed": true,
+          "durationMs": 1.557,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_49",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-010",
+          "passed": true,
+          "durationMs": 1.565,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_50",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-011",
+          "passed": true,
+          "durationMs": 1.599,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_51",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-012",
+          "passed": true,
+          "durationMs": 1.562,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_52",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-013",
+          "passed": true,
+          "durationMs": 1.563,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_53",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-014",
+          "passed": true,
+          "durationMs": 1.544,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_54",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-015",
+          "passed": true,
+          "durationMs": 1.535,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_55",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-016",
+          "passed": true,
+          "durationMs": 1.581,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_56",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-017",
+          "passed": true,
+          "durationMs": 1.46,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_57",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-018",
+          "passed": true,
+          "durationMs": 1.542,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_58",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-019",
+          "passed": true,
+          "durationMs": 1.433,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_59",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        },
+        {
+          "executionId": "identity-binding-020",
+          "passed": true,
+          "durationMs": 1.463,
+          "failure": null,
+          "observed": {
+            "runId": "run_identity_60",
+            "expectedSubject": "alice@company.com",
+            "attemptedSubject": "bob@company.com",
+            "mismatchRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous"
+            ]
+          }
+        }
+      ],
+      "exampleRun": {
+        "executionId": "identity-binding-018",
+        "passed": true,
+        "durationMs": 1.542,
+        "failure": null,
+        "observed": {
+          "runId": "run_identity_58",
+          "expectedSubject": "alice@company.com",
+          "attemptedSubject": "bob@company.com",
+          "mismatchRejected": true,
+          "eventTags": [
+            "ok",
+            "ok",
+            "auth",
+            "classify",
+            "checkpoint",
+            "rendezvous"
+          ]
+        }
+      }
     },
     {
       "id": "generation-fencing",
       "title": "Old credential generation is fenced",
-      "iterations": 8,
-      "passed": 8,
+      "iterations": 20,
+      "passed": 20,
       "failed": 0,
-      "p50Ms": 2.204,
-      "p95Ms": 2.415,
-      "failures": []
+      "p50Ms": 2.191,
+      "p95Ms": 2.304,
+      "failures": [],
+      "runs": [
+        {
+          "executionId": "generation-fencing-001",
+          "passed": true,
+          "durationMs": 2.175,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_61",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-002",
+          "passed": true,
+          "durationMs": 2.099,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_62",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-003",
+          "passed": true,
+          "durationMs": 2.126,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_63",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-004",
+          "passed": true,
+          "durationMs": 2.201,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_64",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-005",
+          "passed": true,
+          "durationMs": 2.125,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_65",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-006",
+          "passed": true,
+          "durationMs": 2.184,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_66",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-007",
+          "passed": true,
+          "durationMs": 2.117,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_67",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-008",
+          "passed": true,
+          "durationMs": 2.175,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_68",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-009",
+          "passed": true,
+          "durationMs": 2.227,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_69",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-010",
+          "passed": true,
+          "durationMs": 2.25,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_70",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-011",
+          "passed": true,
+          "durationMs": 2.304,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_71",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-012",
+          "passed": true,
+          "durationMs": 2.205,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_72",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-013",
+          "passed": true,
+          "durationMs": 2.359,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_73",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-014",
+          "passed": true,
+          "durationMs": 2.233,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_74",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-015",
+          "passed": true,
+          "durationMs": 2.147,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_75",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-016",
+          "passed": true,
+          "durationMs": 2.144,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_76",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-017",
+          "passed": true,
+          "durationMs": 2.207,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_77",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-018",
+          "passed": true,
+          "durationMs": 2.227,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_78",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-019",
+          "passed": true,
+          "durationMs": 2.108,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_79",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "generation-fencing-020",
+          "passed": true,
+          "durationMs": 2.197,
+          "failure": null,
+          "observed": {
+            "runId": "run_fence_80",
+            "staleGeneration": 1,
+            "activeGeneration": 2,
+            "staleWorkerRejected": true,
+            "eventTags": [
+              "ok",
+              "ok",
+              "auth",
+              "classify",
+              "checkpoint",
+              "rendezvous",
+              "rotate",
+              "resume",
+              "ok",
+              "ok"
+            ]
+          }
+        }
+      ],
+      "exampleRun": {
+        "executionId": "generation-fencing-020",
+        "passed": true,
+        "durationMs": 2.197,
+        "failure": null,
+        "observed": {
+          "runId": "run_fence_80",
+          "staleGeneration": 1,
+          "activeGeneration": 2,
+          "staleWorkerRejected": true,
+          "eventTags": [
+            "ok",
+            "ok",
+            "auth",
+            "classify",
+            "checkpoint",
+            "rendezvous",
+            "rotate",
+            "resume",
+            "ok",
+            "ok"
+          ]
+        }
+      }
     },
     {
       "id": "side-effect-reconcile",
       "title": "Ambiguous side effect reconciles before replay",
-      "iterations": 8,
-      "passed": 8,
+      "iterations": 20,
+      "passed": 20,
       "failed": 0,
-      "p50Ms": 0.111,
-      "p95Ms": 0.121,
-      "failures": []
+      "p50Ms": 0.118,
+      "p95Ms": 0.126,
+      "failures": [],
+      "runs": [
+        {
+          "executionId": "side-effect-reconcile-001",
+          "passed": true,
+          "durationMs": 0.146,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_81",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-002",
+          "passed": true,
+          "durationMs": 0.123,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_82",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-003",
+          "passed": true,
+          "durationMs": 0.112,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_83",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-004",
+          "passed": true,
+          "durationMs": 0.111,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_84",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-005",
+          "passed": true,
+          "durationMs": 0.108,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_85",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-006",
+          "passed": true,
+          "durationMs": 0.118,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_86",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-007",
+          "passed": true,
+          "durationMs": 0.126,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_87",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-008",
+          "passed": true,
+          "durationMs": 0.119,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_88",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-009",
+          "passed": true,
+          "durationMs": 0.114,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_89",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-010",
+          "passed": true,
+          "durationMs": 0.123,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_90",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-011",
+          "passed": true,
+          "durationMs": 0.118,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_91",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-012",
+          "passed": true,
+          "durationMs": 0.117,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_92",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-013",
+          "passed": true,
+          "durationMs": 0.118,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_93",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-014",
+          "passed": true,
+          "durationMs": 0.11,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_94",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-015",
+          "passed": true,
+          "durationMs": 0.118,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_95",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-016",
+          "passed": true,
+          "durationMs": 0.11,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_96",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-017",
+          "passed": true,
+          "durationMs": 0.109,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_97",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-018",
+          "passed": true,
+          "durationMs": 0.118,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_98",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-019",
+          "passed": true,
+          "durationMs": 0.123,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_99",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        },
+        {
+          "executionId": "side-effect-reconcile-020",
+          "passed": true,
+          "durationMs": 0.123,
+          "failure": null,
+          "observed": {
+            "runId": "run_effect_100",
+            "mutationCalls": 0,
+            "actionState": "completed",
+            "reconciledBeforeReplay": true,
+            "eventTags": [
+              "reconcile",
+              "ok"
+            ]
+          }
+        }
+      ],
+      "exampleRun": {
+        "executionId": "side-effect-reconcile-006",
+        "passed": true,
+        "durationMs": 0.118,
+        "failure": null,
+        "observed": {
+          "runId": "run_effect_86",
+          "mutationCalls": 0,
+          "actionState": "completed",
+          "reconciledBeforeReplay": true,
+          "eventTags": [
+            "reconcile",
+            "ok"
+          ]
+        }
+      }
     }
   ]
 }

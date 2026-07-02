@@ -15,7 +15,7 @@ type WorkspaceOption = { id: string; name: string; organization: string };
 const OPERATIONS = [
   { href: "/app/overview", label: "Overview", icon: Gauge },
   { href: "/app/quickstart", label: "Quickstart", icon: RocketLaunch },
-  { href: "/app", label: "Recovery lab", icon: Flask },
+  { href: "/app", label: "Playground", icon: Flask },
   { href: "/app/runs", label: "Recovery cases", icon: ListBullets },
   { href: "/app/providers", label: "Connections", icon: LinkSimple },
 ] as const;
@@ -44,6 +44,7 @@ export function AppChrome({
   const [userMenu, setUserMenu] = useState(false);
   const [workspaceMenu, setWorkspaceMenu] = useState(false);
   const [commands, setCommands] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
   const [switching, setSwitching] = useState(false);
   const reduceMotion = useReducedMotion();
   const initials = email.slice(0, 2).toUpperCase();
@@ -145,7 +146,7 @@ export function AppChrome({
       <main>{children}</main>
     </div>
 
-    <AnimatePresence>{commands && <motion.div initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex items-start justify-center bg-[#151922]/30 px-4 pt-[14vh] backdrop-blur-[2px]" onMouseDown={() => setCommands(false)}><motion.div initial={reduceMotion ? false : { opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Command palette" className="w-full max-w-[520px] border border-[#151922] bg-[#fbfcf8] shadow-[12px_12px_0_#d9ddd6]"><div className="flex items-center gap-3 border-b border-[#151922] px-4 py-3"><MagnifyingGlass size={15} /><input autoFocus placeholder="Jump to a page" className="h-full flex-1 bg-transparent text-[12px] outline-none placeholder:text-[#939ba6]" /><kbd className="font-mono text-[9px] text-[#818a96]">ESC</kbd></div><div className="max-h-[60vh] overflow-y-auto p-2">{NAV.map((item) => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setCommands(false)} className="flex items-center gap-3 border border-transparent px-3 py-2.5 text-[11px] text-[#4f5866] hover:border-[#c8cdd2] hover:bg-[#eef0eb] hover:text-[#151922]"><Icon size={15} />{item.label}<span className="ml-auto font-mono text-[8px] text-[#9ba2ab]">↵</span></Link>; })}</div></motion.div></motion.div>}</AnimatePresence>
+    <AnimatePresence>{commands && <motion.div initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex items-start justify-center bg-[#151922]/30 px-4 pt-[14vh] backdrop-blur-[2px]" onMouseDown={() => setCommands(false)}><motion.div initial={reduceMotion ? false : { opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Command palette" className="w-full max-w-[520px] border border-[#151922] bg-[#fbfcf8] shadow-[12px_12px_0_#d9ddd6]"><div className="flex items-center gap-3 border-b border-[#151922] px-4 py-3"><MagnifyingGlass size={15} /><input autoFocus value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder="Jump to a page" className="h-full flex-1 bg-transparent text-[12px] outline-none placeholder:text-[#939ba6]" /><kbd className="font-mono text-[9px] text-[#818a96]">ESC</kbd></div><div className="max-h-[60vh] overflow-y-auto p-2">{NAV.filter((item) => item.label.toLowerCase().includes(commandQuery.trim().toLowerCase())).map((item) => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => { setCommands(false); setCommandQuery(""); }} className="flex items-center gap-3 border border-transparent px-3 py-2.5 text-[11px] text-[#4f5866] hover:border-[#c8cdd2] hover:bg-[#eef0eb] hover:text-[#151922]"><Icon size={15} />{item.label}<span className="ml-auto font-mono text-[8px] text-[#9ba2ab]">↵</span></Link>; })}</div></motion.div></motion.div>}</AnimatePresence>
   </div>;
 }
 

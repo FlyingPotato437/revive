@@ -34,14 +34,15 @@ export function ProjectCreator() {
   return <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row sm:items-end"><div className="flex-1"><Field label="Project name" value={name} onChange={setName} placeholder="Customer support agent" /></div><button className="h-10 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white">Create project</button>{error && <p className="text-[10px] text-[#af4039]">{error}</p>}</form>;
 }
 
-export function ApiKeyManager({ keys }: { keys: Array<{ id: string; name: string; prefix: string; createdAt: number; revokedAt?: number }> }) {
+export function ApiKeyManager({ keys }: { keys: Array<{ id: string; name: string; prefix: string; createdAt: number; expiresAt?: number; revokedAt?: number }> }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [revealed, setRevealed] = useState("");
+  const [expiresInDays, setExpiresInDays] = useState("90");
   const [error, setError] = useState("");
   async function create(event: React.FormEvent) {
     event.preventDefault(); setError(""); setRevealed("");
-    const response = await fetch("/api/workspaces/api-keys", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) });
+    const response = await fetch("/api/workspaces/api-keys", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, expiresInDays: expiresInDays === "never" ? null : Number(expiresInDays) }) });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) return setError(payload.error || "Could not create API key");
     setName(""); setRevealed(payload.key); router.refresh();
@@ -51,10 +52,10 @@ export function ApiKeyManager({ keys }: { keys: Array<{ id: string; name: string
     if (response.ok) router.refresh();
   }
   return <div>
-    <form onSubmit={create} className="flex flex-col gap-3 sm:flex-row sm:items-end"><div className="flex-1"><Field label="Key name" value={name} onChange={setName} placeholder="Local SDK" /></div><button className="h-10 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white">Create API key</button></form>
+    <form onSubmit={create} className="grid gap-3 sm:grid-cols-[1fr_170px_auto] sm:items-end"><Field label="Key name" value={name} onChange={setName} placeholder="Production SDK" /><label className="block"><span className="mb-1.5 block text-[9.5px] font-semibold text-[#596273]">Expires</span><select value={expiresInDays} onChange={(event) => setExpiresInDays(event.target.value)} className="h-10 w-full border border-[#bfc5cc] bg-[#fbfcf8] px-3 text-[11px] outline-none focus:border-[#4967f2]"><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option><option value="never">No expiration</option></select></label><button className="h-10 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white">Create API key</button></form>
     {error && <p className="mt-3 text-[10px] text-[#af4039]">{error}</p>}
     {revealed && <div className="mt-4 border border-[#4967f2] bg-[#edf0ff] p-4"><div className="text-[10.5px] font-semibold text-[#2e49c8]">Copy this key now. It is stored only as a SHA-256 hash.</div><div className="mt-3 flex gap-2"><code className="min-w-0 flex-1 overflow-x-auto border border-[#c7cff9] bg-[#fbfcf8] px-3 py-2 font-mono text-[9px]">{revealed}</code><button type="button" onClick={() => navigator.clipboard.writeText(revealed)} className="border border-[#151922] px-3 text-[9.5px] font-semibold">Copy</button></div></div>}
-    <div className="mt-5 border-t border-[#d8dde3]">{keys.length ? keys.map((key) => <div key={key.id} className="grid gap-2 border-b border-[#e1e5ea] py-3 sm:grid-cols-[1fr_1fr_auto] sm:items-center"><div><div className="text-[10.5px] font-semibold">{key.name}</div><div className="mt-1 font-mono text-[8px] text-[#8a929d]">{key.prefix}...</div></div><div className="text-[9px] text-[#687180]">Created {new Date(key.createdAt).toLocaleDateString()}</div>{key.revokedAt ? <span className="text-[9px] font-semibold text-[#af4039]">Revoked</span> : <button onClick={() => revoke(key.id)} className="text-left text-[9px] font-semibold text-[#af4039] sm:text-right">Revoke</button>}</div>) : <p className="py-6 text-[10.5px] text-[#687180]">No API keys have been created for this workspace.</p>}</div>
+    <div className="mt-5 border-t border-[#d8dde3]">{keys.length ? keys.map((key) => { const expired = Boolean(key.expiresAt && key.expiresAt <= Date.now()); return <div key={key.id} className="grid gap-2 border-b border-[#e1e5ea] py-3 sm:grid-cols-[1fr_1fr_auto] sm:items-center"><div><div className="text-[10.5px] font-semibold">{key.name}</div><div className="mt-1 font-mono text-[8px] text-[#8a929d]">{key.prefix}...</div></div><div className="text-[9px] leading-4 text-[#687180]"><div>Created {new Date(key.createdAt).toLocaleDateString()}</div><div>{key.expiresAt ? `Expires ${new Date(key.expiresAt).toLocaleDateString()}` : "No expiration"}</div></div>{key.revokedAt ? <span className="text-[9px] font-semibold text-[#af4039]">Revoked</span> : expired ? <span className="text-[9px] font-semibold text-[#af4039]">Expired</span> : <button onClick={() => revoke(key.id)} className="text-left text-[9px] font-semibold text-[#af4039] sm:text-right">Revoke</button>}</div>; }) : <p className="py-6 text-[10.5px] text-[#687180]">No API keys have been created for this workspace.</p>}</div>
   </div>;
 }
 

@@ -1,0 +1,87 @@
+# Engineering gaps — honest status
+
+Maturity today: strong technical prototype, early alpha. This file tracks the
+distance to a design-partner alpha and a hosted SaaS, so nobody (including us)
+mistakes a demo for a product. Updated 2026-07-01.
+
+## Done recently (this repo)
+
+- `/v1` control-plane API: `POST/GET /v1/actions`, `POST /v1/actions/:id/complete`,
+  `POST /v1/actions/:id/reconciled`, `POST/GET /v1/recovery-cases`,
+  `GET /v1/recovery-cases/:id`, `POST /v1/recovery-cases/:id/transition`.
+  Bearer API-key auth (hashed, constant-time compare, revocation enforced,
+  last-used tracked). Explicit state machine with atomic version checks — the
+  only write path for case state. Rewrite maps public `/v1/*` onto the routes.
+- TypeScript SDK connects: `new ReviveClient({ baseUrl, apiKey })` uses the HTTP
+  transport against those endpoints (verified live: happy path + parked case).
+- Python sidecar `Reporter` streams case lifecycle into the console.
+- Entra identity binding: issuer/oid/tid from the id_token, trust-on-first-use,
+  scope coverage check; email demoted to display metadata.
+- `admin_consent_required` classification (AADSTS90094, AADSTS650052) in both
+  classifiers, routed to org-admin remediation.
+- Tenancy migration (0003): organizations/workspaces/memberships/api-keys,
+  control-plane tables, tenant-scoped uniqueness, forced RLS with default-deny
+  policies, append-only audit table.
+- Persistent worker (`npm run worker`): continuous drain, adaptive backoff,
+  graceful shutdown, stall alert.
+- P0 dedupe closed: /v1/actions returns a registration verdict
+  (new|completed|uncertain|reconciled + resultRef); the SDK executes only on
+  "new", returns stored results for completed/reconciled, and requires
+  reconciliation for uncertain. Covered by scripts/test-control-plane.mts.
+- State machine hardened: "completed" reachable only from resumed/reconciled;
+  rejected/expired/escalated/manual_review remain escape terminals.
+- Entra id_token fully verified: JWKS RS256 signature, exact issuer, audience,
+  expiry, and a nonce bound to the PKCE flow. Identity binding prefers the
+  connection's creation-time binding; run binding second; sandbox first-use
+  fallback is audited.
+- Audit events now written (local JSONL + Postgres when hosted) for action
+  registration/replay, case open/transition, and OAuth identity verification.
+- API keys support expiration (enforced in auth) alongside revocation.
+- Case detail renders REAL control-plane transitions and the real action
+  ledger for hosted cases — nothing reconstructed.
+- Integration tests: `npm run test:api` (14 checks) against a running server.
+- Postgres control-plane repository: actions and recovery cases use tenant-scoped
+  transactions with `revive.workspace_id`, row locks, optimistic versions and
+  RLS whenever `DATABASE_URL` is configured. Local JSON remains sandbox-only.
+- Hosted API keys are persisted in Postgres, carry a non-secret workspace locator
+  so RLS can be established before hash lookup, support selectable expiration,
+  and reject revoked/expired keys. Audit inserts use the same RLS transaction.
+- Production recovery no longer permits first-use identity binding: a connection
+  must already have subject + tenant identity. First-use remains local-sandbox only.
+
+## Open — ordered
+
+1. **One certified path: LangGraph Python + Nango + Microsoft Graph.**
+   Full sequence: real Graph failure → classified → case → scoped Nango connect
+   session → subject/tenant/scope verification → atomic generation bump → stale
+   worker fenced → reconcile → LangGraph resume → timeline. Store opaque Nango
+   connection references; do not duplicate token custody. Auth0 second.
+2. **Python SDK parity with `/v1`.** The sidecar engine still runs its own local
+   store; it should register actions and open cases against the hosted API the
+   way the TS SDK does (Reporter covers telemetry, not the ledger contract).
+3. **Key scoping + roles.** Keys are workspace-scoped only. Need
+   project/environment scoping and rotation; owner/admin/operator/viewer
+   roles; SSO + MFA.
+4. **Queue operations.** Worker exists; still missing transactional outbox
+   writes, DLQ inspection/replay UI, queue-depth/oldest-job metrics.
+5. **Secrets.** Single `REVIVE_SECRET` envelope. Need KMS-backed envelope
+   encryption with rotation and a secret-manager deployment.
+6. **Observability.** OpenTelemetry traces/metrics/logs correlated by
+   run/case/action id. Currently console logs only.
+7. **Operator console gaps.** Case-detail timeline exists; still missing
+   p50/p95 recovery time, duplicates-prevented counters, queue health on
+   Overview; scope-drift view on Connections.
+8. **ReviveBench staging campaign.** 40/40 local proves deterministic
+    correctness only. Needed: 1,000+ runs on staging with random worker kills,
+    duplicate/out-of-order webhooks, post-commit timeouts, wrong tenant/account,
+    stale wakeups, DB/queue restarts, provider outages. Publish raw results +
+    commit + container digest.
+9. **Ops basics before real customer credentials.** Backups with tested
+    restore, rate limits, dependency/container scanning, retention/deletion
+    controls, external pen test.
+
+## Boundary (unchanged)
+
+Nango/Auth0 own credentials. LangGraph/Temporal own execution. Revive owns
+identity verification, recovery coordination, fencing, reconciliation, and the
+record of what happened. Not a vault, not a workflow engine, not observability.
