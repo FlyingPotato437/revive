@@ -7,31 +7,6 @@ import { useState } from "react";
 
 const stages = [
   {
-    id: "proxy", label: "Proxy", icon: Plugs, language: "bash" as Language,
-    title: "Fastest path: change one base URL",
-    body: "Point provider calls at the Revive proxy. Mutations are ledgered, replays are blocked at the wire, and dead credentials open a recovery case. No SDK required.",
-    code: `# was: https://graph.microsoft.com/v1.0/me/sendMail
-curl -X POST "$REVIVE_URL/proxy/v1.0/me/sendMail" \\
-  -H "Authorization: Bearer rv_live_…" \\
-  -H "X-Revive-Connection-Id: $CONNECTION_ID" \\
-  -H "X-Revive-Run-Id: $RUN_ID" \\
-  -H "Content-Type: application/json" \\
-  -d "$MESSAGE_JSON"
-
-# reads pass straight through (no ledger entry):
-#   GET  /proxy/v1.0/me
-# optional headers:
-#   X-Revive-Action-Key:       send_followup_email
-#   X-Revive-Checkpoint-Id:    ckpt_4
-#   X-Revive-Idempotency-Key:  your own key (else derived)
-#   X-Revive-Lease-Generation: fences stale workers (409)
-# responses:
-#   x-revive-ledger: committed          side effect recorded
-#   x-revive-replay: blocked            duplicate stopped, stored result returned
-#   401 + recoveryUrl                   credential dead, case opened`,
-    result: "Every mutating call is exactly-once without touching your agent code.",
-  },
-  {
     id: "install", label: "Install", icon: Package, language: "bash" as Language,
     title: "Add the action SDK",
     body: "Install the package in the worker that executes provider actions.",
@@ -79,6 +54,31 @@ await revive.protectAction({
     code: `npm run bench:revive
 python3 -m unittest discover -s sidecar/tests -v`,
     result: "The command writes a fresh JSON report and fails if an invariant breaks.",
+  },
+  {
+    id: "proxy", label: "Proxy", icon: Plugs, language: "bash" as Language,
+    title: "Optional: gateway mode",
+    body: "Point provider calls at the Revive proxy. Mutations are ledgered, replays are blocked at the wire, and dead credentials open a recovery case. An alternative to the SDK for HTTP-only stacks.",
+    code: `# was: https://graph.microsoft.com/v1.0/me/sendMail
+curl -X POST "$REVIVE_URL/proxy/v1.0/me/sendMail" \\
+  -H "Authorization: Bearer rv_live_…" \\
+  -H "X-Revive-Connection-Id: $CONNECTION_ID" \\
+  -H "X-Revive-Run-Id: $RUN_ID" \\
+  -H "Content-Type: application/json" \\
+  -d "$MESSAGE_JSON"
+
+# reads pass straight through (no ledger entry):
+#   GET  /proxy/v1.0/me
+# optional headers:
+#   X-Revive-Action-Key:       send_followup_email
+#   X-Revive-Checkpoint-Id:    ckpt_4
+#   X-Revive-Idempotency-Key:  your own key (else derived)
+#   X-Revive-Lease-Generation: fences stale workers (409)
+# responses:
+#   x-revive-ledger: committed          side effect recorded
+#   x-revive-replay: blocked            duplicate stopped, stored result returned
+#   401 + recoveryUrl                   credential dead, case opened`,
+    result: "Every mutating call is exactly-once without touching your agent code.",
   },
 ] as const;
 
