@@ -57,7 +57,9 @@ export async function withWorkspaceTransaction<T>(
   if (!workspaceId) throw new Error("workspaceId is required for tenant-scoped database access");
   const result = await sqlClient().begin(async (sql) => {
     await sql`select set_config('revive.workspace_id', ${workspaceId}, true)`;
-    return operation(sql);
+    // begin() hands back a TransactionSql; our operations accept the wider Sql
+    // interface, which TransactionSql structurally satisfies at runtime.
+    return operation(sql as unknown as Sql);
   });
   return result as T;
 }
