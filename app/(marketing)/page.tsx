@@ -26,16 +26,16 @@ const faqs = [
 
 export default function Home() {
   return <div className="revive-home">
-    <section className="border-b border-[#151922]">
-      <div className="grid min-h-[calc(100dvh-63px)] lg:grid-cols-[minmax(0,1.04fr)_minmax(480px,.96fr)] lg:items-start">
-        <div className="flex min-w-0 items-center px-5 py-16 sm:px-8 lg:sticky lg:top-[63px] lg:min-h-[calc(100dvh-63px)] lg:px-[max(3.5rem,calc((100vw-1380px)/2+2rem))] lg:py-20">
-          <div className="max-w-[690px]">
-            <div className="text-[10px] font-semibold tracking-[.08em] text-[#2e49c8]">Agent recovery control plane</div>
-            <h1 className="mt-7 text-[clamp(44px,5.4vw,78px)] font-semibold leading-[.91] tracking-[-.07em] text-[#151922]"><span className="block">Access breaks.</span><span className="block">The run survives.</span></h1>
-            <p className="mt-7 max-w-[480px] text-[16px] leading-7 text-[#5f6876]">Reconnect the right account and continue the same workflow without repeating completed work.</p>
+    <section className="border-b border-[#e0e3dd]">
+      <div className="grid lg:grid-cols-[minmax(0,1.04fr)_minmax(460px,.96fr)] lg:items-stretch">
+        <div className="flex min-w-0 items-center px-5 py-16 sm:px-8 lg:px-[max(3.5rem,calc((100vw-1380px)/2+2rem))] lg:py-28">
+          <div className="max-w-[620px]">
+            <div className="font-mono text-[10px] font-medium uppercase tracking-[0.13em] text-[#4967f2]">Agent recovery control plane</div>
+            <h1 className="mt-6 text-[clamp(42px,5vw,64px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]"><span className="block">Access breaks.</span><span className="block">The run survives.</span></h1>
+            <p className="mt-6 max-w-[440px] text-[17px] leading-[1.6] text-[#5f6876]">Reconnect the right account and continue the same workflow without repeating completed work.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/app" className="inline-flex h-12 items-center border border-[#151922] bg-[#151922] px-5 text-[12px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">See it recover</Link>
-              <Link href="#product" className="inline-flex h-12 items-center border border-[#151922] px-5 text-[12px] font-semibold text-[#151922] transition hover:bg-white active:translate-y-px">How it works</Link>
+              <Link href="/app" className="inline-flex h-12 items-center rounded-[8px] bg-[#4967f2] px-5 text-[13px] font-semibold text-white transition hover:bg-[#3954d9] active:translate-y-px">See it recover</Link>
+              <Link href="#product" className="inline-flex h-12 items-center rounded-[8px] border border-[#d9ddd6] bg-transparent px-5 text-[13px] font-semibold text-[#151922] transition hover:border-[#151922] hover:bg-white active:translate-y-px">How it works</Link>
             </div>
           </div>
         </div>
@@ -43,8 +43,8 @@ export default function Home() {
       </div>
     </section>
 
-    <section aria-label="Recovery boundary" className="border-b border-[#151922] bg-[#eef0eb]">
-      <div className="mx-auto grid max-w-[1380px] sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
+    <section aria-label="Recovery boundary" className="border-b border-[#e0e3dd] bg-[#eef0eb]">
+      <div className="mx-auto grid max-w-[1380px] divide-y divide-[#dcdfd8] sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:divide-y-0">
         <BoundaryCell label="Credential system" title="Grant rejected" detail="Entra / Nango / Auth0" tone="fail" />
         <BoundaryArrow />
         <BoundaryCell label="Continuity layer" title="Run correlated" detail="lease / checkpoint / action" tone="active" />
@@ -53,42 +53,35 @@ export default function Home() {
       </div>
     </section>
 
-    <div className="recovery-ticker font-mono" aria-hidden="true">
-      <div className="recovery-ticker-track">
-        <TickerRun />
-        <TickerRun />
-      </div>
-    </div>
-
     <section id="product" className="mx-auto grid max-w-[1380px] gap-16 px-5 py-24 sm:px-8 lg:grid-cols-[.75fr_1.25fr] lg:py-36">
       <Reveal className="lg:sticky lg:top-28 lg:self-start">
         <p className="text-[11px] font-semibold text-[#4967f2]">What actually broke</p>
-        <h2 className="mt-5 max-w-[520px] text-[clamp(38px,5vw,64px)] font-semibold leading-[.96] tracking-[-.06em] text-[#151922]">A credential failure is not a workflow failure.</h2>
+        <h2 className="mt-5 max-w-[520px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">A credential failure is not a workflow failure.</h2>
         <p className="mt-6 max-w-[430px] text-[14px] leading-6 text-[#697281]">Retry cannot repair a revoked grant. Revive parks the run, routes the account owner, and preserves every committed action.</p>
       </Reveal>
       <Stagger className="stage-stack">
         {recoveryStages.map((stage) => <StaggerItem key={stage.title}>
           <article className="stage-row group grid gap-4 py-7 sm:grid-cols-[130px_1fr] sm:py-9">
-            <div className="font-mono text-[9px] tracking-[.08em] text-[#7b8491] group-hover:text-[#2e49c8]">{stage.system.toUpperCase()}</div>
-            <div><h3 className="text-[23px] font-semibold tracking-[-.04em] text-[#151922]">{stage.title}</h3><p className="mt-2 max-w-[570px] text-[13px] leading-6 text-[#697281]">{stage.body}</p></div>
+            <div className="font-mono text-[10px] tracking-[.08em] text-[#7b8491] group-hover:text-[#2e49c8]">{stage.system.toUpperCase()}</div>
+            <div><h3 className="text-[22px] font-semibold tracking-[-0.02em] text-[#151922]">{stage.title}</h3><p className="mt-2 max-w-[570px] text-[14px] leading-6 text-[#697281]">{stage.body}</p></div>
           </article>
         </StaggerItem>)}
       </Stagger>
     </section>
 
-    <section id="architecture" className="border-y border-[#151922] bg-[#eef0eb]">
+    <section id="architecture" className="border-y border-[#e0e3dd] bg-[#eef0eb]">
       <div className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
-        <Reveal><p className="text-[11px] font-semibold text-[#4967f2]">The recovery contract</p><h2 className="mt-5 max-w-[860px] text-[clamp(40px,5.7vw,72px)] font-semibold leading-[.93] tracking-[-.065em] text-[#151922]">Same run ID.<br />New credential generation.</h2></Reveal>
-        <div className="continuity-sheet mt-16 grid border border-[#151922] bg-[#fbfcf8] lg:grid-cols-[1.08fr_.92fr]">
-          <Reveal className="relative min-h-[440px] overflow-hidden border-b border-[#151922] p-7 sm:p-10 lg:border-b-0 lg:border-r">
+        <Reveal><p className="text-[11px] font-semibold text-[#4967f2]">The recovery contract</p><h2 className="mt-5 max-w-[860px] text-[clamp(38px,5vw,60px)] font-semibold leading-[1.0] tracking-[-0.03em] text-[#151922]">Same run ID.<br />New credential generation.</h2></Reveal>
+        <div className="continuity-sheet mt-16 grid overflow-hidden rounded-[14px] border border-[#151922] bg-[#fbfcf8] lg:grid-cols-[1.08fr_.92fr]">
+          <Reveal className="relative min-h-[440px] overflow-hidden border-b border-[#d9ddd6] p-7 sm:p-10 lg:border-b-0 lg:border-r">
             <div className="continuity-ruler" aria-hidden="true" />
             <div className="relative flex h-full flex-col justify-between">
-              <div className="flex items-center justify-between font-mono text-[9px] tracking-[.1em] text-[#727b89]"><span>LOGICAL EXECUTION</span><span>PROTECTED</span></div>
+              <div className="flex items-center justify-between font-mono text-[10px] tracking-[.1em] text-[#727b89]"><span>LOGICAL EXECUTION</span><span>PROTECTED</span></div>
               <div className="py-16">
-                <div className="text-[clamp(64px,9vw,120px)] font-semibold leading-none tracking-[-.085em] text-[#151922]">run_7f2</div>
-                <div className="mt-6 grid grid-cols-[auto_1fr_auto] items-center gap-4"><span className="font-mono text-[10px] font-medium text-[#c2413a]">GRANT REJECTED</span><span className="h-px bg-[#aeb5bd]" /><span className="font-mono text-[10px] font-medium text-[#2e49c8]">GENERATION 02</span></div>
+                <div className="font-mono text-[clamp(58px,8vw,104px)] font-semibold leading-none tracking-[-.04em] text-[#151922]">run_7f2</div>
+                <div className="mt-6 grid grid-cols-[auto_1fr_auto] items-center gap-4"><span className="font-mono text-[10px] font-medium text-[#c2413a]">GRANT REJECTED</span><span className="h-px bg-[#cbd0d5]" /><span className="font-mono text-[10px] font-medium text-[#2e49c8]">GENERATION 02</span></div>
               </div>
-              <div className="font-mono text-[9px] text-[#737c89]">CHECKPOINT + ACTION KEY PRESERVED</div>
+              <div className="font-mono text-[10px] text-[#737c89]">CHECKPOINT + ACTION KEY PRESERVED</div>
             </div>
           </Reveal>
           <Stagger className="grid sm:grid-cols-2 lg:grid-cols-1">
@@ -101,56 +94,83 @@ export default function Home() {
     </section>
 
     <section className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
-      <Reveal><h2 className="max-w-[760px] text-[clamp(36px,4.8vw,60px)] font-semibold leading-[.98] tracking-[-.055em] text-[#151922]">Built between systems that already do their jobs well.</h2></Reveal>
-      <Reveal className="systems-ledger mt-14 border-t border-[#151922]">
+      <Reveal><h2 className="max-w-[760px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">Built between systems that already do their jobs well.</h2></Reveal>
+      <Reveal className="systems-ledger mt-14 border-t border-[#d9ddd6]">
         <SystemRow label="Credential custody" systems="Microsoft Entra, Nango, Auth0" detail="Tokens stay with the identity layer." />
         <SystemRow label="Recovery contract" systems="Revive" detail="Correlates identity, execution and replay evidence." active />
         <SystemRow label="Durable execution" systems="LangGraph, Temporal" detail="The runtime handles checkpointing and scheduling." />
       </Reveal>
     </section>
 
-    <section className="border-y border-[#151922] bg-[#eef0eb]">
+    <section id="security" className="border-y border-[#e0e3dd]">
       <div className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
-        <Reveal><h2 className="max-w-[780px] text-[clamp(36px,4.8vw,60px)] font-semibold leading-[.98] tracking-[-.055em] text-[#151922]">Add recovery at the action boundary.</h2><p className="mt-5 max-w-[620px] text-[13px] leading-6 text-[#687180]">Use the runtime and credential system already in production. Revive records the contract between them.</p></Reveal>
+        <Reveal>
+          <p className="text-[11px] font-semibold text-[#4967f2]">How reauthorization is delivered</p>
+          <h2 className="mt-5 max-w-[720px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">A single-use link, verified against the same identity.</h2>
+          <p className="mt-5 max-w-[620px] text-[14px] leading-6 text-[#687180]">No iframe, no shared password, no session to hijack. The link is a signed, one-time capability that expires in 15 minutes and only completes if the reconnecting account matches the one originally bound to the run.</p>
+        </Reveal>
+        <Reveal delay={.06} className="mt-14 grid gap-px border border-[#151922] bg-[#151922] sm:grid-cols-3">
+          {[
+            ["01", "Agent fails", "A credential is rejected mid-run. Revive parks the run at its checkpoint and opens a recovery case."],
+            ["02", "Owner reconnects", "The account owner opens a single-use link (email or Slack) and signs in through the provider's own OAuth."],
+            ["03", "Run resumes", "Revive verifies the same subject and tenant, rotates the credential lease, and continues the original run once."],
+          ].map(([n, title, body]) => (
+            <div key={n} className="bg-[#fbfcf8] p-6 sm:p-8">
+              <div className="font-mono text-[10px] text-[#2e49c8]">{n}</div>
+              <h3 className="mt-4 text-[17px] font-semibold tracking-[-.02em] text-[#151922]">{title}</h3>
+              <p className="mt-2 text-[12px] leading-6 text-[#687180]">{body}</p>
+            </div>
+          ))}
+        </Reveal>
+        <Reveal delay={.1} className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["No token custody", "Provider tokens stay in your vault (Nango, Auth0, Entra). Revive never stores raw refresh tokens."],
+            ["Identity-verified recovery", "The reconnecting account's subject and tenant must match the run's creation-time binding, or resume is blocked."],
+            ["Tenant isolation", "Postgres row-level security, forced and fail-closed, scopes every read and write to one workspace."],
+            ["Hashed, scoped keys", "API keys are SHA-256 hashed with constant-time comparison; the control plane is rate-limited per workspace."],
+          ].map(([title, body]) => (
+            <div key={title} className="border border-[#d9ddd6] bg-[#fbfcf8] p-5">
+              <div className="text-[12px] font-semibold text-[#151922]">{title}</div>
+              <p className="mt-2 text-[10.5px] leading-5 text-[#687180]">{body}</p>
+            </div>
+          ))}
+        </Reveal>
+      </div>
+    </section>
+
+    <section className="border-b border-[#e0e3dd] bg-[#eef0eb]">
+      <div className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
+        <Reveal><h2 className="max-w-[780px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">Add recovery at the action boundary.</h2><p className="mt-5 max-w-[620px] text-[14px] leading-6 text-[#687180]">Use the runtime and credential system already in production. Revive records the contract between them.</p></Reveal>
         <Reveal delay={.06} className="mt-12"><IntegrationPanel /></Reveal>
       </div>
     </section>
 
-    <section id="faq" className="border-y border-[#151922] bg-[#eef0eb]">
+    <section id="faq" className="border-y border-[#e0e3dd] bg-[#eef0eb]">
       <div className="mx-auto grid max-w-[1180px] gap-12 px-5 py-24 sm:px-8 lg:grid-cols-[.65fr_1.35fr] lg:py-28">
-        <Reveal><h2 className="text-[42px] font-semibold tracking-[-.05em] text-[#151922]">Clear boundaries.</h2><p className="mt-4 max-w-[300px] text-[13px] leading-6 text-[#687180]">How Revive fits with the infrastructure already running your workflows.</p></Reveal>
-        <Reveal delay={.06} className="border-t border-[#151922]">{faqs.map(([question, answer]) => <details key={question} className="group border-b border-[#c7ccd2] py-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[14px] font-semibold text-[#151922]"><span>{question}</span><span className="font-mono text-[18px] font-normal text-[#737c89] transition group-open:rotate-45 group-open:text-[#2e49c8]">+</span></summary><p className="mt-3 max-w-[680px] pr-10 text-[12px] leading-6 text-[#687180]">{answer}</p></details>)}</Reveal>
+        <Reveal><h2 className="text-[clamp(32px,3.4vw,42px)] font-semibold tracking-[-0.03em] text-[#151922]">Clear boundaries.</h2><p className="mt-4 max-w-[300px] text-[14px] leading-6 text-[#687180]">How Revive fits with the infrastructure already running your workflows.</p></Reveal>
+        <Reveal delay={.06} className="border-t border-[#d9ddd6]">{faqs.map(([question, answer]) => <details key={question} className="group border-b border-[#dcdfd8] py-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[15px] font-semibold text-[#151922]"><span>{question}</span><span className="font-mono text-[18px] font-normal text-[#737c89] transition group-open:rotate-45 group-open:text-[#2e49c8]">+</span></summary><p className="mt-3 max-w-[680px] pr-10 text-[13px] leading-6 text-[#687180]">{answer}</p></details>)}</Reveal>
       </div>
     </section>
 
     <section className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-36">
-      <Reveal className="relative border-l-[6px] border-[#4967f2] pl-6 sm:pl-10">
-        <p className="absolute right-0 top-0 hidden font-mono text-[9px] tracking-[.1em] text-[#8a93a0] lg:block">FAULT INJECTION / LOCAL SANDBOX</p>
-        <h2 className="max-w-[880px] text-[clamp(44px,6vw,82px)] font-semibold leading-[.91] tracking-[-.07em] text-[#151922]">Break the credential.<br />Keep the execution.</h2>
-        <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-center"><p className="max-w-[550px] text-[14px] leading-6 text-[#687180]">Run the local fault injection and inspect every recovery transition.</p><Link href="/app" className="inline-flex h-12 w-fit items-center border border-[#151922] bg-[#151922] px-6 text-[12px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">Open recovery lab</Link></div>
+      <Reveal className="relative border-l-[4px] border-[#4967f2] pl-6 sm:pl-10">
+        <h2 className="max-w-[880px] text-[clamp(40px,5.2vw,68px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">Break the credential.<br />Keep the execution.</h2>
+        <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-center"><p className="max-w-[550px] text-[15px] leading-6 text-[#687180]">Run the local fault injection and inspect every recovery transition.</p><Link href="/app" className="inline-flex h-12 w-fit items-center rounded-[8px] bg-[#151922] px-6 text-[13px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">Open recovery lab</Link></div>
       </Reveal>
     </section>
   </div>;
 }
 
-function TickerRun() {
-  const items = [
-    ["CHECKPOINT", "PRESERVED"], ["CREDENTIAL GENERATION", "01 → 02"], ["STALE WORKER", "FENCED"],
-    ["SIDE EFFECT", "RECONCILED"], ["IDENTITY", "SAME SUBJECT · SAME TENANT"], ["REPLAY VERDICT", "ALREADY_COMMITTED"],
-    ["DUPLICATE SENDS", "0 OBSERVED"], ["RUN", "RESUMED AT CKPT_05"],
-  ] as const;
-  return <>{items.map(([label, value]) => <span key={label}>{label} <em>{value}</em></span>)}</>;
-}
-
 function BoundaryCell({ label, title, detail, tone }: { label: string; title: string; detail: string; tone: "fail" | "active" | "ok" }) {
+  const dot = tone === "fail" ? "#c2413a" : tone === "ok" ? "#148060" : "#4967f2";
   const color = tone === "fail" ? "text-[#c2413a]" : tone === "ok" ? "text-[#148060]" : "text-[#2e49c8]";
-  return <div className="px-5 py-6 sm:px-7"><div className={`font-mono text-[8px] tracking-[.1em] ${color}`}>{label.toUpperCase()}</div><div className="mt-2 text-[15px] font-semibold text-[#151922]">{title}</div><div className="mt-1 font-mono text-[8px] text-[#7b8491]">{detail}</div></div>;
+  return <div className="px-5 py-7 sm:px-7"><div className="flex items-center gap-2"><span className="h-[7px] w-[7px] rounded-full" style={{ background: dot }} /><span className={`font-mono text-[10px] tracking-[.08em] ${color}`}>{label.toUpperCase()}</span></div><div className="mt-2.5 text-[16px] font-semibold text-[#151922]">{title}</div><div className="mt-1 font-mono text-[10px] text-[#7b8491]">{detail}</div></div>;
 }
 
 function BoundaryArrow() {
-  return <div className="hidden items-center sm:flex" aria-hidden="true"><span className="h-px w-8 bg-[#9ca4ae]" /><span className="h-2 w-2 rotate-45 border-r border-t border-[#9ca4ae]" /></div>;
+  return <div className="hidden items-center sm:flex" aria-hidden="true"><span className="h-px w-8 bg-[#c4cbd1]" /><span className="h-1.5 w-1.5 rotate-45 border-r border-t border-[#c4cbd1]" /></div>;
 }
 
 function SystemRow({ label, systems, detail, active = false }: { label: string; systems: string; detail: string; active?: boolean }) {
-  return <div className={`grid gap-4 border-b border-[#c8cdd2] px-1 py-6 sm:grid-cols-[190px_1fr_1fr] sm:items-center ${active ? "bg-[#edf0ff] px-5" : ""}`}><div className="font-mono text-[9px] tracking-[.09em] text-[#737c89]">{label.toUpperCase()}</div><div className={`text-[15px] font-semibold ${active ? "text-[#2e49c8]" : "text-[#151922]"}`}>{systems}</div><p className="text-[11px] leading-5 text-[#687180]">{detail}</p></div>;
+  return <div className={`grid gap-4 border-b border-[#d9ddd6] px-1 py-6 sm:grid-cols-[190px_1fr_1fr] sm:items-center ${active ? "rounded-[8px] border-b-transparent bg-[#edf0ff] px-5" : ""}`}><div className="font-mono text-[10px] tracking-[.08em] text-[#737c89]">{label.toUpperCase()}</div><div className={`text-[16px] font-semibold ${active ? "text-[#2e49c8]" : "text-[#151922]"}`}>{systems}</div><p className="text-[12px] leading-5 text-[#687180]">{detail}</p></div>;
 }

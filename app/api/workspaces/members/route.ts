@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sessionFromCookies } from "@/lib/auth";
 import { listWorkspaceMembers, removeWorkspaceMember, requireWorkspaceRole, setWorkspaceMember, type WorkspaceRole } from "@/lib/rbac";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
+import { sendWorkspaceInvite } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -29,8 +30,13 @@ export async function POST(req: NextRequest) {
     await requireWorkspaceRole(ctx.session.email, ctx.workspace, "admin");
     const body = await req.json() as { email?: string; role?: WorkspaceRole };
     if (!body.role || !["viewer", "operator", "admin"].includes(body.role)) throw new Error("role must be viewer, operator, or admin");
-    await setWorkspaceMember(ctx.workspace, String(body.email || ""), body.role as "viewer" | "operator" | "admin");
-    return NextResponse.json({ ok: true });
+    const email = String(body.email || "").trim().toLowerCase();
+    await setWorkspaceMember(ctx.workspace, email, body.role as "viewer" | "operator" | "admin");
+    // Fire-and-forget invite; never block the membership write on email delivery.
+    const invited = await sendWorkspaceInvite({
+      email, role: body.role, workspaceName: ctx.workspace.name, inviterEmail: ctx.session.email,
+    }).catch(() => ({ email: false, slack: false }));
+    return NextResponse.json({ ok: true, invited });
   } catch (error) {
     const forbidden = error instanceof Error && error.message === "forbidden";
     return NextResponse.json({ error: error instanceof Error ? error.message : "could not update member" }, { status: forbidden ? 403 : 400 });
