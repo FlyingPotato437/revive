@@ -78,7 +78,7 @@ export async function createCheckoutSession(input: {
   returnUrl: string;
 }): Promise<string> {
   if (!stripeConfigured()) throw new Error("billing is not configured (STRIPE_SECRET_KEY, STRIPE_PRICE_PRO)");
-  const session = await stripe("/checkout/sessions", {
+  const checkoutParams = {
     mode: "subscription",
     // Keep card explicit until the Stripe account finishes activating dynamic
     // payment methods. This still uses Stripe Checkout and never handles card
@@ -94,8 +94,10 @@ export async function createCheckoutSession(input: {
     "subscription_data[metadata][workspaceId]": input.workspaceId,
     success_url: `${input.returnUrl}?billing=success`,
     cancel_url: `${input.returnUrl}?billing=cancelled`,
-  }, {
-    idempotencyKey: `revive-checkout-${crypto.createHash("sha256").update(`${input.organizationId}:${process.env.STRIPE_PRICE_PRO}:${new Date().toISOString().slice(0, 10)}`).digest("hex")}`,
+  };
+  const requestHash = crypto.createHash("sha256").update(JSON.stringify(checkoutParams)).digest("hex");
+  const session = await stripe("/checkout/sessions", checkoutParams, {
+    idempotencyKey: `revive-checkout-${requestHash}`,
   });
   return String(session.url);
 }
