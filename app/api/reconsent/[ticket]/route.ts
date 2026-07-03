@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { approveReconsent } from "@/lib/engine";
-import { entraConfigured } from "@/lib/oauth/entra";
 import { nangoConfigured } from "@/lib/integrations/nango";
 import { loadConnectionBinding } from "@/lib/hosted";
 import { resolveRecoveryTarget } from "@/lib/recovery-target";
@@ -17,14 +16,13 @@ export async function GET(
   const target = await resolveRecoveryTarget(ticket);
   if (!target) return NextResponse.json({ error: "ticket expired, consumed, or unknown" }, { status: 410 });
   if (target.kind === "sandbox") {
-    const realEntra = target.ticket.provider === "microsoft" && entraConfigured();
+    // The Playground is a self-contained simulation with a synthetic account,
+    // so approval is always simulated. Real provider OAuth belongs to the
+    // control-plane recovery path (a real Nango/Entra connection), never here.
     return NextResponse.json({
       ticket: target.ticket,
       classifier: target.session.revive.classifier,
-      authorization: {
-        mode: realEntra ? "entra_pkce" : "sandbox",
-        url: realEntra ? `/api/oauth/entra/start?ticket=${encodeURIComponent(ticket)}` : null,
-      },
+      authorization: { mode: "sandbox", url: null },
     });
   }
 
@@ -63,9 +61,7 @@ export async function POST(
   if (target.kind === "control") {
     return NextResponse.json({ ok: false, reason: "complete authorization through the configured credential vault" }, { status: 409 });
   }
-  if (target.ticket.provider === "microsoft" && entraConfigured()) {
-    return NextResponse.json({ ok: false, reason: "complete Microsoft Entra authorization" }, { status: 409 });
-  }
+  // Sandbox tickets always simulate the approval and resume the demo run.
   const result = approveReconsent(ticket);
   if (!result.ok) return NextResponse.json(result, { status: 409 });
   return NextResponse.json(result);
