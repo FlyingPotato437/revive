@@ -4,7 +4,7 @@ import { reconcileAction, TransitionError } from "@/lib/control-plane";
 
 export const dynamic = "force-dynamic";
 
-// POST /v1/actions/:id/reconciled — SDK contract: ReviveTransport.markReconciled.
+// POST /v1/actions/:id/reconciled implements ReviveTransport.markReconciled.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await authenticateApiKey(req);
   if (!auth.ok) return auth.response;

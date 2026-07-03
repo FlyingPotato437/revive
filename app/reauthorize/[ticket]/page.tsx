@@ -30,6 +30,7 @@ type CompletionData = { resumeQueued: boolean; state: string };
 const SCOPE_PERMS: Record<string, string> = {
   offline_access: "Keep access after this browser session",
   "Mail.ReadWrite": "Read and update mail",
+  "Mail.Send": "Send mail for protected workflow actions",
   "Calendars.Read": "Read calendar events",
   "Files.Read.All": "Read files this account can access",
 };

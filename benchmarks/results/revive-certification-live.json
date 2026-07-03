@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "kind": "live-provider-correctness-certification",
-  "generatedAt": "2026-07-02T18:18:03.964411+00:00",
-  "sourceCommit": "207b3ed",
+  "generatedAt": "2026-07-02T23:03:50.882440+00:00",
+  "sourceCommit": "6ab2671",
   "runtime": {
     "name": "LangGraph",
     "checkpointer": "SQLiteSaver",
-    "threadId": "live-cert-f9661040a69a"
+    "threadId": "live-cert-cdb6ad38e8e3"
   },
   "credentialSystem": {
     "name": "Nango",
@@ -28,7 +28,7 @@
     "customer MTTR"
   ],
   "passed": true,
-  "durationMs": 1914.032,
+  "durationMs": 2673.607,
   "assertions": {
     "sameThreadResumed": true,
     "leaseGenerationAdvanced": true,

@@ -6,7 +6,7 @@ import { audit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
-// POST /v1/recovery-cases/:id/deny — human denial: the case terminates as
+// POST /v1/recovery-cases/:id/deny handles human denial. The case terminates as
 // rejected and the parked run is never resumed under this case.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await authenticateApiKey(req);

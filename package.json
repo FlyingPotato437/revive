@@ -13,12 +13,15 @@
     "sdk:build": "npm --prefix sdk/typescript run build",
     "bench:revive": "python3 sidecar/benchmarks/revivebench.py",
     "certify:live": ".venv/bin/python sidecar/benchmarks/live_langgraph_nango.py",
+    "demo:killer": "node scripts/killer-demo.mjs",
     "worker": "node scripts/worker.mjs",
     "retention": "node scripts/retention.mjs",
     "migrate": "node scripts/migrate.mjs",
-    "test:api": "node --env-file-if-exists=.env.local --import tsx scripts/test-control-plane.mts"
+    "test:api": "node --env-file-if-exists=.env.local --import tsx scripts/test-control-plane.mts",
+    "test:reconciliation": "node --env-file-if-exists=.env.local --import tsx scripts/test-reconciliation.mts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.5.12",
     "@lobehub/icons-static-svg": "^1.91.0",
     "@nangohq/frontend": "^0.70.9",
     "@phosphor-icons/react": "^2.1.10",

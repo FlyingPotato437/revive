@@ -8,6 +8,7 @@ next-env.d.ts
 .DS_Store
 npm-debug.log*
 .env*
+!.env.example
 
 # python sidecar
 .venv/

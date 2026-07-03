@@ -20,6 +20,22 @@ Monitor `GET /api/internal/worker/health` with `Authorization: Bearer $REVIVE_HE
 
 The runtime adapter receives a signed `recovery.resume_requested` event at `REVIVE_RUNTIME_RESUME_URL`. It must reconcile any uncertain side effect, resume the original checkpoint, and return JSON containing `{"ok":true,"resumed":true,"runId":"...","checkpointId":"..."}`. Revive does not mark the case resumed on a generic HTTP 200 or a mismatched run/checkpoint acknowledgement.
 
+For the executable LangGraph implementation, run `npm run demo:killer`. The
+coordinator starts the control plane and callback service together, rotates a
+fresh callback secret in memory, creates and later revokes a temporary
+workspace API key, and drains the queue until the exact graph thread
+acknowledges resume. The Microsoft integration needs delegated
+`Mail.ReadWrite`, `Mail.Send`, `User.Read`, and `Calendars.Read` permissions.
+
+## Hosted console authentication
+
+Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` to enable the
+Clerk SSO entry point. Clerk completes the hosted sign-in, then
+`/api/auth/clerk/bridge` resolves the verified primary email and issues a
+Revive application session. Configure MFA, allowed domains, and enterprise
+connections in the Clerk tenant before a pilot. Without both keys, the local
+password and sandbox paths remain active.
+
 ## Backups and recovery drills
 
 Managed Postgres point-in-time recovery is the primary control. The repository backup command produces a second portable artifact:

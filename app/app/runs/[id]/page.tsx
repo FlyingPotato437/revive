@@ -16,7 +16,7 @@ export default async function RecoveryCaseDetail({ params }: { params: Promise<{
   const status = recovery?.status ?? run.status;
   const tone = status === "recovered" || run.status === "completed" ? "ok" : status === "awaiting_user" ? "warn" : run.status === "dead" ? "fail" : "cobalt";
   // Hosted control-plane case: render the REAL transition history and the real
-  // action ledger — never a reconstructed spine.
+  // action ledger, never a reconstructed spine.
   const controlPlaneEvents = recovery?.events ?? [];
   const isControlPlane = controlPlaneEvents.length > 0;
   const ledger = isControlPlane && session.workspaceId

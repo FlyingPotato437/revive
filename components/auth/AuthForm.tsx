@@ -12,7 +12,7 @@ const boundary = [
   { icon: Key, label: "Lease", detail: "Next credential generation" },
 ] as const;
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export function AuthForm({ mode, ssoEnabled = false }: { mode: "login" | "signup"; ssoEnabled?: boolean }) {
   const router = useRouter();
   const params = useSearchParams();
   const reduceMotion = useReducedMotion();
@@ -90,6 +90,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </div>
 
           <form onSubmit={submit} className="mt-10 max-w-[520px]">
+            {ssoEnabled && (
+              <>
+                <Link href="/sso" className="mb-5 inline-flex h-12 w-full items-center justify-between border border-[#4967f2] bg-[#e9ecff] px-4 text-[11px] font-semibold text-[#263b9f] transition hover:bg-[#dfe4ff] active:translate-y-px">
+                  Continue with company SSO
+                  <ArrowRight size={14} weight="bold" />
+                </Link>
+                <div className="mb-5 flex items-center gap-3 font-mono text-[8px] tracking-[.1em] text-[#8a929e]"><span className="h-px flex-1 bg-[#c7ccd2]" />OR USE PASSWORD<span className="h-px flex-1 bg-[#c7ccd2]" /></div>
+              </>
+            )}
             <div className="grid gap-4">
               {mode === "signup" && <Field label="Name" value={name} onChange={setName} placeholder="Your name" type="text" autoComplete="name" />}
               <Field label="Work email" value={email} onChange={setEmail} placeholder="you@company.com" type="email" autoComplete="email" required />

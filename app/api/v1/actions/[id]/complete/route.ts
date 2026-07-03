@@ -4,7 +4,7 @@ import { completeAction, TransitionError } from "@/lib/control-plane";
 
 export const dynamic = "force-dynamic";
 
-// POST /v1/actions/:id/complete — SDK contract: ReviveTransport.completeAction.
+// POST /v1/actions/:id/complete implements ReviveTransport.completeAction.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await authenticateApiKey(req);
   if (!auth.ok) return auth.response;

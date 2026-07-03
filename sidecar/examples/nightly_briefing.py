@@ -27,7 +27,7 @@ from revive import (CheckpointStore, Engine, Provider, Step, Token, TokenError,
 from examples.mock_idp import IdP, make_server
 
 BASE = "http://127.0.0.1:8750"
-SCOPES = ["offline_access", "Mail.ReadWrite", "Calendars.Read", "Files.Read.All"]
+SCOPES = ["offline_access", "Mail.ReadWrite", "Mail.Send", "Calendars.Read", "Files.Read.All"]
 STEP_IDS = ["acquire", "identity", "inbox", "calendar", "files", "compose", "send", "archive"]
 STEP_LABELS = {
     "acquire": "Acquire Graph token", "identity": "Resolve service identity",

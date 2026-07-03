@@ -21,11 +21,14 @@ export interface RecoveryCase {
     leaseGeneration?: number;
 }
 export type ActionRegistrationState = "new" | "completed" | "uncertain" | "reconciled";
+export type ReplayVerdict = "safe_to_execute" | "already_committed" | "reconcile_first" | "blocked_stale_generation";
 export interface ActionRegistration {
     id: string;
     idempotencyKey: string;
     /** Ledger verdict for this idempotency key. Only "new" may execute. */
     state: ActionRegistrationState;
+    /** Direct answer to "should this exact side effect run again?". */
+    replayVerdict?: ReplayVerdict;
     /** Stored result reference for completed/reconciled actions. */
     resultRef?: string;
 }

@@ -4,9 +4,9 @@
 // reconcile_first to already_committed / safe_to_execute.
 //
 // Strategies (in order of reliability):
-//   1. messageId       — direct GET of the created object (send/draft mutations)
-//   2. internetMessageId — exact-match filter over sentitems
-//   3. subject + window  — sentitems search fallback; can only prove presence,
+//   1. messageId: direct GET of the created object (send/draft mutations)
+//   2. internetMessageId: exact-match filter over sentitems
+//   3. subject + window: sentitems search fallback; can only prove presence,
 //                          absence within the window is reported as not_found
 // All reads go through the Nango proxy: Revive never holds the raw token.
 
@@ -35,7 +35,7 @@ export interface GraphMailProbe {
 }
 
 export async function reconcileGraphSentMail(probe: GraphMailProbe): Promise<GraphReconcileResult> {
-  // 1. Direct object fetch — strongest evidence.
+  // 1. Direct object fetch, the strongest evidence.
   if (probe.messageId) {
     const response = await nangoProxy({
       integrationId: probe.integrationId,
@@ -73,7 +73,7 @@ export async function reconcileGraphSentMail(probe: GraphMailProbe): Promise<Gra
       : { outcome: "not_found", strategy: "internet_message_id", detail: "no sent message carries this internetMessageId" };
   }
 
-  // 3. Subject within a time window — presence proof only.
+  // 3. Subject within a time window, which proves presence only.
   if (probe.subject) {
     const windowMinutes = Math.max(1, Math.min(probe.windowMinutes ?? 60, 24 * 60));
     const since = new Date(Date.now() - windowMinutes * 60_000).toISOString();

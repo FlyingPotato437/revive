@@ -23,7 +23,7 @@ export interface EntraTokenSet {
 
 export interface EntraIdentityClaims {
   issuer: string;
-  subject: string; // oid — the immutable directory object id
+  subject: string; // oid, the immutable directory object id
   tenant: string;  // tid
 }
 
@@ -108,7 +108,7 @@ function tenant(): string {
 }
 
 export function requestedScopes(): string[] {
-  const value = process.env.ENTRA_SCOPES || "offline_access User.Read Mail.ReadWrite Calendars.Read Files.Read.All";
+  const value = process.env.ENTRA_SCOPES || "offline_access User.Read Mail.ReadWrite Mail.Send Calendars.Read Files.Read.All";
   // openid guarantees an id_token, which carries the oid/tid claims that
   // recovery identity binding verifies against. Never bind on email.
   return [...new Set(["openid", ...value.split(/\s+/).filter(Boolean)])];

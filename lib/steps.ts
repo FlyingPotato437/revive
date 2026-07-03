@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // The scripted run: a realistic overnight Microsoft Graph automation.
-// "Nightly Exec Briefing" — a cron-scheduled, unattended, multi-step agent.
+// "Nightly Exec Briefing" is a cron-scheduled, unattended, multi-step agent.
 // The dead-refresh-token failure lands on a configurable step (default: Files).
 // ---------------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ export const RUN_SCRIPT: StepSpec[] = [
     method: "POST",
     path: "/oauth2/v2.0/token",
     label: "Acquire Graph token",
-    detail: "grant_type=refresh_token · offline_access Mail.ReadWrite Calendars.Read Files.Read.All",
+    detail: "grant_type=refresh_token · offline_access Mail.ReadWrite Mail.Send Calendars.Read Files.Read.All",
   },
   {
     id: "identity",
@@ -41,7 +41,7 @@ export const RUN_SCRIPT: StepSpec[] = [
     method: "GET",
     path: "/v1.0/me/calendarView",
     label: "Pull tomorrow's calendar",
-    detail: "7 events · 09:00–17:30",
+    detail: "7 events · 09:00-17:30",
   },
   {
     id: "files",

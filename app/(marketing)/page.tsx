@@ -4,9 +4,9 @@ import { Reveal, Stagger, StaggerItem } from "@/components/marketing/Motion";
 import { IntegrationPanel } from "@/components/marketing/IntegrationPanel";
 
 const recoveryStages = [
-  { title: "Know why it stopped", body: "An expired login looks like every other error. Revive tells apart “retry will fix it” from “a person has to reconnect” — before anything is retried blind.", system: "Identity" },
+  { title: "Know why it stopped", body: "Revive separates retryable failures from grants that need a person to reconnect, before another tool call runs.", system: "Identity" },
   { title: "Park the work safely", body: "The run pauses at its last checkpoint instead of crashing. Nothing is lost, and nothing gets repeated while you wait.", system: "Revive" },
-  { title: "Bring back the one person who can fix it", body: "The account owner gets a secure, single-use link. They sign in once — no ops ticket, no shared password, no credentials shown to anyone.", system: "Account owner" },
+  { title: "Bring back the account owner", body: "A secure, single-use link routes reauthorization to the bound account. No shared password or exposed credential.", system: "Account owner" },
   { title: "Pick up exactly where it left off", body: "The same run continues from its checkpoint. The email that already went out stays sent once.", system: "Runtime" },
 ];
 
@@ -18,9 +18,9 @@ const invariants = [
 ];
 
 const faqs = [
-  ["Why can't we just retry?", "Retrying with a dead login fails the same way again. And replaying blind can repeat things that already happened — the email sends twice, the invoice posts twice. Recovery needs a person to reconnect and a record of what already committed."],
-  ["Is Revive another token vault?", "No. Your credential system — Nango, Auth0, provider vaults — keeps custody of tokens. Revive handles what happens to the in-flight work when those tokens die."],
-  ["Does recovery survive a worker restart?", "Yes. The recovery case and checkpoint are durable, so a different worker can pick up the same run — even days later."],
+  ["Why can't we just retry?", "A rejected grant fails again, while blind replay can duplicate work that already committed. Revive reconnects the account and checks the action ledger first."],
+  ["Is Revive another token vault?", "No. Nango, Auth0, or your provider vault keeps token custody. Revive coordinates the in-flight run around that credential change."],
+  ["Does recovery survive a worker restart?", "Yes. The recovery case and checkpoint are durable, so another worker can continue the same run later."],
   ["Which runtimes can Revive coordinate?", "LangGraph and Temporal adapters ship in the repo today (adapter preview). The contract is designed to support more durable runtimes."],
 ];
 
@@ -30,9 +30,9 @@ export default function Home() {
       <div className="hero-index" aria-hidden="true">RECOVERY<br />WITHOUT<br />REPLAY</div>
       <div className="relative mx-auto grid min-h-[calc(100dvh-63px)] max-w-[1380px] items-center gap-12 px-5 py-12 sm:px-8 lg:grid-cols-[.94fr_1.06fr] lg:gap-16 lg:py-14">
         <div className="relative z-10 max-w-[690px]">
-          <div className="flex items-center gap-3 text-[10px] font-semibold tracking-[.08em] text-[#2e49c8]"><span className="h-[6px] w-[6px] bg-[#4967f2]" />Agent recovery control plane</div>
+          <div className="text-[10px] font-semibold tracking-[.08em] text-[#2e49c8]">Agent recovery control plane</div>
           <h1 className="mt-7 text-[clamp(48px,5.5vw,78px)] font-semibold leading-[.91] tracking-[-.07em] text-[#151922]"><span className="block">Keep the run.</span><span className="block sm:whitespace-nowrap">Replace the credential.</span></h1>
-          <p className="mt-7 max-w-[540px] text-[16px] leading-7 text-[#5f6876]">Production agents fail mid-run: a login expires, a tool times out, an approval stalls &mdash; after step four already committed. Revive makes failed agents recoverable without duplicating real-world side effects: it parks the run, checks what already happened, brings the right person back, and resumes only when safe.</p>
+          <p className="mt-7 max-w-[500px] text-[16px] leading-7 text-[#5f6876]">Revive parks failed agents, verifies side effects, and resumes the same run after the account reconnects.</p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link href="/app" className="inline-flex h-12 items-center border border-[#151922] bg-[#151922] px-5 text-[12px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">See it recover</Link>
             <Link href="#architecture" className="inline-flex h-12 items-center border border-[#151922] px-5 text-[12px] font-semibold text-[#151922] transition hover:bg-white active:translate-y-px">Read architecture</Link>
@@ -56,7 +56,7 @@ export default function Home() {
       <Reveal className="lg:sticky lg:top-28 lg:self-start">
         <p className="text-[11px] font-semibold text-[#4967f2]">What actually broke</p>
         <h2 className="mt-5 max-w-[520px] text-[clamp(38px,5vw,64px)] font-semibold leading-[.96] tracking-[-.06em] text-[#151922]">A credential failure is not a workflow failure.</h2>
-        <p className="mt-6 max-w-[430px] text-[14px] leading-6 text-[#697281]">The nightly briefing that never went out. The invoice run that stopped at 2am. Retry can&rsquo;t fix an expired login &mdash; someone has to reconnect, and everything around that moment has to be handled carefully.</p>
+        <p className="mt-6 max-w-[430px] text-[14px] leading-6 text-[#697281]">Retry cannot repair a revoked grant. Revive parks the run, routes the account owner, and preserves every committed action.</p>
       </Reveal>
       <Stagger className="stage-stack">
         {recoveryStages.map((stage) => <StaggerItem key={stage.title}>

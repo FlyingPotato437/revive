@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // SDK → console bridge. The sidecar reports recovery-case lifecycle events with
 // a workspace API key; cases appear in Overview and Recovery cases alongside
-// drills. Raw tokens are never accepted here — lifecycle metadata only.
+// drills. Raw tokens are never accepted here, only lifecycle metadata.
 
 type IngestEvent = "opened" | "parked" | "reauthorized" | "resumed" | "recovered" | "abandoned";
 

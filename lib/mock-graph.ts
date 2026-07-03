@@ -5,7 +5,7 @@
 //
 // This same module backs the real /api/graph HTTP route, so the "mock Graph
 // endpoint" in the demo is genuinely an endpoint returning a forged
-// invalid_grant — not a hardcoded UI string.
+// invalid_grant, not a hardcoded UI string.
 // ---------------------------------------------------------------------------
 
 import type { RawAuthError } from "./classifier";
@@ -23,7 +23,7 @@ export function mintAccessToken(scopes: string[], generation: number): string {
 }
 
 export function fingerprint(token: string): string {
-  // a short, stable fingerprint of the token — what we log instead of secrets
+  // a short, stable fingerprint of the token, which we log instead of secrets
   let h = 2166136261;
   for (let i = 0; i < token.length; i++) {
     h ^= token.charCodeAt(i);

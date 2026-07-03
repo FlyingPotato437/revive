@@ -14,7 +14,7 @@ await saveExternalVaultConnection({
   workspaceId: "ws_revive_local",
   provider: "microsoft",
   accountId: upn || connectionId,
-  scopes: ["offline_access", "User.Read", "Mail.ReadWrite", "Calendars.Read", "Files.Read.All"],
+  scopes: ["offline_access", "User.Read", "Mail.ReadWrite", "Mail.Send", "Calendars.Read", "Files.Read.All"],
   vault: "nango",
   integrationId: "microsoft-tenant-specific",
   providerSubject: subject,

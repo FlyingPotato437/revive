@@ -28,7 +28,7 @@ from revive.adapters.langgraph import revive_refresh
 from examples.mock_idp import IdP, make_server
 
 BASE = "http://127.0.0.1:8751"
-SCOPES = ["offline_access", "Mail.ReadWrite", "Files.Read.All"]
+SCOPES = ["offline_access", "Mail.ReadWrite", "Mail.Send", "Files.Read.All"]
 STEPS = ["acquire", "identity", "inbox", "calendar", "files", "compose", "send", "archive"]
 FAILURE_STEP = 4
 

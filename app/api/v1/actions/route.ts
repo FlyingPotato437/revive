@@ -5,7 +5,7 @@ import { audit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
-// POST /v1/actions — register a protected action attempt (SDK contract:
+// POST /v1/actions registers a protected action attempt (SDK contract:
 // ReviveTransport.registerAction → { id, idempotencyKey }).
 export async function POST(req: NextRequest) {
   const auth = await authenticateApiKey(req);
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   // "prepared" means the side effect has never been attempted, so both a
   // fresh registration and a replay of a prepared action are safe to execute.
   const isFresh = action.state === "prepared";
-  // Replay verdict — the direct answer to "should this exact external side
+  // Replay verdict is the direct answer to "should this exact external side
   // effect run again?": safe_to_execute (never attempted), already_committed
   // (result recorded; return it, do not re-run), reconcile_first (attempt
   // started but outcome unknown; check the provider before any retry).
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   });
 }
 
-// GET /v1/actions — workspace action ledger.
+// GET /v1/actions returns the workspace action ledger.
 export async function GET(req: NextRequest) {
   const auth = await authenticateApiKey(req);
   if (!auth.ok) return auth.response;

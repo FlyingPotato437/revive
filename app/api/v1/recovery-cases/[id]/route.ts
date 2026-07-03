@@ -4,7 +4,7 @@ import { getCase } from "@/lib/control-plane";
 
 export const dynamic = "force-dynamic";
 
-// GET /v1/recovery-cases/:id — full case with event timeline.
+// GET /v1/recovery-cases/:id returns the full case with event timeline.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await authenticateApiKey(req);
   if (!auth.ok) return auth.response;

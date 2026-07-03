@@ -4,7 +4,7 @@ import { startAction, TransitionError } from "@/lib/control-plane";
 
 export const dynamic = "force-dynamic";
 
-// POST /v1/actions/:id/started — recorded immediately before execute() runs.
+// POST /v1/actions/:id/started is recorded immediately before execute() runs.
 // Separates "registered" (prepared, never attempted) from "attempted"
 // (started, unknown outcome until completed).
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

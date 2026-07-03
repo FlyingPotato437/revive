@@ -6,7 +6,7 @@ import { audit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
-// POST /v1/recovery-cases/:id/approve — human approval for a case whose
+// POST /v1/recovery-cases/:id/approve handles human approval for a case whose
 // resume decision was approval_required. Records WHO approved and releases
 // the case from parked into awaiting_authorization so recovery can proceed.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

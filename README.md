@@ -109,6 +109,35 @@ asserts one mutation and one remote draft, then deletes the draft. The result is
 written to `benchmarks/results/revive-certification-live.json` and is presented
 separately from local ReviveBench counts.
 
+## Live recovery demo
+
+The interactive Graph demo uses a real LangGraph checkpoint, hosted Revive
+case, Nango reconnect session, signed runtime callback, and Microsoft Graph
+mail action. It reads the profile and calendar, parks at `sendMail`, waits for
+the account owner, then sends one temporary message to a mailbox you control.
+It discards the `202 Accepted` response on purpose, reconciles Sent Items, and
+asserts that the send endpoint ran once.
+
+The Nango Microsoft integration must include `Mail.Send`, then the existing
+connection must be reauthorized once. Run:
+
+```bash
+npm run demo:killer
+```
+
+The command launches an isolated control plane on port 3100 and prints the
+one-time recovery URL. It creates and revokes its own one-day workspace API
+key. By default it sends to the connected Microsoft test mailbox; set
+`REVIVE_DEMO_RECIPIENT` to use another mailbox you control. It writes a live
+artifact only after every assertion passes and cleans up matching Inbox, Sent
+Items, and Drafts messages.
+
+Slack, Jira, and Salesforce reconciliation endpoints are also implemented at
+`POST /v1/actions/:id/reconcile-provider`. They use Slack message identifiers,
+Jira issue keys or bounded search, and Salesforce external IDs. Their fixture
+tests are local; do not call them live-certified until provider accounts have
+been exercised.
+
 ## TypeScript SDK
 
 The packageable TypeScript SDK lives in `sdk/typescript` and exposes the

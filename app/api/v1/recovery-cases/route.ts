@@ -8,7 +8,7 @@ import { evaluatePolicy } from "@/lib/policy";
 
 export const dynamic = "force-dynamic";
 
-// POST /v1/recovery-cases — SDK contract: ReviveTransport.openRecoveryCase.
+// POST /v1/recovery-cases implements ReviveTransport.openRecoveryCase.
 // Opens (or returns the still-open) case for run+action and advances it
 // detected → classified → parked, since the SDK only calls this after it has
 // already classified the failure and parked the run.
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   });
 }
 
-// GET /v1/recovery-cases?open=1 — workspace case queue.
+// GET /v1/recovery-cases?open=1 returns the workspace case queue.
 export async function GET(req: NextRequest) {
   const auth = await authenticateApiKey(req);
   if (!auth.ok) return auth.response;

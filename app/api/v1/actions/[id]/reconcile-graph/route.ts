@@ -8,7 +8,7 @@ import { audit } from "@/lib/audit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// POST /v1/actions/:id/reconcile-graph — provider reconciliation for an
+// POST /v1/actions/:id/reconcile-graph performs provider reconciliation for an
 // uncertain Microsoft Graph mail action. Asks the provider whether the side
 // effect committed; on "committed" the ledger is marked reconciled with the
 // remote id, so the next registration returns already_committed instead of
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await reconcileAction(auth.workspace.id, id, { remoteId: result.remoteId, note: `graph:${result.strategy}: ${result.detail}`.slice(0, 300) });
     } catch (error) {
       if (!(error instanceof TransitionError)) throw error;
-      // already reconciled/completed is fine — the provider agrees.
+      // Already reconciled/completed is fine because the provider agrees.
     }
   }
   await audit({

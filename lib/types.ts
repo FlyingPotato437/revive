@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Revive core types — shared between the engine, the API, and the UI.
+// Revive core types shared between the engine, the API, and the UI.
 // ---------------------------------------------------------------------------
 
 export type Provider = "microsoft" | "google";
@@ -9,7 +9,7 @@ export type Verdict =
   | "refreshable" // access token expired but refresh token is alive → silent refresh works
   | "dead" // refresh token is truly dead → out-of-band re-consent required
   | "transient" // throttling / 5xx → retry with backoff
-  | "unknown"; // unrecognized — fail safe (treat as dead, ask a human)
+  | "unknown"; // unrecognized; fail safe (treat as dead, ask a human)
 
 export type StepStatus =
   | "pending"

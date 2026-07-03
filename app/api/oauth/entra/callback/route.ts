@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     //   1. The identity captured when the connection was originally created.
     //   2. The identity bound to this run's credential lease.
     //   3. Sandbox-only fallback: no prior binding exists (local drills), so
-    //      this authorization becomes the binding — recorded as unverified.
+    //      this authorization becomes the binding, recorded as unverified.
     const connectionRef = session.revive.recoveryCase?.credentialLeaseId || "";
     const creationBinding = connectionRef ? await loadConnectionIdentity(connectionRef, session.workspaceId) : null;
     const expectedSubject = creationBinding?.subject || session.revive.token.subject;

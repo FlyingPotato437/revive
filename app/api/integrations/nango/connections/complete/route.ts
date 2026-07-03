@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sessionFromCookies } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { saveExternalVaultConnection } from "@/lib/hosted";
-import { allowedNangoIntegrations, fetchNangoMicrosoftIdentity } from "@/lib/integrations/nango";
+import { allowedNangoIntegrations, fetchNangoMicrosoftIdentity, MICROSOFT_GRAPH_RECOVERY_SCOPES } from "@/lib/integrations/nango";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 import { requireWorkspaceRole } from "@/lib/rbac";
 
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       workspaceId: workspace.id,
       provider: "microsoft",
       accountId: identity.accountId,
-      scopes: ["offline_access", "openid", "User.Read", "Mail.ReadWrite", "Calendars.Read", "Files.Read.All"],
+      scopes: [...MICROSOFT_GRAPH_RECOVERY_SCOPES],
       vault: "nango",
       integrationId,
       providerSubject: identity.subject,

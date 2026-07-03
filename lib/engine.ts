@@ -2,10 +2,10 @@
 // The Revive engine.
 //
 // Drives two real runs of the same scripted agent, side by side:
-//   • baseline — no sidecar. On a dead refresh token it silently reuses the
+//   • baseline: no sidecar. On a dead refresh token it silently reuses the
 //     stale access token, loops, and dies. (Reproduces the documented open bugs:
 //     Codex #14144, Claude Code #12447, Copilot CLI #2779.)
-//   • revive — the sidecar. On a dead refresh token it (1) classifies, (2)
+//   • revive: the sidecar. On a dead refresh token it (1) classifies, (2)
 //     captures a step-accurate durable checkpoint, (3) fires a URL-mode
 //     re-consent elicitation, and (4) rotates the credential lease and resumes
 //     the same logical run from its durable checkpoint.
@@ -42,8 +42,8 @@ import type {
 
 const PROVIDER: Provider = "microsoft";
 const ACCOUNT = process.env.REVIVE_RECOVERY_ACCOUNT || "svc-briefing@contoso.com";
-const SCOPES = ["offline_access", "Mail.ReadWrite", "Calendars.Read", "Files.Read.All"];
-const BASE_DELAY = 780; // per-step pacing (ms) — tuned for watchable animation
+const SCOPES = ["offline_access", "Mail.ReadWrite", "Mail.Send", "Calendars.Read", "Files.Read.All"];
+const BASE_DELAY = 780; // per-step pacing (ms), tuned for watchable animation
 const MAX_BASELINE_RETRIES = 4;
 
 function sleep(ms: number) {
@@ -123,7 +123,7 @@ export function startSession(
   putSession(session);
   emit(session.id, { type: "snapshot", session: structuredClone(session) });
 
-  // Kick off both lanes concurrently; do not await — they run in the background.
+  // Kick off both lanes concurrently; do not await because they run in the background.
   void executeFrom(session.id, "baseline", 0, false);
   void executeFrom(session.id, "revive", 0, false);
 
@@ -247,7 +247,7 @@ async function executeFrom(
       lane,
       "info",
       "start",
-      `Nightly Exec Briefing — ${run.steps.length} steps · ${ACCOUNT}`,
+      `Nightly Exec Briefing: ${run.steps.length} steps · ${ACCOUNT}`,
     );
   }
 
@@ -274,7 +274,7 @@ async function executeFrom(
         lane,
         "warn",
         "auth",
-        `Access token expired — attempting silent refresh`,
+        `Access token expired. Attempting silent refresh`,
       );
       await sleep(560);
 
@@ -383,7 +383,7 @@ async function baselineStall(sessionId: string, stepIndex: number) {
     "baseline",
     "warn",
     "noop",
-    `No re-consent path — falling back to cached access token`,
+    `No re-consent path. Falling back to cached access token`,
   );
 
   for (let a = 1; a <= MAX_BASELINE_RETRIES; a++) {
@@ -396,7 +396,7 @@ async function baselineStall(sessionId: string, stepIndex: number) {
       "baseline",
       "warn",
       "retry",
-      `Silent refresh #${a} failed again — reusing cached token ${stale} (stale)`,
+      `Silent refresh #${a} failed again. Reusing cached token ${stale} (stale)`,
     );
     await sleep(520);
     run.metrics.staleTokenReuses += 1;
@@ -421,7 +421,7 @@ async function baselineStall(sessionId: string, stepIndex: number) {
     "baseline",
     "error",
     "abandon",
-    `Run abandoned at step ${stepIndex + 1}/${run.steps.length} — ${remaining} steps never ran. Manual restart required.`,
+    `Run abandoned at step ${stepIndex + 1}/${run.steps.length}. ${remaining} steps never ran. Manual restart required.`,
   );
   settleIfDone(sessionId);
 }
@@ -475,7 +475,7 @@ async function revivePark(
     "revive",
     "good",
     "checkpoint",
-    `Durable checkpoint captured — step ${stepIndex + 1} (${step.id}) frozen mid-flight`,
+    `Durable checkpoint captured. Step ${stepIndex + 1} (${step.id}) frozen mid-flight`,
   );
   await sleep(520);
 
@@ -510,7 +510,7 @@ async function revivePark(
   });
   log(sessionId, "revive", "info", "elicit", `URL-mode re-consent elicitation emitted`);
   log(sessionId, "revive", "info", "elicit", `↳ ${ticket.url}`);
-  // now we wait — approveReconsent() resumes the run out-of-band
+  // now we wait; approveReconsent() resumes the run out of band
 }
 
 function prepareAction(run: RunState, step: RunState["steps"][number]) {

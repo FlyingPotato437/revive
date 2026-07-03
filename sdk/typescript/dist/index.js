@@ -202,16 +202,16 @@ export class MemoryReviveTransport {
             const previous = existing.state;
             if (previous === "completed" || previous === "reconciled") {
                 return {
-                    id, idempotencyKey: input.idempotencyKey, state: previous,
+                    id, idempotencyKey: input.idempotencyKey, state: previous, replayVerdict: "already_committed",
                     resultRef: existing.result !== undefined ? JSON.stringify(existing.result) : existing.resultRef,
                 };
             }
             // A prior attempt started but never finished: outcome is unknown.
             this.actions.set(id, { ...existing, state: "uncertain" });
-            return { id, idempotencyKey: input.idempotencyKey, state: "uncertain" };
+            return { id, idempotencyKey: input.idempotencyKey, state: "uncertain", replayVerdict: "reconcile_first" };
         }
         this.actions.set(id, { ...input, id, state: "started", idempotencyKey: input.idempotencyKey });
-        return { id, idempotencyKey: input.idempotencyKey, state: "new" };
+        return { id, idempotencyKey: input.idempotencyKey, state: "new", replayVerdict: "safe_to_execute" };
     }
     async markStarted(input) {
         const current = this.actions.get(input.actionId);

@@ -28,7 +28,7 @@ from revive import (AuthError, CheckpointStore, Completed,
                     Engine, Parked, Provider, StaleCredentialGeneration, Step,
                     Token, WrongRecoveryIdentity)
 
-SCOPES = ["offline_access", "Mail.ReadWrite"]
+SCOPES = ["offline_access", "Mail.ReadWrite", "Mail.Send"]
 ITERATIONS = 20
 
 

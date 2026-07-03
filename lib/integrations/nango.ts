@@ -1,5 +1,19 @@
 const DEFAULT_NANGO_URL = "https://api.nango.dev";
 
+export const MICROSOFT_GRAPH_RECOVERY_SCOPES = [
+  "offline_access",
+  "openid",
+  "User.Read",
+  "Mail.ReadWrite",
+  "Mail.Send",
+  "Calendars.Read",
+  "Files.Read.All",
+] as const;
+
+export const MICROSOFT_GRAPH_USER_SCOPES = MICROSOFT_GRAPH_RECOVERY_SCOPES
+  .filter((scope) => scope !== "offline_access" && scope !== "openid")
+  .join(" ");
+
 export interface NangoConnectSessionInput {
   endUser: { id: string; email?: string; displayName?: string };
   organization?: { id: string; displayName?: string };
@@ -56,8 +70,11 @@ export async function createNangoConnectSession(input: NangoConnectSessionInput)
   const response = await nangoFetch("/connect/sessions", {
     method: "POST",
     body: JSON.stringify({
-      end_user: { id: input.endUser.id, email: input.endUser.email, display_name: input.endUser.displayName },
-      organization: input.organization ? { id: input.organization.id, display_name: input.organization.displayName } : undefined,
+      tags: {
+        end_user_id: input.endUser.id,
+        end_user_email: input.endUser.email,
+        organization_id: input.organization?.id,
+      },
       allowed_integrations: input.allowedIntegrations,
       integrations_config_defaults: serializeDefaults(input.integrationDefaults),
     }),
@@ -81,14 +98,10 @@ export async function createNangoReconnectSession(input: {
     body: JSON.stringify({
       connection_id: input.connectionId,
       integration_id: input.integrationId,
-      end_user: input.endUser ? {
-        id: input.endUser.id,
-        email: input.endUser.email,
-        display_name: input.endUser.displayName,
-      } : undefined,
-      organization: input.organization ? {
-        id: input.organization.id,
-        display_name: input.organization.displayName,
+      tags: input.endUser || input.organization ? {
+        end_user_id: input.endUser?.id,
+        end_user_email: input.endUser?.email,
+        organization_id: input.organization?.id,
       } : undefined,
       integrations_config_defaults: serializeDefaults(input.integrationDefaults),
     }),

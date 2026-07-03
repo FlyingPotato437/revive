@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
-import { allowedNangoIntegrations, createNangoConnectSession } from "@/lib/integrations/nango";
+import { allowedNangoIntegrations, createNangoConnectSession, MICROSOFT_GRAPH_USER_SCOPES } from "@/lib/integrations/nango";
 import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
         ? {
             "microsoft-tenant-specific": {
               connectionConfig: { tenant: process.env.ENTRA_TENANT_ID },
+              userScopes: MICROSOFT_GRAPH_USER_SCOPES,
             },
           }
         : undefined,

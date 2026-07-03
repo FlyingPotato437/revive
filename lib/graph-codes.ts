@@ -120,7 +120,7 @@ export const CODE_TABLE: CodeEntry[] = [
     title: "Access token expired",
     reason:
       "The short-lived access token lapsed (CompactToken lifetime). The refresh token is still valid.",
-    remediation: "Silent refresh — no human needed.",
+    remediation: "Silent refresh. No human needed.",
     source: "https://learn.microsoft.com/en-us/graph/resolve-auth-errors",
   },
   {

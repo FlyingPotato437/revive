@@ -10,7 +10,7 @@ const stages = [
     id: "install", label: "Install", icon: Package, language: "bash" as Language,
     title: "Add the action SDK",
     body: "Install the package in the worker that executes provider actions.",
-    code: `# not yet on npm — install from the repo:
+    code: `# not yet on npm; install from the repo:
 npm install path/to/revive/sdk/typescript`,
     result: "Your workflow can now register actions and open recovery cases.",
   },

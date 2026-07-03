@@ -4,8 +4,9 @@
 //   atomic 0600 JSON file under .revive/ (survives restarts either way).
 // - scrypt-hashed passwords, constant-time compares.
 // - HMAC-signed session cookie.
-// Production gaps that remain: hosted SSO/MFA, password reset, and server-side
-// session revocation. Workspace RBAC is enforced separately in lib/rbac.ts.
+// Clerk can provide the hosted sign-in ceremony when configured. Revive still
+// mints this short-lived application session so existing workspace RBAC stays
+// consistent across password, sandbox, and SSO entry points.
 // ---------------------------------------------------------------------------
 
 import crypto from "node:crypto";
@@ -127,14 +128,16 @@ function sign(payload: string) {
   return crypto.createHmac("sha256", applicationSecret()).update(payload).digest("base64url");
 }
 
-export function createSession(email: string): string {
+export type ConsoleAuthMode = "password" | "clerk" | "sandbox";
+
+export function createSession(email: string, authMode: ConsoleAuthMode = "password"): string {
   const body = Buffer.from(
-    JSON.stringify({ email, exp: Math.floor(Date.now() / 1000) + SESSION_TTL }),
+    JSON.stringify({ email, authMode, exp: Math.floor(Date.now() / 1000) + SESSION_TTL }),
   ).toString("base64url");
   return `${body}.${sign(body)}`;
 }
 
-export function verifySession(token: string | undefined): { email: string } | null {
+export function verifySession(token: string | undefined): { email: string; authMode: ConsoleAuthMode } | null {
   if (!token || !token.includes(".")) return null;
   const [body, mac] = token.split(".");
   const expected = Buffer.from(sign(body));
@@ -144,7 +147,10 @@ export function verifySession(token: string | undefined): { email: string } | nu
     const data = JSON.parse(Buffer.from(body, "base64url").toString());
     if (!data.email || (data.exp && data.exp < Math.floor(Date.now() / 1000)))
       return null;
-    return { email: data.email };
+    const authMode: ConsoleAuthMode = data.authMode === "clerk" || data.authMode === "sandbox"
+      ? data.authMode
+      : "password";
+    return { email: data.email, authMode };
   } catch {
     return null;
   }

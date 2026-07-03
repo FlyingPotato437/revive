@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createNangoReconnectSession, allowedNangoIntegrations } from "@/lib/integrations/nango";
+import { createNangoReconnectSession, allowedNangoIntegrations, MICROSOFT_GRAPH_USER_SCOPES } from "@/lib/integrations/nango";
 import { resolveRecoveryTarget } from "@/lib/recovery-target";
 import { transition, TransitionError } from "@/lib/control-plane";
 import { audit } from "@/lib/audit";
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
       connectionId: record.connectionId,
       integrationId,
       integrationDefaults: integrationId === "microsoft-tenant-specific" && process.env.ENTRA_TENANT_ID
-        ? { [integrationId]: { connectionConfig: { tenant: process.env.ENTRA_TENANT_ID } } }
+        ? { [integrationId]: { connectionConfig: { tenant: process.env.ENTRA_TENANT_ID }, userScopes: MICROSOFT_GRAPH_USER_SCOPES } }
         : undefined,
     });
     await audit({

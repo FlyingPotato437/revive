@@ -1,0 +1,56 @@
+# Render blueprint: web control plane + always-on queue worker.
+# Deploy: Render dashboard → New → Blueprint → point at this repo.
+# Set the sync:false env vars once in the dashboard; they are secrets.
+services:
+  - type: web
+    name: revive-web
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: REVIVE_SECRET
+        sync: false
+      - key: REVIVE_WORKER_SECRET
+        sync: false
+      - key: NANGO_SECRET_KEY
+        sync: false
+      - key: NANGO_ALLOWED_INTEGRATIONS
+        value: microsoft-tenant-specific
+      - key: ENTRA_TENANT_ID
+        sync: false
+      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: REVIVE_PUBLIC_URL
+        fromService:
+          type: web
+          name: revive-web
+          envVarKey: RENDER_EXTERNAL_URL
+
+  - type: worker
+    name: revive-worker
+    runtime: node
+    plan: starter
+    buildCommand: npm ci
+    startCommand: npm run worker
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: REVIVE_SECRET
+        sync: false
+      - key: REVIVE_WORKER_SECRET
+        sync: false
+      - key: REVIVE_BASE_URL
+        fromService:
+          type: web
+          name: revive-web
+          envVarKey: RENDER_EXTERNAL_URL

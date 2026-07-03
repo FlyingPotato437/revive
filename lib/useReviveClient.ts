@@ -127,7 +127,7 @@ export function useReviveClient() {
     setState(EMPTY);
   }, [teardown]);
 
-  // Reconnect to an in-flight session after a page reload — the SSE buffer
+  // Reconnect to an in-flight session after a page reload. The SSE buffer
   // replays every event, rebuilding the full UI state (refresh-safe).
   useEffect(() => {
     let sid: string | null = null;

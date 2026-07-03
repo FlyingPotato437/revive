@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const TERMINAL_RECOVERED = new Set(["completed", "reconciled", "resumed"]);
 const TERMINAL_FAILED = new Set(["rejected", "expired", "escalated", "manual_review"]);
 
-// GET /api/workspaces/metrics — agent recovery SLOs computed from the REAL
+// GET /api/workspaces/metrics returns agent recovery SLOs computed from the real
 // case/action ledgers of this workspace. No synthetic numbers: every value is
 // derived from recorded transitions, and sample sizes are always returned so
 // small denominators are visible.

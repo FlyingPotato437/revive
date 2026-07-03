@@ -4,6 +4,7 @@ import { entraConfigured } from "@/lib/oauth/entra";
 import { nangoConfigured } from "@/lib/integrations/nango";
 import { loadConnectionBinding } from "@/lib/hosted";
 import { resolveRecoveryTarget } from "@/lib/recovery-target";
+import { MICROSOFT_GRAPH_RECOVERY_SCOPES } from "@/lib/integrations/nango";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export async function GET(
       sessionId: `control:${target.record.id}`,
       provider: target.record.provider === "google" ? "google" : "microsoft",
       account: binding?.accountId || target.record.connectionId,
-      scopes: binding?.scopes?.length ? binding.scopes : ["offline_access", "User.Read", "Mail.ReadWrite"],
+      scopes: [...new Set([...(binding?.scopes || []), ...MICROSOFT_GRAPH_RECOVERY_SCOPES])],
       url: target.record.url || `/reauthorize/${ticket}`,
       reason: target.record.reason,
       code: target.record.reason.split(":", 1)[0] || "credential_rejected",
