@@ -1,5 +1,5 @@
 import { getCase, TERMINAL_STATES, type ControlCase } from "./control-plane";
-import { sessionForTicket } from "./store";
+import { hydrateSessionForTicket } from "./store";
 import { verifyRecoveryAccessToken, type RecoveryAccessClaims } from "./recovery-access";
 import type { ReconsentTicket, SessionState } from "./types";
 
@@ -8,7 +8,9 @@ export type RecoveryTarget =
   | { kind: "control"; record: ControlCase; claims: RecoveryAccessClaims };
 
 export async function resolveRecoveryTarget(token: string): Promise<RecoveryTarget | null> {
-  const sandbox = sessionForTicket(token);
+  // Hydrate the sandbox session from durable storage first: on serverless the
+  // ticket may have been created on a different instance than this one.
+  const sandbox = await hydrateSessionForTicket(token);
   const sandboxTicket = sandbox?.revive.ticket;
   if (sandbox && sandboxTicket?.id === token && sandboxTicket.status === "open" && sandboxTicket.expiresAt > Date.now()) {
     return { kind: "sandbox", session: sandbox, ticket: sandboxTicket };
