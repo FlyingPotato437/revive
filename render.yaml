@@ -16,7 +16,7 @@ services:
     name: revive-worker
     runtime: node
     plan: starter
-    buildCommand: npm ci
+    buildCommand: npm install --no-audit --no-fund
     startCommand: npm run worker
     envVars:
       - key: NODE_VERSION

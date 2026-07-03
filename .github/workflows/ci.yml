@@ -11,7 +11,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
-      - run: npm ci
+      # npm install (not npm ci): the lockfile is valid, but npm's strict
+      # ci-time validation of nested optional deps (picomatch under tinyglobby)
+      # varies across npm patch versions. install re-resolves consistently.
+      - run: npm install --no-audit --no-fund
       - run: npx tsc --noEmit
       - run: npm run build
         env: { REVIVE_SECRET: ci-only-secret-at-least-32-characters }

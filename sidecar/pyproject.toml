@@ -27,7 +27,8 @@ hosted = ["temporalio>=1.7", "psycopg[binary]>=3.2"]
 dev = ["langgraph>=0.2"]
 
 [project.urls]
-Homepage = "https://revive.dev"
+Homepage = "https://revivelabs.app"
+Repository = "https://github.com/FlyingPotato437/revive"
 Source = "https://github.com/revive-labs/revive"
 
 [tool.hatch.build.targets.wheel]

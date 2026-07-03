@@ -1,7 +1,29 @@
 {
-  "name": "@revive/workflows",
+  "name": "@revivelabs/sdk",
   "version": "0.1.0",
-  "description": "TypeScript SDK for binding credential recovery to durable workflow actions.",
+  "description": "Agent recovery control plane SDK: bind credential recovery to durable workflow actions so failed agents resume without duplicating side effects.",
+  "license": "Apache-2.0",
+  "author": "Revive Labs",
+  "homepage": "https://revivelabs.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FlyingPotato437/revive.git",
+    "directory": "sdk/typescript"
+  },
+  "bugs": {
+    "url": "https://github.com/FlyingPotato437/revive/issues"
+  },
+  "keywords": [
+    "ai-agents",
+    "agent-recovery",
+    "credential-recovery",
+    "idempotency",
+    "durable-execution",
+    "langgraph",
+    "vercel-ai",
+    "oauth",
+    "token-refresh"
+  ],
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -10,14 +32,22 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./vercel-ai": {
+      "types": "./dist/vercel-ai.d.ts",
+      "default": "./dist/vercel-ai.js"
     }
   },
   "files": [
     "dist",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "typescript": "^5.7.3"
