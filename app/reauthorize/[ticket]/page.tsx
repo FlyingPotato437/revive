@@ -193,8 +193,8 @@ export default function Reauthorize({ params }: { params: Promise<{ ticket: stri
             </span>
           </div>
 
-          <div className="grid lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)]">
-            <div className="min-h-[470px] p-5 sm:p-8 lg:border-r lg:border-[#151922] lg:p-12">
+          <div className="grid md:grid-cols-[minmax(0,1.25fr)_minmax(270px,.75fr)]">
+            <div className="min-h-[470px] p-5 sm:p-8 md:border-r md:border-[#151922] xl:p-12">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={phase}
@@ -213,7 +213,7 @@ export default function Reauthorize({ params }: { params: Promise<{ ticket: stri
               </AnimatePresence>
             </div>
 
-            <aside className="border-t border-[#151922] bg-[#eef0eb] lg:border-t-0">
+            <aside className="border-t border-[#151922] bg-[#eef0eb] md:border-t-0">
               <div className="p-5 sm:p-7 lg:p-8">
                 <h2 className="text-[15px] font-semibold tracking-[-.025em]">Recovery controls</h2>
                 <p className="mt-2 max-w-[36ch] text-[11px] leading-[1.65] text-[#66707e]">
@@ -298,8 +298,9 @@ function ReadyState({ data, approving, approve }: { data: RecoveryData; approvin
   return (
     <div>
       <div className="font-mono text-[9px] tracking-[.12em] text-[#2e49c8]">AUTHORIZATION REQUIRED</div>
-      <h1 className="mt-3 max-w-[680px] text-[clamp(2.1rem,5vw,4.4rem)] font-semibold leading-[.98] tracking-[-.055em]">
-        Restore access. Resume the same run.
+      <h1 className="mt-3 max-w-[680px] text-[clamp(2.1rem,3.9vw,4rem)] font-semibold leading-[1.01] tracking-[-.04em]">
+        <span className="block">Restore access.</span>
+        <span className="block">Resume the same run.</span>
       </h1>
       <p className="mt-5 max-w-[58ch] text-[13px] leading-[1.7] text-[#66707e]">
         Microsoft Graph rejected the current grant. Reauthorize the bound account to rotate its credential generation and release the parked workflow.
@@ -336,8 +337,11 @@ function ReadyState({ data, approving, approve }: { data: RecoveryData; approvin
       <div className="mt-7">
         <h2 className="font-mono text-[8px] tracking-[.11em] text-[#7b8491]">REQUESTED ACCESS</h2>
         <div className="mt-3 grid gap-px border border-[#c7ccd2] bg-[#c7ccd2] sm:grid-cols-2">
-          {data.ticket.scopes.map((scope) => (
-            <div key={scope} className="bg-[#fbfcf8] px-3.5 py-3">
+          {data.ticket.scopes.map((scope, index) => (
+            <div
+              key={scope}
+              className={`bg-[#fbfcf8] px-3.5 py-3 ${index === data.ticket.scopes.length - 1 && data.ticket.scopes.length % 2 === 1 ? "sm:col-span-2" : ""}`}
+            >
               <div className="font-mono text-[9px] font-medium text-[#303743]">{scope}</div>
               <div className="mt-1 text-[9px] leading-[1.45] text-[#7b8491]">{SCOPE_PERMS[scope] ?? "Scoped provider access"}</div>
             </div>
