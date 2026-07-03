@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiKey } from "@/lib/api-auth";
-import { rotateLease, transition, TransitionError, type CaseState } from "@/lib/control-plane";
+import { advanceLease, transition, TransitionError, type CaseState } from "@/lib/control-plane";
 import { mirrorCaseToConsole } from "@/lib/console-mirror";
 import { audit } from "@/lib/audit";
 
@@ -11,7 +11,7 @@ const STATES: CaseState[] = [
   "resumed", "reconciled", "completed", "rejected", "expired", "escalated", "manual_review",
 ];
 
-// POST /v1/recovery-cases/:id/transition — the ONLY write path for case state.
+// POST /v1/recovery-cases/:id/transition is the only write path for case state.
 // Body: { to, expectedVersion, note? }. Illegal edges and stale versions → 409.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await authenticateApiKey(req);
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // every worker still holding the old lease is fenced out of new actions.
     let rotatedGeneration: number | undefined;
     if (record.state === "identity_verified") {
-      rotatedGeneration = await rotateLease(auth.workspace.id, record.connectionId, record.leaseGeneration ?? 1);
+      rotatedGeneration = await advanceLease(auth.workspace.id, record.connectionId);
     }
     mirrorCaseToConsole(record);
     await audit({ workspaceId: auth.workspace.id, actor: auth.keyPrefix, subjectKind: "case", subjectId: record.id, event: `transition:${record.state}`, detail: { version: record.version } });

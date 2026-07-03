@@ -68,7 +68,7 @@ export interface ControlCase {
 }
 
 // prepared: registered, side effect NOT yet attempted (safe to execute).
-// started: execute() was about to run — outcome unknown if it never completed.
+// started: execute() was about to run; outcome unknown if it never completed.
 export type ActionState = "prepared" | "started" | "completed" | "uncertain" | "reconciled";
 
 export interface ControlAction {
@@ -560,6 +560,54 @@ export async function assertLeaseGeneration(workspaceId: string, connectionId: s
 }
 
 /** Atomic rotate: expectedGeneration must match or the caller is stale. Returns the new generation. */
+export async function getLeaseGeneration(workspaceId: string, connectionId: string): Promise<number> {
+  if (!hostedDatabaseEnabled()) {
+    const lease = (readLocal().leases ?? []).find((item) => item.workspaceId === workspaceId && item.connectionId === connectionId);
+    return lease?.generation ?? 1;
+  }
+  return withWorkspaceTransaction(workspaceId, async (sql) => {
+    const rows = await sql<{ generation: number }[]>`
+      select generation from revive_leases where workspace_id = ${workspaceId} and connection_id = ${connectionId}
+    `;
+    return rows[0]?.generation ?? 1;
+  });
+}
+
+// Atomic, unconditional advance: every call yields a strictly newer generation
+// (the UPDATE increments in one statement, so concurrent completions get
+// distinct generations). Workers holding any older generation are fenced.
+// Prefer this over rotateLease(expected) when the caller's view of the current
+// generation may be stale — e.g. a second recovery on the same connection.
+export async function advanceLease(workspaceId: string, connectionId: string): Promise<number> {
+  if (!hostedDatabaseEnabled()) {
+    const data = readLocal();
+    const leases = data.leases ?? (data.leases = []);
+    let lease = leases.find((item) => item.workspaceId === workspaceId && item.connectionId === connectionId);
+    if (!lease) {
+      lease = { workspaceId, connectionId, generation: 1, updatedAt: Date.now() };
+      leases.push(lease);
+    }
+    lease.generation += 1;
+    lease.updatedAt = Date.now();
+    writeLocal(data);
+    return lease.generation;
+  }
+  return withWorkspaceTransaction(workspaceId, async (sql) => {
+    await sql`
+      insert into revive_leases (workspace_id, connection_id, generation)
+      values (${workspaceId}, ${connectionId}, 1)
+      on conflict (workspace_id, connection_id) do nothing
+    `;
+    const rows = await sql<{ generation: number }[]>`
+      update revive_leases
+      set generation = generation + 1, updated_at = now()
+      where workspace_id = ${workspaceId} and connection_id = ${connectionId}
+      returning generation
+    `;
+    return rows[0].generation;
+  });
+}
+
 export async function rotateLease(workspaceId: string, connectionId: string, expectedGeneration: number): Promise<number> {
   if (!hostedDatabaseEnabled()) {
     const data = readLocal();

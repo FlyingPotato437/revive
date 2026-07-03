@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { audit } from "@/lib/audit";
-import { rotateLease, transition, TransitionError } from "@/lib/control-plane";
+import { advanceLease, transition, TransitionError } from "@/lib/control-plane";
 import { loadConnectionBinding, saveExternalVaultConnection } from "@/lib/hosted";
-import { allowedNangoIntegrations, fetchNangoMicrosoftIdentity } from "@/lib/integrations/nango";
+import { allowedNangoIntegrations, fetchNangoMicrosoftIdentity, MICROSOFT_GRAPH_RECOVERY_SCOPES } from "@/lib/integrations/nango";
 import { resolveRecoveryTarget } from "@/lib/recovery-target";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { enqueueRuntimeResume } from "@/lib/webhooks";
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
       workspaceId: target.record.workspaceId,
       provider: "microsoft",
       accountId: identity.accountId,
-      scopes: expected?.scopes?.length ? expected.scopes : ["offline_access", "User.Read", "Mail.ReadWrite"],
+      scopes: [...new Set([...(expected?.scopes || []), ...MICROSOFT_GRAPH_RECOVERY_SCOPES])],
       vault: "nango",
       integrationId,
       providerSubject: identity.subject,
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
       actor: "nango-connect",
       note: `Microsoft subject ${identity.subject}`,
     });
-    const generation = await rotateLease(record.workspaceId, record.connectionId, record.leaseGeneration ?? 1);
+    const generation = await advanceLease(record.workspaceId, record.connectionId);
     const resumeJobId = await enqueueRuntimeResume(record, generation);
     await audit({
       workspaceId: record.workspaceId,
