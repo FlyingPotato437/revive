@@ -349,7 +349,15 @@ def main() -> int:
                     event = json.loads(body)
                     data = event["data"]
                     if data.get("runId") != run_id or data.get("checkpointId") != checkpoint_id:
-                        raise RuntimeError("callback did not match this run and checkpoint")
+                        # A stale queue job from an earlier demo run. Acknowledge
+                        # nothing, fail the DELIVERY only: this demo must not end.
+                        encoded = json.dumps({"ok": False, "ignored": "foreign run"}).encode()
+                        self.send_response(409)
+                        self.send_header("content-type", "application/json")
+                        self.send_header("content-length", str(len(encoded)))
+                        self.end_headers()
+                        self.wfile.write(encoded)
+                        return
                     resume = {"connection_id": data["connectionId"], "lease_generation": data["generation"]}
                     try:
                         graph.invoke(Command(resume=resume), config=config)
@@ -364,7 +372,9 @@ def main() -> int:
                         ).fetchone()
                     assertions = {
                         "sameThreadResumed": final.get("status") == "completed",
-                        "leaseGenerationAdvanced": final.get("lease_generation") == 2,
+                        # advanceLease yields a strictly newer generation per
+                        # recovery; repeat demo runs on one connection go 2,3,4…
+                        "leaseGenerationAdvanced": final.get("lease_generation") == data["generation"] and int(data["generation"]) >= 2,
                         "sideEffectReconciled": final.get("reconciled") is True,
                         "singleSendCall": bool(row and row[0] == 1),
                     }
