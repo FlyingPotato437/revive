@@ -6,7 +6,7 @@ import { hostedDatabaseEnabled, withWorkspaceTransaction } from "./hosted";
 export interface AuditEvent {
   workspaceId: string;
   actor: string; // api key prefix, user email, or "system"
-  subjectKind: "case" | "action" | "connection" | "key" | "auth";
+  subjectKind: "case" | "action" | "connection" | "key" | "auth" | "billing";
   subjectId: string;
   event: string;
   detail?: Record<string, unknown>;
