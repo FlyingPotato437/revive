@@ -1,5 +1,5 @@
 {
-  "name": "@revivelabs/sdk",
+  "name": "revive-sdk",
   "version": "0.1.0",
   "description": "Agent recovery control plane SDK: bind credential recovery to durable workflow actions so failed agents resume without duplicating side effects.",
   "license": "Apache-2.0",
@@ -42,9 +42,6 @@
     "dist",
     "README.md"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepublishOnly": "npm run build"

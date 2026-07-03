@@ -1,17 +1,17 @@
-# @revivelabs/sdk
+# revive-sdk
 
 Agent recovery control plane SDK. Wrap a workflow action so that when its
 credential fails, the run parks, the right account owner reconnects, and the
 run resumes — without ever duplicating a side effect that already committed.
 
 ```bash
-npm install @revivelabs/sdk
+npm install revive-sdk
 ```
 
 ## Protect one action
 
 ```ts
-import { ReviveClient } from "@revivelabs/sdk";
+import { ReviveClient } from "revive-sdk";
 
 const revive = new ReviveClient({
   baseUrl: "https://revivelabs.app",
@@ -45,7 +45,7 @@ keys are derived from `runId + checkpointId + actionKey` when not supplied.
 ## Vercel AI SDK
 
 ```ts
-import { protectTools } from "@revivelabs/sdk/vercel-ai";
+import { protectTools } from "revive-sdk/vercel-ai";
 
 const tools = protectTools(revive, {
   runId: threadId,
