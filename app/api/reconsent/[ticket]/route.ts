@@ -19,9 +19,11 @@ export async function GET(
     // The Playground is a self-contained simulation with a synthetic account,
     // so approval is always simulated. Real provider OAuth belongs to the
     // control-plane recovery path (a real Nango/Entra connection), never here.
+    // A consumed one-time ticket is reported as "recovered", not an error.
     return NextResponse.json({
       ticket: target.ticket,
       classifier: target.session.revive.classifier,
+      recovered: target.consumed,
       authorization: { mode: "sandbox", url: null },
     });
   }

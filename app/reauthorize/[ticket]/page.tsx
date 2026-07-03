@@ -74,9 +74,11 @@ export default function Reauthorize({ params }: { params: Promise<{ ticket: stri
     const controller = new AbortController();
     fetch(`/api/reconsent/${ticket}`, { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error("inactive recovery ticket"))))
-      .then((value: RecoveryData) => {
+      .then((value: RecoveryData & { recovered?: boolean }) => {
         setData(value);
-        setPhase("ready");
+        // A single-use ticket that was already approved is a success, not an
+        // error — the run already recovered.
+        setPhase(value.recovered ? "done" : "ready");
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;

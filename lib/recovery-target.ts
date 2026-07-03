@@ -4,7 +4,7 @@ import { verifyRecoveryAccessToken, type RecoveryAccessClaims } from "./recovery
 import type { ReconsentTicket, SessionState } from "./types";
 
 export type RecoveryTarget =
-  | { kind: "sandbox"; session: SessionState; ticket: ReconsentTicket }
+  | { kind: "sandbox"; session: SessionState; ticket: ReconsentTicket; consumed: boolean }
   | { kind: "control"; record: ControlCase; claims: RecoveryAccessClaims };
 
 export async function resolveRecoveryTarget(token: string): Promise<RecoveryTarget | null> {
@@ -12,8 +12,12 @@ export async function resolveRecoveryTarget(token: string): Promise<RecoveryTarg
   // ticket may have been created on a different instance than this one.
   const sandbox = await hydrateSessionForTicket(token);
   const sandboxTicket = sandbox?.revive.ticket;
-  if (sandbox && sandboxTicket?.id === token && sandboxTicket.status === "open" && sandboxTicket.expiresAt > Date.now()) {
-    return { kind: "sandbox", session: sandbox, ticket: sandboxTicket };
+  if (sandbox && sandboxTicket?.id === token) {
+    // Return the target even once the one-time ticket has been used, so the
+    // page can show "already recovered" instead of a scary "expired". Only a
+    // still-open, unexpired ticket is consumable.
+    const consumed = sandboxTicket.status !== "open" || sandboxTicket.expiresAt <= Date.now();
+    return { kind: "sandbox", session: sandbox, ticket: sandboxTicket, consumed };
   }
 
   const claims = verifyRecoveryAccessToken(token);
