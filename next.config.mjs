@@ -12,6 +12,22 @@ const nextConfig = {
     ];
   },
   async headers() {
+    // Report-only first: this logs violations without breaking Clerk, Stripe,
+    // Nango, or framer-motion inline styles. Tighten to an enforcing CSP once
+    // the violation reports are clean.
+    const cspReportOnly = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://clerk.revivelabs.app https://js.stripe.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://*.clerk.accounts.dev https://clerk.revivelabs.app https://api.stripe.com https://api.nango.dev https://*.nango.dev https://api.clerk.com",
+      "frame-src 'self' https://js.stripe.com https://*.clerk.accounts.dev https://connect.nango.dev",
+      "worker-src 'self' blob:",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ].join("; ");
     return [{
       source: "/:path*",
       headers: [
@@ -20,6 +36,8 @@ const nextConfig = {
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
         { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+        { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+        { key: "Content-Security-Policy-Report-Only", value: cspReportOnly },
       ],
     }];
   },
