@@ -59,16 +59,20 @@ async function loadUser(email: string): Promise<User | null> {
 }
 
 async function storeUser(user: User): Promise<void> {
-  const users = readLocal();
-  users[user.email] = user;
-  writeLocal(users);
   if (hostedDatabaseEnabled()) {
+    // Postgres is the store of record. Do NOT touch the local filesystem here:
+    // on serverless hosts (Vercel) the app directory is read-only and the write
+    // throws EROFS, which previously turned signup into a 500.
     await sqlClient()`
       insert into revive_users (email, name, salt, hash)
       values (${user.email}, ${user.name}, ${user.salt}, ${user.hash})
       on conflict (email) do nothing
     `;
+    return;
   }
+  const users = readLocal();
+  users[user.email] = user;
+  writeLocal(users);
 }
 
 // --- password hashing ----------------------------------------------------------
