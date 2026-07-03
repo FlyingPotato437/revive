@@ -17,7 +17,8 @@ const OPERATIONS = [
   { href: "/app/quickstart", label: "Quickstart", icon: RocketLaunch },
   { href: "/app", label: "Playground", icon: Flask },
   { href: "/app/runs", label: "Recovery cases", icon: ListBullets },
-  { href: "/app/providers", label: "Connections", icon: LinkSimple },
+  { href: "/app/connections", label: "Connections", icon: LinkSimple },
+  { href: "/app/providers", label: "Adapters", icon: ArrowSquareOut },
 ] as const;
 
 const ACCOUNT = [

@@ -203,6 +203,63 @@ export async function saveCredentialConnection(input: CredentialConnectionInput)
   fs.renameSync(temporary, file);
 }
 
+export interface WorkspaceConnectionSummary {
+  id: string;
+  provider: string;
+  accountId?: string;
+  scopes: string[];
+  vault?: string;
+  displayName?: string;
+  status?: string;
+  generation?: number;
+  updatedAt?: number;
+}
+
+/** Console listing: connection identity + custody metadata, never token material. */
+export async function listWorkspaceConnections(workspaceId: string): Promise<WorkspaceConnectionSummary[]> {
+  if (hostedDatabaseEnabled()) {
+    return withWorkspaceTransaction(workspaceId, async (sql) => {
+      const rows = await sql<{
+        id: string; provider: string; account_id: string | null; scopes: string[];
+        metadata: Record<string, unknown> | null; status: string | null; generation: number | null; updated_at: Date;
+      }[]>`
+        select id, provider, account_id, scopes, metadata, status, generation, updated_at
+        from revive_connections where workspace_id = ${workspaceId} order by updated_at desc limit 100
+      `;
+      return rows.map((row) => ({
+        id: row.id,
+        provider: row.provider,
+        accountId: row.account_id ?? undefined,
+        scopes: row.scopes ?? [],
+        vault: typeof row.metadata?.source === "string" ? String(row.metadata.source).replace("_external_vault", "") : undefined,
+        displayName: typeof row.metadata?.displayName === "string" ? row.metadata.displayName : undefined,
+        status: row.status ?? undefined,
+        generation: row.generation ?? undefined,
+        updatedAt: row.updated_at?.getTime(),
+      }));
+    });
+  }
+  const directory = process.env.REVIVE_STATE_DIR || path.join(process.cwd(), ".revive");
+  const file = path.join(directory, "credential-connections.json");
+  let records: Record<string, unknown>[] = [];
+  try { records = JSON.parse(fs.readFileSync(file, "utf8")); } catch { return []; }
+  return records
+    .filter((item) => !item.workspaceId || item.workspaceId === workspaceId)
+    .map((item) => ({
+      id: String(item.id),
+      provider: String(item.provider || "unknown"),
+      accountId: item.accountId ? String(item.accountId) : undefined,
+      scopes: Array.isArray(item.scopes) ? item.scopes.map(String) : [],
+      vault: typeof (item.metadata as Record<string, unknown>)?.source === "string"
+        ? String((item.metadata as Record<string, unknown>).source).replace("_external_vault", "")
+        : undefined,
+      displayName: typeof (item.metadata as Record<string, unknown>)?.displayName === "string"
+        ? String((item.metadata as Record<string, unknown>).displayName)
+        : undefined,
+      updatedAt: typeof item.updatedAt === "number" ? item.updatedAt : undefined,
+    }));
+}
+
 /** Store an external-vault reference and immutable provider identity, never raw provider tokens. */
 export async function saveExternalVaultConnection(input: {
   id: string;
@@ -252,7 +309,7 @@ export interface ConnectionBinding extends ConnectionIdentity {
 
 /**
  * The identity bound to a connection at creation time. Recovery compares the
- * reauthorized account against THIS binding — never trust-on-first-use during
+ * reauthorized account against THIS binding. Never trust on first use during
  * recovery when the connection already exists.
  */
 export async function loadConnectionIdentity(connectionId: string, workspaceId?: string): Promise<ConnectionIdentity | null> {
