@@ -4,6 +4,7 @@ import { listCases, openCase, transition } from "@/lib/control-plane";
 import { mirrorCaseToConsole } from "@/lib/console-mirror";
 import { audit } from "@/lib/audit";
 import { classifyToolFailure } from "@/lib/failure-classifier";
+import { notifyCaseOpened } from "@/lib/notify";
 import { evaluatePolicy } from "@/lib/policy";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
   if (record.state === "detected") {
     record = await transition(auth.workspace.id, record.id, { to: "classified", expectedVersion: record.version, actor: auth.keyPrefix, note: `${failure.failureClass} → ${resume.decision} (${resume.ruleId})`.slice(0, 120) });
     record = await transition(auth.workspace.id, record.id, { to: "parked", expectedVersion: record.version, actor: auth.keyPrefix });
+    void notifyCaseOpened(record);
   }
   mirrorCaseToConsole(record);
   await audit({ workspaceId: auth.workspace.id, actor: auth.keyPrefix, subjectKind: "case", subjectId: record.id, event: "opened", detail: { runId: record.runId, state: record.state, reason: record.reason.slice(0, 120), failureClass: failure.failureClass, resumeDecision: resume.decision, resumeRule: resume.ruleId, actionClass: resume.actionClass } });
