@@ -18,7 +18,8 @@
     "retention": "node scripts/retention.mjs",
     "migrate": "node scripts/migrate.mjs",
     "test:api": "node --env-file-if-exists=.env.local --import tsx scripts/test-control-plane.mts",
-    "test:reconciliation": "node --env-file-if-exists=.env.local --import tsx scripts/test-reconciliation.mts"
+    "test:reconciliation": "node --env-file-if-exists=.env.local --import tsx scripts/test-reconciliation.mts",
+    "test:billing": "node --env-file-if-exists=.env.local --import tsx scripts/test-billing.mts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.5.12",

@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/#product", label: "Product" },
   { href: "/compare", label: "Why Revive" },
   { href: "/benchmarks", label: "Evidence" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
 export function Nav() {
