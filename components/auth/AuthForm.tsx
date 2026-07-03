@@ -22,6 +22,10 @@ export function AuthForm({ mode, ssoEnabled = false }: { mode: "login" | "signup
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // With hosted identity configured, Clerk is the front door; the password
+  // form stays available behind an explicit toggle so there is exactly one
+  // set of credential inputs on screen at a time.
+  const [showPassword, setShowPassword] = useState(!ssoEnabled);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -91,31 +95,45 @@ export function AuthForm({ mode, ssoEnabled = false }: { mode: "login" | "signup
 
           <form onSubmit={submit} className="mt-10 max-w-[520px]">
             {ssoEnabled && (
-              <>
-                <Link href="/sso" className="mb-5 inline-flex h-12 w-full items-center justify-between border border-[#4967f2] bg-[#e9ecff] px-4 text-[11px] font-semibold text-[#263b9f] transition hover:bg-[#dfe4ff] active:translate-y-px">
-                  Continue with company SSO
+              <div className="grid gap-2">
+                <Link href={`/sso?next=${encodeURIComponent(next)}`} className="inline-flex h-12 w-full items-center justify-between border border-[#151922] bg-[#151922] px-4 text-[11px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">
+                  {mode === "login" ? "Sign in with Revive ID" : "Create account with Revive ID"}
                   <ArrowRight size={14} weight="bold" />
                 </Link>
-                <div className="mb-5 flex items-center gap-3 font-mono text-[8px] tracking-[.1em] text-[#8a929e]"><span className="h-px flex-1 bg-[#c7ccd2]" />OR USE PASSWORD<span className="h-px flex-1 bg-[#c7ccd2]" /></div>
+                <button type="button" onClick={demo} disabled={busy} className="h-11 border border-[#bfc5cc] bg-[#eef0eb] px-5 text-[10.5px] font-semibold text-[#4f5866] transition hover:border-[#151922] hover:bg-[#fbfcf8] active:translate-y-px disabled:opacity-60">
+                  Open sandbox
+                </button>
+                {!showPassword && (
+                  <button type="button" onClick={() => setShowPassword(true)} className="mt-1 w-fit text-[10px] font-semibold text-[#7b8491] underline decoration-[#c7ccd2] underline-offset-4 transition hover:text-[#2e49c8]">
+                    Use email and password instead
+                  </button>
+                )}
+                {showPassword && <div className="mt-3 flex items-center gap-3 font-mono text-[8px] tracking-[.1em] text-[#8a929e]"><span className="h-px flex-1 bg-[#c7ccd2]" />EMAIL AND PASSWORD<span className="h-px flex-1 bg-[#c7ccd2]" /></div>}
+              </div>
+            )}
+            {showPassword && (
+              <>
+                <div className={`grid gap-4 ${ssoEnabled ? "mt-4" : ""}`}>
+                  {mode === "signup" && <Field label="Name" value={name} onChange={setName} placeholder="Your name" type="text" autoComplete="name" />}
+                  <Field label="Work email" value={email} onChange={setEmail} placeholder="you@company.com" type="email" autoComplete="email" required />
+                  <Field label="Password" value={password} onChange={setPassword} placeholder="At least 8 characters" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required />
+                </div>
+
+                {error && <div role="alert" className="mt-4 border-l-[3px] border-[#c2413a] bg-[#fcedeb] px-4 py-3 text-[11px] leading-5 text-[#8b3e38]">{error}</div>}
+
+                <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                  <button type="submit" disabled={busy} className="inline-flex h-11 flex-1 items-center justify-center gap-2 border border-[#151922] bg-[#151922] px-5 text-[11px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px disabled:cursor-wait disabled:opacity-60">
+                    {busy ? "Working" : mode === "login" ? "Sign in" : "Create workspace"}
+                    {!busy && <ArrowRight size={14} weight="bold" />}
+                  </button>
+                  {!ssoEnabled && (
+                    <button type="button" onClick={demo} disabled={busy} className="h-11 border border-[#bfc5cc] bg-[#eef0eb] px-5 text-[10.5px] font-semibold text-[#4f5866] transition hover:border-[#151922] hover:bg-[#fbfcf8] active:translate-y-px disabled:opacity-60">
+                      Open sandbox
+                    </button>
+                  )}
+                </div>
               </>
             )}
-            <div className="grid gap-4">
-              {mode === "signup" && <Field label="Name" value={name} onChange={setName} placeholder="Your name" type="text" autoComplete="name" />}
-              <Field label="Work email" value={email} onChange={setEmail} placeholder="you@company.com" type="email" autoComplete="email" required />
-              <Field label="Password" value={password} onChange={setPassword} placeholder="At least 8 characters" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required />
-            </div>
-
-            {error && <div role="alert" className="mt-4 border-l-[3px] border-[#c2413a] bg-[#fcedeb] px-4 py-3 text-[11px] leading-5 text-[#8b3e38]">{error}</div>}
-
-            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-              <button type="submit" disabled={busy} className="inline-flex h-11 flex-1 items-center justify-center gap-2 border border-[#151922] bg-[#151922] px-5 text-[11px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px disabled:cursor-wait disabled:opacity-60">
-                {busy ? "Working" : mode === "login" ? "Sign in" : "Create workspace"}
-                {!busy && <ArrowRight size={14} weight="bold" />}
-              </button>
-              <button type="button" onClick={demo} disabled={busy} className="h-11 border border-[#bfc5cc] bg-[#eef0eb] px-5 text-[10.5px] font-semibold text-[#4f5866] transition hover:border-[#151922] hover:bg-[#fbfcf8] active:translate-y-px disabled:opacity-60">
-                Open sandbox
-              </button>
-            </div>
           </form>
 
           <div className="mt-8 flex flex-col gap-3 border-t border-[#c7ccd2] pt-5 text-[10.5px] text-[#687180] sm:flex-row sm:items-center sm:justify-between">
