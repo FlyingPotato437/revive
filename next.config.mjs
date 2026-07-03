@@ -9,8 +9,6 @@ const nextConfig = {
     // Public control-plane surface: /v1/* (SDK contract) → app/api/v1/*.
     return [
       { source: "/v1/:path*", destination: "/api/v1/:path*" },
-      // Gateway surface: agents point their tool base URL at /proxy/*.
-      { source: "/proxy/:path*", destination: "/api/proxy/:path*" },
     ];
   },
   async headers() {

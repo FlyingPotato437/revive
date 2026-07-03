@@ -7,8 +7,16 @@ import {
   LinkBreak,
   UserCircle,
 } from "@phosphor-icons/react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState } from "react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
 const phases = [
   {
@@ -33,29 +41,39 @@ const phases = [
   },
 ] as const;
 
-const tokenPositions = [
-  { x: 71, y: 27 },
-  { x: 82, y: 47 },
-  { x: 82, y: 47 },
-  { x: 51, y: 84 },
-];
-
 export function HeroVisual() {
+  const scene = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
   const [phase, setPhase] = useState(reduceMotion ? 3 : 0);
+  const { scrollYProgress } = useScroll({
+    target: scene,
+    offset: ["start start", "end start"],
+  });
+  const progress = useSpring(scrollYProgress, {
+    stiffness: 180,
+    damping: 30,
+    mass: 0.2,
+  });
+  const tokenRotation = useTransform(progress, [0, 0.26, 0.48, 0.74, 1], [-52, 14, 14, 112, 146]);
+  const tokenCounterRotation = useTransform(tokenRotation, (value) => -value);
+  const ringRotation = useTransform(progress, [0, 1], [-10, 32]);
+  const outerRingRotation = useTransform(progress, [0, 1], [16, -24]);
+  const discY = useTransform(progress, [0, 1], [0, 76]);
+  const discScale = useTransform(progress, [0, 0.42, 1], [0.98, 1, 1.06]);
+  const gateX = useTransform(progress, [0, 0.3, 0.55, 1], [0, 0, -18, -4]);
+  const ambientOpacity = useTransform(progress, [0, 0.45, 1], [0.32, 0.68, 0.18]);
 
   useEffect(() => {
     if (reduceMotion) {
       setPhase(3);
-      return;
     }
-
-    const timer = window.setInterval(
-      () => setPhase((value) => (value + 1) % phases.length),
-      1850,
-    );
-    return () => window.clearInterval(timer);
   }, [reduceMotion]);
+
+  useMotionValueEvent(progress, "change", (value) => {
+    if (reduceMotion) return;
+    const next = value < 0.23 ? 0 : value < 0.46 ? 1 : value < 0.7 ? 2 : 3;
+    setPhase((currentPhase) => currentPhase === next ? currentPhase : next);
+  });
 
   const current = phases[phase];
   const blocked = phase === 1;
@@ -63,21 +81,34 @@ export function HeroVisual() {
   const resumed = phase === 3;
 
   return (
-    <figure
-      className="continuity-relay relative flex min-h-[520px] min-w-0 items-center justify-center overflow-hidden border-t border-[#151922] bg-[#2946cf] px-5 py-12 sm:min-h-[610px] sm:px-10 lg:min-h-[calc(100dvh-63px)] lg:border-l lg:border-t-0"
-      aria-label="A Revive recovery relay keeps one workflow run intact while its credential is replaced"
+    <div
+      ref={scene}
+      className="relative min-w-0 lg:min-h-[124dvh]"
     >
-      <div className="relay-registration" aria-hidden="true">
-        <span>RV / CONTINUITY RELAY</span>
-        <span>01</span>
-      </div>
-
-      <motion.div
-        initial={reduceMotion ? false : { opacity: 0, scale: 0.96, rotate: 2 }}
-        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-        className="relay-disc relative aspect-square w-full max-w-[560px]"
+      <figure
+        className="continuity-relay relative flex min-h-[520px] items-center justify-center overflow-hidden border-t border-[#151922] bg-[#2946cf] px-5 py-12 sm:min-h-[610px] sm:px-10 lg:sticky lg:top-[63px] lg:min-h-[calc(100dvh-63px)] lg:border-l lg:border-t-0"
+        aria-label="A Revive recovery relay keeps one workflow run intact while its credential is replaced"
       >
+        <motion.div
+          aria-hidden="true"
+          className="absolute aspect-square w-[112%] rounded-full border border-[#f4f5f1]/25"
+          style={reduceMotion ? { rotate: 0, opacity: 0.25 } : { rotate: outerRingRotation, opacity: ambientOpacity }}
+        />
+        <motion.div
+          aria-hidden="true"
+          className="absolute aspect-square w-[86%] rounded-full border border-[#151922]/30"
+          style={reduceMotion ? { rotate: 0 } : { rotate: ringRotation }}
+        >
+          <span className="absolute left-1/2 top-[-5px] h-[10px] w-14 -translate-x-1/2 border border-[#151922] bg-[#f1c55b]" />
+        </motion.div>
+
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="relay-disc relative aspect-square w-full max-w-[560px]"
+          style={reduceMotion ? undefined : { y: discY, scale: discScale }}
+        >
         <svg
           aria-hidden="true"
           className="absolute inset-[7%] h-[86%] w-[86%] -rotate-[38deg]"
@@ -140,30 +171,28 @@ export function HeroVisual() {
 
         <motion.div
           aria-hidden="true"
-          className="relay-token absolute left-0 top-0 flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#151922] bg-[#f4f5f1] shadow-[4px_4px_0_rgba(21,25,34,.22)]"
-          animate={{
-            left: `${tokenPositions[phase].x}%`,
-            top: `${tokenPositions[phase].y}%`,
-            scale: blocked ? 0.9 : 1,
-          }}
-          transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
+          className="pointer-events-none absolute inset-[7%]"
+          style={reduceMotion ? { rotate: 112 } : { rotate: tokenRotation }}
         >
-          {blocked ? (
-            <LinkBreak size={20} weight="bold" color="#b7473f" />
-          ) : resumed ? (
-            <Check size={20} weight="bold" color="#2946cf" />
-          ) : (
-            <ArrowRight size={20} weight="bold" color="#2946cf" />
-          )}
+          <motion.div
+            className="relay-token absolute right-[-22px] top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#151922] bg-[#f4f5f1] shadow-[4px_4px_0_rgba(21,25,34,.22)]"
+            style={reduceMotion ? { rotate: -112 } : { rotate: tokenCounterRotation }}
+            animate={{ scale: blocked ? 0.9 : 1 }}
+          >
+            {blocked ? (
+              <LinkBreak size={20} weight="bold" color="#b7473f" />
+            ) : resumed ? (
+              <Check size={20} weight="bold" color="#2946cf" />
+            ) : (
+              <ArrowRight size={20} weight="bold" color="#2946cf" />
+            )}
+          </motion.div>
         </motion.div>
 
         <motion.div
           className="absolute right-[-2%] top-[31%] flex items-center gap-2 border border-[#151922] bg-[#f1c55b] px-3 py-2 shadow-[4px_4px_0_rgba(21,25,34,.2)]"
-          animate={{
-            opacity: blocked || reconnecting ? 1 : 0.34,
-            x: reconnecting ? -18 : 0,
-            rotate: reconnecting ? -3 : 0,
-          }}
+          style={reduceMotion ? undefined : { x: gateX }}
+          animate={{ opacity: blocked || reconnecting ? 1 : 0.34, rotate: reconnecting ? -3 : 0 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
         >
           {reconnecting ? <Key size={17} weight="fill" /> : <LinkBreak size={17} weight="bold" />}
@@ -192,12 +221,12 @@ export function HeroVisual() {
             1 COMMITTED / 0 REPLAYED
           </div>
         </div>
-      </motion.div>
+        </motion.div>
 
-      <figcaption className="relay-caption">
-        <span>{blocked ? "PAUSED" : reconnecting ? "VERIFYING" : resumed ? "RESUMED" : "RUNNING"}</span>
-        <span>CHECKPOINT 05 HELD</span>
-      </figcaption>
-    </figure>
+        <figcaption className="sr-only">
+          Scroll to follow one run from credential rejection through verified reconnection and resume.
+        </figcaption>
+      </figure>
+    </div>
   );
 }

@@ -27,8 +27,8 @@ const faqs = [
 export default function Home() {
   return <div className="revive-home">
     <section className="border-b border-[#151922]">
-      <div className="grid min-h-[calc(100dvh-63px)] lg:grid-cols-[minmax(0,1.04fr)_minmax(480px,.96fr)]">
-        <div className="flex min-w-0 items-center px-5 py-16 sm:px-8 lg:px-[max(3.5rem,calc((100vw-1380px)/2+2rem))] lg:py-20">
+      <div className="grid min-h-[calc(100dvh-63px)] lg:grid-cols-[minmax(0,1.04fr)_minmax(480px,.96fr)] lg:items-start">
+        <div className="flex min-w-0 items-center px-5 py-16 sm:px-8 lg:sticky lg:top-[63px] lg:min-h-[calc(100dvh-63px)] lg:px-[max(3.5rem,calc((100vw-1380px)/2+2rem))] lg:py-20">
           <div className="max-w-[690px]">
             <div className="text-[10px] font-semibold tracking-[.08em] text-[#2e49c8]">Agent recovery control plane</div>
             <h1 className="mt-7 text-[clamp(44px,5.4vw,78px)] font-semibold leading-[.91] tracking-[-.07em] text-[#151922]"><span className="block">Access breaks.</span><span className="block">The run survives.</span></h1>

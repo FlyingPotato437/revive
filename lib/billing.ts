@@ -5,16 +5,31 @@
 import crypto from "node:crypto";
 import { hostedDatabaseEnabled, withWorkspaceTransaction } from "@/lib/hosted";
 
-export type Plan = "free" | "pro";
+export type Plan = "free" | "dev" | "team" | "enterprise";
+export type CheckoutPlan = "dev" | "team";
 export const STRIPE_API_VERSION = "2026-02-25.clover";
 
-export const PLAN_LIMITS: Record<Plan, { connections: number; casesPerMonth: number }> = {
+export const PLAN_LIMITS: Record<Plan, { connections: number | null; casesPerMonth: number | null }> = {
   free: { connections: 1, casesPerMonth: 100 },
-  pro: { connections: 25, casesPerMonth: 10_000 },
+  dev: { connections: 3, casesPerMonth: 1_000 },
+  team: { connections: 25, casesPerMonth: 10_000 },
+  enterprise: { connections: null, casesPerMonth: null },
 };
 
-function stripeConfigured(): boolean {
-  return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_PRO);
+function priceId(plan: CheckoutPlan): string | undefined {
+  return plan === "dev" ? process.env.STRIPE_PRICE_DEV : process.env.STRIPE_PRICE_TEAM;
+}
+
+function stripeConfigured(plan: CheckoutPlan): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY && priceId(plan));
+}
+
+function normalizePlan(value: string | undefined): Plan {
+  if (value === "dev" || value === "team" || value === "enterprise") return value;
+  // The original paid plan was named Pro. Existing subscriptions retain
+  // their entitlements as Team when this pricing model is deployed.
+  if (value === "pro") return "team";
+  return "free";
 }
 
 async function stripe(
@@ -64,7 +79,7 @@ export async function getOrganizationBilling(workspaceId: string, organizationId
       select plan, stripe_customer_id, stripe_subscription_id from revive_organizations where id = ${organizationId}
     `;
     return {
-      plan: rows[0]?.plan === "pro" ? "pro" : "free",
+      plan: normalizePlan(rows[0]?.plan),
       stripeCustomerId: rows[0]?.stripe_customer_id ?? undefined,
       stripeSubscriptionId: rows[0]?.stripe_subscription_id ?? undefined,
     };
@@ -76,22 +91,27 @@ export async function createCheckoutSession(input: {
   organizationId: string;
   email: string;
   returnUrl: string;
+  plan: CheckoutPlan;
 }): Promise<string> {
-  if (!stripeConfigured()) throw new Error("billing is not configured (STRIPE_SECRET_KEY, STRIPE_PRICE_PRO)");
+  if (!stripeConfigured(input.plan)) {
+    throw new Error(`billing is not configured for the ${input.plan} plan`);
+  }
   const checkoutParams = {
     mode: "subscription",
     // Keep card explicit until the Stripe account finishes activating dynamic
     // payment methods. This still uses Stripe Checkout and never handles card
     // details inside Revive.
     "payment_method_types[0]": "card",
-    "line_items[0][price]": process.env.STRIPE_PRICE_PRO!,
+    "line_items[0][price]": priceId(input.plan)!,
     "line_items[0][quantity]": "1",
     customer_email: input.email,
     client_reference_id: input.organizationId,
     "metadata[organizationId]": input.organizationId,
     "metadata[workspaceId]": input.workspaceId,
+    "metadata[plan]": input.plan,
     "subscription_data[metadata][organizationId]": input.organizationId,
     "subscription_data[metadata][workspaceId]": input.workspaceId,
+    "subscription_data[metadata][plan]": input.plan,
     success_url: `${input.returnUrl}?billing=success`,
     cancel_url: `${input.returnUrl}?billing=cancelled`,
   };

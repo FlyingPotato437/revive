@@ -138,41 +138,6 @@ Jira issue keys or bounded search, and Salesforce external IDs. Their fixture
 tests are local; do not call them live-certified until provider accounts have
 been exercised.
 
-## Proxy gateway mode
-
-The fastest integration: change one base URL. Point provider calls at
-`$REVIVE_URL/proxy/<provider-path>` and the ledger becomes automatic —
-no SDK in your agent code.
-
-```bash
-# was: https://graph.microsoft.com/v1.0/me/sendMail
-curl -X POST "$REVIVE_URL/proxy/v1.0/me/sendMail" \
-  -H "Authorization: Bearer rv_live_…" \
-  -H "X-Revive-Connection-Id: $CONNECTION_ID" \
-  -H "X-Revive-Run-Id: $RUN_ID" \
-  -H "Content-Type: application/json" \
-  -d "$MESSAGE_JSON"
-```
-
-Headers: `X-Revive-Connection-Id` (required), `X-Revive-Run-Id` (required for
-mutations), and optionally `X-Revive-Action-Key`, `X-Revive-Checkpoint-Id`,
-`X-Revive-Idempotency-Key` (derived from run + checkpoint + action + body when
-absent), and `X-Revive-Lease-Generation` (stale workers get 409 before the
-provider is touched).
-
-Semantics per call:
-
-- `GET`/`HEAD` pass straight through (`x-revive-ledger: read_passthrough`).
-- First mutation dispatches and records (`x-revive-ledger: committed`).
-- An identical replay returns the stored result with `x-revive-replay:
-  blocked` — the provider is never called twice.
-- An unknown prior outcome returns `409 reconcile_first` instead of a blind
-  retry; reconcile via `/v1/actions/:id/reconcile-graph` (or `-gmail`).
-- A dead credential (`401`/`403`) opens a parked recovery case and returns the
-  single-use recovery URL in the response.
-
-Live certification: `benchmarks/results/proxy-gateway-live.json`.
-
 ## TypeScript SDK
 
 The packageable TypeScript SDK lives in `sdk/typescript` and exposes the

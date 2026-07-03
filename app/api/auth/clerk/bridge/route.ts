@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
   }
   const identity = await auth();
   if (!identity.userId) {
-    return NextResponse.redirect(new URL("/sso", request.url));
+    const retry = new URL("/sso", request.url);
+    retry.searchParams.set("next", safeDestination(request));
+    return NextResponse.redirect(retry);
   }
   const client = await clerkClient();
   const user = await client.users.getUser(identity.userId);

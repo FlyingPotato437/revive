@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { applyStripeBillingEvent, verifyStripeSignature } from "@/lib/billing";
+import { applyStripeBillingEvent, verifyStripeSignature, type Plan } from "@/lib/billing";
 import { audit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -27,13 +27,14 @@ export async function POST(req: NextRequest) {
   const workspaceId = metadata.workspaceId;
   if (!organizationId || !workspaceId) return NextResponse.json({ received: true, skipped: "no metadata" });
 
-  let plan: "free" | "pro" | undefined;
+  let plan: Plan | undefined;
+  const paidPlan = metadata.plan === "dev" ? "dev" : "team";
   if (event.type === "checkout.session.completed") {
     const paymentStatus = String(object.payment_status || "");
-    if (paymentStatus === "paid" || paymentStatus === "no_payment_required") plan = "pro";
+    if (paymentStatus === "paid" || paymentStatus === "no_payment_required") plan = paidPlan;
   } else if (event.type === "customer.subscription.updated") {
     const status = String(object.status || "");
-    plan = ["active", "trialing", "past_due"].includes(status) ? "pro" : "free";
+    plan = ["active", "trialing", "past_due"].includes(status) ? paidPlan : "free";
   } else if (event.type === "customer.subscription.deleted") {
     plan = "free";
   }
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
       : typeof object.id === "string" && event.type.startsWith("customer.subscription.") ? object.id : undefined,
   });
   if (applied) {
-    await audit({ workspaceId, actor: "stripe", subjectKind: "billing", subjectId: organizationId, event: plan === "pro" ? "plan_upgraded" : "plan_downgraded", detail: { plan, reason: event.type, stripeEventId: event.id } });
+    await audit({ workspaceId, actor: "stripe", subjectKind: "billing", subjectId: organizationId, event: plan === "free" ? "plan_downgraded" : "plan_upgraded", detail: { plan, reason: event.type, stripeEventId: event.id } });
   }
   return NextResponse.json({ received: true, applied });
 }

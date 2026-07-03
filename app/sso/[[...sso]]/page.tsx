@@ -2,7 +2,17 @@ import Link from "next/link";
 import { SignIn } from "@clerk/nextjs";
 import { ArrowLeft, Fingerprint, ShieldCheck } from "@phosphor-icons/react/dist/ssr";
 
-export default function SsoPage() {
+function safeNext(value?: string): string {
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/app";
+}
+
+export default async function SsoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const next = safeNext((await searchParams).next);
+  const bridgeUrl = `/api/auth/clerk/bridge?next=${encodeURIComponent(next)}`;
   return (
     <main className="relative min-h-[100dvh] overflow-hidden bg-[#f4f5f1] text-[#151922]">
       <div className="pointer-events-none absolute inset-0 opacity-70 [background-image:linear-gradient(to_right,rgba(21,25,34,.035)_1px,transparent_1px)] [background-size:40px_40px] [mask-image:linear-gradient(to_bottom,#000,transparent_78%)]" />
@@ -28,8 +38,8 @@ export default function SsoPage() {
           <SignIn
             path="/sso"
             routing="path"
-            forceRedirectUrl="/api/auth/clerk/bridge"
-            fallbackRedirectUrl="/api/auth/clerk/bridge"
+            forceRedirectUrl={bridgeUrl}
+            fallbackRedirectUrl={bridgeUrl}
             appearance={{
               variables: { colorPrimary: "#2e49c8", colorForeground: "#151922", colorBackground: "#fbfcf8", borderRadius: "2px", fontFamily: "var(--font-inter)" },
               elements: {

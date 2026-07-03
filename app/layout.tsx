@@ -36,7 +36,17 @@ export default function RootLayout({
   const clerkEnabled = Boolean(
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY,
   );
-  const content = clerkEnabled ? <ClerkProvider>{children}</ClerkProvider> : children;
+  const content = clerkEnabled ? (
+    <ClerkProvider
+      signInUrl="/sso"
+      signUpUrl="/sso"
+      signInForceRedirectUrl="/api/auth/clerk/bridge"
+      signUpForceRedirectUrl="/api/auth/clerk/bridge"
+      afterSignOutUrl="/"
+    >
+      {children}
+    </ClerkProvider>
+  ) : children;
   return (
     <html
       lang="en"

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       const organizationId = await organizationIdForWorkspace(workspace.id);
       const billing = await getOrganizationBilling(workspace.id, organizationId);
       const limit = PLAN_LIMITS[billing.plan].connections;
-      if (existing.length >= limit) {
+      if (limit !== null && existing.length >= limit) {
         return NextResponse.json(
           { error: `the ${billing.plan} plan allows ${limit} connection${limit === 1 ? "" : "s"}; upgrade to add more`, code: "plan_limit" },
           { status: 402 },

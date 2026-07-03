@@ -5,6 +5,8 @@ const links = [
   { label: "Why Revive", href: "/compare" },
   { label: "Evidence", href: "/benchmarks" },
   { label: "Recovery lab", href: "/app" },
+  { label: "Terms", href: "/terms" },
+  { label: "Privacy", href: "/privacy" },
 ];
 
 export function Footer() {

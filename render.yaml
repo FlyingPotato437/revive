@@ -1,39 +1,17 @@
-# Render blueprint: web control plane + always-on queue worker.
-# Deploy: Render dashboard → New → Blueprint → point at this repo.
-# Set the sync:false env vars once in the dashboard; they are secrets.
+# Render blueprint: the always-on queue worker for a Vercel-hosted web app.
+#
+# The web console runs on Vercel (serverless), which cannot host a long-lived
+# process. This worker continuously drains the runtime-resume queue by calling
+# the web app's authenticated drain endpoint, so parked recoveries resume
+# without a per-request cron.
+#
+# Deploy:
+#   1. Render dashboard → New → Blueprint → point at this repo.
+#   2. Set the two sync:false secrets in the dashboard:
+#        REVIVE_BASE_URL       = https://revivelabs.app   (your Vercel URL)
+#        REVIVE_WORKER_SECRET  = same value as in Vercel env
+#   3. Deploy. The worker needs no database access; it only calls the web API.
 services:
-  - type: web
-    name: revive-web
-    runtime: node
-    plan: starter
-    buildCommand: npm ci && npm run build
-    startCommand: npm run start
-    healthCheckPath: /login
-    envVars:
-      - key: NODE_VERSION
-        value: "22"
-      - key: DATABASE_URL
-        sync: false
-      - key: REVIVE_SECRET
-        sync: false
-      - key: REVIVE_WORKER_SECRET
-        sync: false
-      - key: NANGO_SECRET_KEY
-        sync: false
-      - key: NANGO_ALLOWED_INTEGRATIONS
-        value: microsoft-tenant-specific
-      - key: ENTRA_TENANT_ID
-        sync: false
-      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-        sync: false
-      - key: CLERK_SECRET_KEY
-        sync: false
-      - key: REVIVE_PUBLIC_URL
-        fromService:
-          type: web
-          name: revive-web
-          envVarKey: RENDER_EXTERNAL_URL
-
   - type: worker
     name: revive-worker
     runtime: node
@@ -43,14 +21,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: DATABASE_URL
-        sync: false
-      - key: REVIVE_SECRET
+      - key: REVIVE_BASE_URL
         sync: false
       - key: REVIVE_WORKER_SECRET
         sync: false
-      - key: REVIVE_BASE_URL
-        fromService:
-          type: web
-          name: revive-web
-          envVarKey: RENDER_EXTERNAL_URL
