@@ -1,0 +1,13 @@
+{
+  "certification": "proxy gateway mode — live against Microsoft Graph via Nango",
+  "recordedAt": "2026-07-03",
+  "surface": "POST $REVIVE_URL/proxy/<provider-path> with Authorization + X-Revive-Connection-Id (+ Run-Id for mutations)",
+  "checks": {
+    "readPassthrough": "GET /proxy/v1.0/me → HTTP 200, x-revive-ledger: read_passthrough",
+    "mutationLedger": "POST sentitems message → HTTP 201, x-revive-ledger: committed, action id issued",
+    "replayBlockedAtWire": "identical POST → HTTP 200, x-revive-replay: blocked, stored object returned, NO second create at the provider",
+    "staleWorkerFenced": "X-Revive-Lease-Generation: 1 with lease at 2 → HTTP 409 blocked_stale_generation, provider never called"
+  },
+  "pythonClient": "protect_action exactly-once verified live (1 execution across 2 calls); credential failure opened a recovery case with a signed URL",
+  "caveats": "401-credential-failure proxy path exercised via SDK/case route, not by revoking the live grant; JSON request bodies only"
+}
