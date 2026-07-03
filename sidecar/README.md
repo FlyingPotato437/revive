@@ -1,70 +1,70 @@
-# revive-sidecar
+# revive-sdk
 
-Process-independent credential recovery for durable Python workflows.
-
-The sidecar classifies a rejected OAuth grant, stores the checkpoint and
-recovery rendezvous in SQLite, and resumes the same logical run after
-reauthorization. Recovery links use 256 bits of entropy, expire after 15 minutes
-and can be consumed once.
-
-Mutating steps may opt into the action ledger. Revive supplies a stable action
-ID, records started/completed state and refuses blind replay when an earlier
-attempt may have committed. A reconcile callback can resolve ambiguous remote
-state.
-
-## Local development
-
-The package is not represented as published yet. Install it from this folder:
+Agent recovery control plane SDK for Python. Wrap an agent's real-world action
+so that when its credential fails, the run parks, the right account owner
+reconnects, and the run resumes — without ever duplicating a side effect that
+already committed.
 
 ```bash
-python3 -m pip install -e .
-python3 -m unittest discover -s tests -v
+pip install revive-sdk
 ```
 
-Run the offline examples against the local provider fixture:
-
-```bash
-python3 -m examples.nightly_briefing
-python3 -m examples.langgraph_agent
-python3 -m examples.parley_approval
-```
-
-## Core API
+## Protect one action
 
 ```python
-from revive import CheckpointStore, Engine, Provider
+from revive import ReviveClient, ReviveParkedError
 
-store = CheckpointStore("revive.db")
-provider = Provider("microsoft", token_url=TOKEN_URL, scopes=SCOPES)
-engine = Engine(provider, store, base_url=RECOVERY_URL)
+revive = ReviveClient("https://revivelabs.app", api_key="rv_live_…")
 
-result = engine.run(run_id, steps, credential_lease, SCOPES)
+try:
+    result = revive.protect_action(
+        run_id=run_id,
+        connection_id="conn_microsoft_ops",
+        action_key="send_followup_email",
+        execute=lambda: graph_send_mail(message),   # your real side effect
+    )
+    # executed exactly once; a retry returns the stored result, never re-sends
+except ReviveParkedError as parked:
+    # the credential is dead — send parked.parked.recovery_url to the account owner
+    notify(parked.parked.recovery_url)
 ```
 
-The checkpoint, rendezvous and action attempt are durable. A new `Engine`
-instance can load and resume a parked run after the original worker exits.
+`protect_action` registers the action, gates execution on the ledger verdict
+(`safe_to_execute` / `already_committed` / `reconcile_first`), records the
+attempt, and opens a recovery case when the credential is rejected. Idempotency
+keys are derived from `run_id + action_key` unless you pass `idem_key`.
 
 ## Framework adapters
 
-The LangGraph adapter reuses LangGraph's native `interrupt()` and checkpointer.
-Revive supplies the auth-failure trigger and reauthorization payload; LangGraph
-owns durable thread resumption. A production graph must use a durable
-checkpointer rather than `MemorySaver`.
+```python
+# OpenAI Agents SDK — protect a function tool
+from revive.adapters.openai_agents import revive_tool
 
-The Temporal adapter provides a `RecoveryGate` for workflows and a
-`TemporalRecoveryClient` that signals an existing workflow execution with an
-opaque connection ID and lease generation. Raw refresh tokens never enter
-Temporal workflow history.
+@revive_tool(revive, connection_id="conn_microsoft_ops")
+def send_followup_email(run_id: str, to: str, subject: str) -> dict:
+    ...
 
-For hosted checkpointing, install `revive-sidecar[postgres]`, apply the root
-Postgres migration and replace `CheckpointStore` with
-`PostgresCheckpointStore(DATABASE_URL)`.
+# Anthropic tool use — guard the tool-execution side of the loop
+from revive.adapters.anthropic_tools import ReviveToolGuard
+guard = ReviveToolGuard(revive, connection_id="conn_microsoft_ops",
+                        protected={"send_email", "create_ticket"})
 
-## Current limitations
+# LangGraph — see revive.adapters.langgraph (install with: pip install "revive-sdk[langgraph]")
+```
 
-- Automated tests use a local identity-provider fixture; live Entra verification requires an owned tenant.
-- Durable webhook retry/DLQ delivery is owned by the hosted web control plane; the Python channel supports signing and bounded in-process retry.
-- The package has not been released to PyPI.
-- MCP Tasks remains roadmap work.
+## What Revive is not
 
-Apache-2.0.
+Revive does not take custody of provider tokens — that stays with your
+credential vault (Nango, Auth0, Entra). It coordinates the in-flight run
+around a credential change: park, verify identity, fence stale workers,
+reconcile, resume.
+
+## Self-hosting (optional)
+
+The package also ships the local park/resume engine (`Engine`,
+`CheckpointStore`, `PostgresCheckpointStore`) for running the recovery loop
+in-process instead of against the hosted control plane. See the repository.
+
+Extras: `revive-sdk[langgraph]`, `revive-sdk[temporal]`, `revive-sdk[postgres]`.
+
+License: Apache-2.0 · https://revivelabs.app

@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "revive-sidecar"
+name = "revive-sdk"
 version = "0.1.0"
-description = "Credential recovery for durable workflows: checkpoint, reauthorize, rotate a credential lease, and resume the same logical run safely."
+description = "Agent recovery control plane SDK: protect agent actions so a failed credential parks the run and resumes exactly-once, without duplicating side effects. LangGraph, OpenAI Agents, and Anthropic tool-use adapters included."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
@@ -29,7 +29,7 @@ dev = ["langgraph>=0.2"]
 [project.urls]
 Homepage = "https://revivelabs.app"
 Repository = "https://github.com/FlyingPotato437/revive"
-Source = "https://github.com/revive-labs/revive"
+Issues = "https://github.com/FlyingPotato437/revive/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["revive"]
