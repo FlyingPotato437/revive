@@ -64,10 +64,19 @@ export const store: Store =
   g.__reviveStore ??
   (g.__reviveStore = loadStore());
 
-export function registerTicket(ticketId: string, sessionId: string) {
+export async function registerTicket(ticketId: string, sessionId: string): Promise<void> {
   store.tickets.set(ticketId, sessionId);
   persist();
-  void persistTicketDurable(ticketId, sessionId);
+  // The recovery URL is usable as soon as registerTicket resolves. Persist the
+  // session first, then its lookup row, so another serverless instance can
+  // hydrate the ticket immediately instead of briefly reporting it as expired.
+  const session = store.sessions.get(sessionId);
+  if (session && !(await persistSessionDurable(session))) {
+    throw new Error("recovery session could not be persisted");
+  }
+  if (!(await persistTicketDurable(ticketId, sessionId))) {
+    throw new Error("recovery ticket could not be persisted");
+  }
 }
 
 export function sessionForTicket(ticketId: string): SessionState | undefined {
@@ -89,8 +98,8 @@ export function putSession(s: SessionState) {
 // helpers write-through to Postgres and hydrate on demand; they are no-ops
 // without DATABASE_URL, keeping local development purely in-memory.
 
-async function persistSessionDurable(s: SessionState): Promise<void> {
-  if (!hostedDatabaseEnabled()) return;
+async function persistSessionDurable(s: SessionState): Promise<boolean> {
+  if (!hostedDatabaseEnabled()) return true;
   try {
     const json = sqlClient().json(JSON.parse(JSON.stringify(s)));
     await sqlClient()`
@@ -98,21 +107,25 @@ async function persistSessionDurable(s: SessionState): Promise<void> {
       values (${s.id}, ${json}, now())
       on conflict (id) do update set data = excluded.data, updated_at = now()
     `;
+    return true;
   } catch (error) {
     console.error("console session persist failed", error);
+    return false;
   }
 }
 
-async function persistTicketDurable(ticketId: string, sessionId: string): Promise<void> {
-  if (!hostedDatabaseEnabled()) return;
+async function persistTicketDurable(ticketId: string, sessionId: string): Promise<boolean> {
+  if (!hostedDatabaseEnabled()) return true;
   try {
     await sqlClient()`
       insert into revive_console_tickets (ticket_id, session_id, created_at)
       values (${ticketId}, ${sessionId}, now())
       on conflict (ticket_id) do update set session_id = excluded.session_id
     `;
+    return true;
   } catch (error) {
     console.error("console ticket persist failed", error);
+    return false;
   }
 }
 

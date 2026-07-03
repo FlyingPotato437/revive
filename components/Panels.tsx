@@ -55,7 +55,7 @@ export function ReconsentCard({ ticket, approving, onApprove }: { ticket: Recons
             <div className="text-[12px] font-semibold text-ink">User action required</div>
             <div className="mt-0.5 text-[10.5px] text-ink-muted">The run is durably parked; no worker is blocked.</div>
           </div>
-          <span className="rounded-[5px] bg-white/70 px-2 py-1 font-mono text-[10px] text-warn">expires {minutes}:{seconds}</span>
+          <span className="rounded-[5px] bg-white/70 px-2 py-1 font-mono text-[10px] text-warn">{remaining === 0 ? "validating expiry" : `${minutes}m ${seconds}s left`}</span>
         </div>
         <div className="p-4">
           <dl className="grid grid-cols-[92px_1fr] gap-x-3 gap-y-2 text-[11px]">
@@ -69,7 +69,7 @@ export function ReconsentCard({ ticket, approving, onApprove }: { ticket: Recons
             <button onClick={copy} className="shrink-0 rounded-[5px] bg-paper-inset px-2 py-1 text-[9px] font-semibold text-ink-muted">{copied ? "Copied" : "Copy"}</button>
           </div>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <button onClick={onApprove} disabled={approving || remaining === 0 || ticket.status !== "open"} className="h-10 flex-1 rounded-[8px] bg-ink px-4 text-[12px] font-semibold text-white transition hover:bg-[#272d39] disabled:opacity-45">{approving ? "Authorizing…" : "Authorize and resume"}</button>
+            <button onClick={onApprove} disabled={approving || ticket.status !== "open"} className="h-10 flex-1 rounded-[8px] bg-ink px-4 text-[12px] font-semibold text-white transition hover:bg-[#272d39] disabled:opacity-45">{approving ? "Authorizing…" : "Authorize and resume"}</button>
             <a href={ticket.url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center rounded-[8px] border border-hairline bg-white px-4 text-[11px] font-medium text-ink-muted hover:bg-paper-inset">Open consent screen ↗</a>
           </div>
         </div>

@@ -498,7 +498,18 @@ async function revivePark(
   run.ticket = ticket;
   run.recoveryCase.status = "awaiting_user";
   run.recoveryCase.updatedAt = Date.now();
-  registerTicket(ticket.id, sessionId);
+  try {
+    await registerTicket(ticket.id, sessionId);
+  } catch {
+    run.ticket = undefined;
+    run.status = "stalled";
+    run.recoveryCase.status = "expired";
+    run.recoveryCase.updatedAt = Date.now();
+    pushRun(sessionId, run);
+    log(sessionId, "revive", "error", "persist", "Recovery link could not be published. Durable storage rejected the ticket.");
+    return;
+  }
+  // Publish the link only after the session and lookup row are durable.
   pushRun(sessionId, run);
   void enqueueWebhookEvent("recovery.parked", {
     recoveryCaseId: run.recoveryCase.id,
