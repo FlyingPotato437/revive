@@ -26,16 +26,17 @@ const faqs = [
 
 export default function Home() {
   return <div className="revive-home">
-    <section className="relative border-b border-[#151922]">
-      <div className="hero-index" aria-hidden="true">RECOVERY<br />WITHOUT<br />REPLAY</div>
-      <div className="relative mx-auto grid min-h-[calc(100dvh-63px)] max-w-[1380px] items-center gap-12 px-5 py-12 sm:px-8 lg:grid-cols-[.94fr_1.06fr] lg:gap-16 lg:py-14">
-        <div className="relative z-10 max-w-[690px]">
-          <div className="text-[10px] font-semibold tracking-[.08em] text-[#2e49c8]">Agent recovery control plane</div>
-          <h1 className="mt-7 text-[clamp(48px,5.5vw,78px)] font-semibold leading-[.91] tracking-[-.07em] text-[#151922]"><span className="block">Keep the run.</span><span className="block sm:whitespace-nowrap">Replace the credential.</span></h1>
-          <p className="mt-7 max-w-[500px] text-[16px] leading-7 text-[#5f6876]">Revive parks failed agents, verifies side effects, and resumes the same run after the account reconnects.</p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Link href="/app" className="inline-flex h-12 items-center border border-[#151922] bg-[#151922] px-5 text-[12px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">See it recover</Link>
-            <Link href="#architecture" className="inline-flex h-12 items-center border border-[#151922] px-5 text-[12px] font-semibold text-[#151922] transition hover:bg-white active:translate-y-px">Read architecture</Link>
+    <section className="border-b border-[#151922]">
+      <div className="grid min-h-[calc(100dvh-63px)] lg:grid-cols-[minmax(0,1.04fr)_minmax(480px,.96fr)]">
+        <div className="flex min-w-0 items-center px-5 py-16 sm:px-8 lg:px-[max(3.5rem,calc((100vw-1380px)/2+2rem))] lg:py-20">
+          <div className="max-w-[690px]">
+            <div className="text-[10px] font-semibold tracking-[.08em] text-[#2e49c8]">Agent recovery control plane</div>
+            <h1 className="mt-7 text-[clamp(44px,5.4vw,78px)] font-semibold leading-[.91] tracking-[-.07em] text-[#151922]"><span className="block">Access breaks.</span><span className="block">The run survives.</span></h1>
+            <p className="mt-7 max-w-[480px] text-[16px] leading-7 text-[#5f6876]">Reconnect the right account and continue the same workflow without repeating completed work.</p>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <Link href="/app" className="inline-flex h-12 items-center border border-[#151922] bg-[#151922] px-5 text-[12px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">See it recover</Link>
+              <Link href="#product" className="inline-flex h-12 items-center border border-[#151922] px-5 text-[12px] font-semibold text-[#151922] transition hover:bg-white active:translate-y-px">How it works</Link>
+            </div>
           </div>
         </div>
         <HeroVisual />
