@@ -62,7 +62,7 @@ export async function POST(
     return NextResponse.json({ ok: false, reason: "complete authorization through the configured credential vault" }, { status: 409 });
   }
   // Sandbox tickets always simulate the approval and resume the demo run.
-  const result = approveReconsent(ticket);
+  const result = await approveReconsent(ticket);
   if (!result.ok) return NextResponse.json(result, { status: 409 });
   return NextResponse.json(result);
 }

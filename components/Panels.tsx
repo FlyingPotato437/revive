@@ -68,9 +68,9 @@ export function ReconsentCard({ ticket, approving, onApprove }: { ticket: Recons
             <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-ink-muted">{fullUrl}</span>
             <button onClick={copy} className="shrink-0 rounded-[5px] bg-paper-inset px-2 py-1 text-[9px] font-semibold text-ink-muted">{copied ? "Copied" : "Copy"}</button>
           </div>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <button onClick={onApprove} disabled={approving || ticket.status !== "open"} className="h-10 flex-1 rounded-[8px] bg-ink px-4 text-[12px] font-semibold text-white transition hover:bg-[#272d39] disabled:opacity-45">{approving ? "Authorizing…" : "Authorize and resume"}</button>
-            <a href={ticket.url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center rounded-[8px] border border-hairline bg-white px-4 text-[11px] font-medium text-ink-muted hover:bg-paper-inset">Open consent screen ↗</a>
+          <div className="mt-3">
+            <button onClick={onApprove} disabled={approving || ticket.status !== "open"} className="h-10 w-full rounded-[8px] bg-ink px-4 text-[12px] font-semibold text-white transition hover:bg-[#272d39] disabled:opacity-45">{approving ? "Authorizing and resuming…" : "Authorize and resume"}</button>
+            <p className="mt-2 text-center text-[10px] text-ink-muted">Simulated reauthorization for the demo account. The recovery link above is what a real account owner would receive.</p>
           </div>
         </div>
       </motion.div>

@@ -143,15 +143,50 @@ export function useReviveClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Pull the authoritative session snapshot over plain HTTP. SSE cannot be
+  // relied on across serverless instances, so this is both the post-approve
+  // refresh and a periodic fallback that keeps the UI in sync.
+  const refresh = useCallback(async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const body = await response.json() as { session?: SessionState };
+      if (!body.session) return;
+      const terminal = (s: string) => s === "completed" || s === "dead";
+      setState((prev) => ({
+        ...prev,
+        session: body.session!,
+        baseline: body.session!.baseline,
+        revive: body.session!.revive,
+        done: terminal(body.session!.baseline.status) && terminal(body.session!.revive.status),
+      }));
+    } catch {
+      /* transient; the next poll retries */
+    }
+  }, []);
+
   const approve = useCallback(async () => {
     const ticket = state.revive?.ticket;
+    const sessionId = state.sessionId;
     if (!ticket || ticket.status !== "open") return;
     const response = await fetch(`/api/reconsent/${ticket.id}`, { method: "POST" });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       throw new Error(body.reason || "Recovery approval failed");
     }
-  }, [state.revive?.ticket]);
+    // The POST returns only after the resume completes and is persisted, so a
+    // single refresh reflects the recovered run even when SSE is unavailable.
+    if (sessionId) await refresh(sessionId);
+  }, [state.revive?.ticket, state.sessionId, refresh]);
+
+  // Polling fallback: while a session is active but not finished, reconcile
+  // state over HTTP every few seconds in case SSE events never arrive.
+  useEffect(() => {
+    const sessionId = state.sessionId;
+    if (!sessionId || state.done) return;
+    const timer = setInterval(() => { void refresh(sessionId); }, 3000);
+    return () => clearInterval(timer);
+  }, [state.sessionId, state.done, refresh]);
 
   return { state, start, reset, approve };
 }

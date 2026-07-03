@@ -23,6 +23,7 @@ import {
 } from "./mock-graph";
 import {
   emit,
+  flushSession,
   getSession,
   putSession,
   registerTicket,
@@ -135,10 +136,10 @@ export function startSession(
  * Validates synchronously, then runs mint → splice → resume in the background
  * so the HTTP response returns immediately.
  */
-export function approveReconsent(ticketId: string, context: { connectionId?: string } = {}): {
+export async function approveReconsent(ticketId: string, context: { connectionId?: string } = {}): Promise<{
   ok: boolean;
   reason?: string;
-} {
+}> {
   const session = sessionForTicket(ticketId);
   if (!session) return { ok: false, reason: "no such ticket" };
   const run = session.revive;
@@ -168,7 +169,12 @@ export function approveReconsent(ticketId: string, context: { connectionId?: str
     generation: run.token.generation + 1,
     connectionId: context.connectionId,
   });
-  void runResume(session);
+  // Await the resume so the run reaches completion before this returns. On a
+  // serverless host the instance can freeze the moment the response is sent, so
+  // a fire-and-forget resume would never finish. Flush the final state durably
+  // so any instance can read the completed run afterward.
+  await runResume(session);
+  await flushSession(session);
   return { ok: true };
 }
 

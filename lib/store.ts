@@ -160,6 +160,32 @@ export function getSession(id: string): SessionState | undefined {
   return store.sessions.get(id);
 }
 
+/** Load a session by id from Postgres into memory so a different serverless
+ *  instance than the one that created it can still read its state. */
+export async function hydrateSession(id: string): Promise<SessionState | undefined> {
+  const local = store.sessions.get(id);
+  if (local) return local;
+  if (!hostedDatabaseEnabled()) return undefined;
+  try {
+    const rows = await sqlClient()<{ data: SessionState }[]>`
+      select data from revive_console_sessions where id = ${id}
+    `;
+    const session = rows[0]?.data;
+    if (session) store.sessions.set(session.id, session);
+    return session;
+  } catch (error) {
+    console.error("console session load failed", error);
+    return undefined;
+  }
+}
+
+/** Awaitable durable persist — used at the end of a resume so the final state
+ *  is in Postgres before the HTTP response returns (the serverless instance
+ *  may freeze immediately after). */
+export async function flushSession(s: SessionState): Promise<void> {
+  await persistSessionDurable(s);
+}
+
 export function listSessions(): SessionState[] {
   return [...store.sessions.values()].sort((a, b) => b.createdAt - a.createdAt);
 }

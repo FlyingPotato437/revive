@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
       },
     });
     await audit({ workspaceId: session.workspaceId || "local", actor: "oauth-callback", subjectKind: "auth", subjectId: ticketId, event: expectedSubject ? "identity_verified" : "identity_bound_first_use", detail: { connectionId, tenant: identity.tenant } });
-    const approved = approveReconsent(ticketId, { connectionId });
+    const approved = await approveReconsent(ticketId, { connectionId });
     if (!approved.ok) throw new Error(approved.reason || "recovery could not be resumed");
     return recoveryRedirect(req, ticketId, "completed");
   } catch (error) {
