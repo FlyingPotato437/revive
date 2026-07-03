@@ -1,0 +1,10 @@
+.git
+.next
+.next-dev
+.venv
+.revive
+node_modules
+deck
+video
+*.pptx
+*.mp4
