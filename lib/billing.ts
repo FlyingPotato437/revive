@@ -80,6 +80,10 @@ export async function createCheckoutSession(input: {
   if (!stripeConfigured()) throw new Error("billing is not configured (STRIPE_SECRET_KEY, STRIPE_PRICE_PRO)");
   const session = await stripe("/checkout/sessions", {
     mode: "subscription",
+    // Keep card explicit until the Stripe account finishes activating dynamic
+    // payment methods. This still uses Stripe Checkout and never handles card
+    // details inside Revive.
+    "payment_method_types[0]": "card",
     "line_items[0][price]": process.env.STRIPE_PRICE_PRO!,
     "line_items[0][quantity]": "1",
     customer_email: input.email,
