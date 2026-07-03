@@ -30,8 +30,8 @@
     "next": "^15.5.19",
     "postgres": "^3.4.7",
     "prism-react-renderer": "^2.4.1",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
+    "react": "^19.0.3",
+    "react-dom": "^19.0.3",
     "simple-icons": "^15.22.0"
   },
   "devDependencies": {
