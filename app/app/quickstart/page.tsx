@@ -5,7 +5,7 @@ export default function QuickstartPage() {
   return <div className="mx-auto max-w-[1280px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
     <PageHeader eyebrow="Operations" title="Quickstart" description="Protect one provider action, route reauthorization, and verify the recovery contract." />
     <div className="mt-6"><QuickstartFlow /></div>
-    <div className="mt-8 grid gap-4 border-t border-[#bfc5cc] pt-6 sm:grid-cols-2"><RuntimeLink name="LangGraph" href="https://github.com/revive-labs/revive/tree/main/sidecar/revive/adapters/langgraph.py" body="Parks with the runtime's native interrupt and resumes through its checkpointer." /><RuntimeLink name="Temporal" href="https://github.com/revive-labs/revive/tree/main/sidecar/revive/adapters/temporal.py" body="Signals the existing workflow with an opaque connection and lease generation." /></div>
+    <div className="mt-8 grid gap-4 border-t border-[#bfc5cc] pt-6 sm:grid-cols-2"><RuntimeLink name="LangGraph" href="https://github.com/FlyingPotato437/revive/tree/main/sidecar/revive/adapters/langgraph.py" body="Parks with the runtime's native interrupt and resumes through its checkpointer." /><RuntimeLink name="Temporal" href="https://github.com/FlyingPotato437/revive/tree/main/sidecar/revive/adapters/temporal.py" body="Signals the existing workflow with an opaque connection and lease generation." /></div>
   </div>;
 }
 

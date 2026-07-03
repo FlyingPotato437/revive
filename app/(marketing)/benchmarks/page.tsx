@@ -362,7 +362,7 @@ export default function BenchmarkWhitepaperPage() {
             <pre className="mt-7 overflow-x-auto border border-[#151922] bg-[#151922] p-5 font-mono text-[11px] leading-6 text-[#f4f5f1]"><code>{"npm run bench:revive\npython3 -m unittest discover -s sidecar/tests -v\nnpm run certify:live"}</code></pre>
             <div className="mt-7 flex flex-wrap gap-3">
               <a href="/api/evidence/revivebench?download=1" className="inline-flex h-10 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">Download raw JSON</a>
-              <a href="https://github.com/revive-labs/revive/blob/main/sidecar/benchmarks/revivebench.py" className="inline-flex h-10 items-center border border-[#151922] bg-transparent px-4 text-[10.5px] font-semibold text-[#151922] transition hover:bg-white active:translate-y-px">Read the runner</a>
+              <a href="https://github.com/FlyingPotato437/revive/blob/main/sidecar/benchmarks/revivebench.py" className="inline-flex h-10 items-center border border-[#151922] bg-transparent px-4 text-[10.5px] font-semibold text-[#151922] transition hover:bg-white active:translate-y-px">Read the runner</a>
               <Link href="/app/quickstart" className="inline-flex h-10 items-center px-2 text-[10.5px] font-semibold text-[#2e49c8]">Integration guide</Link>
             </div>
           </ReportSection>
