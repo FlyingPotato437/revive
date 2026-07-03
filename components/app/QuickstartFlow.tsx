@@ -1,11 +1,36 @@
 "use client";
 
-import { ArrowRight, BracketsCurly, CheckCircle, Key, Package, TestTube } from "@phosphor-icons/react";
+import { ArrowRight, BracketsCurly, CheckCircle, Key, Package, Plugs, TestTube } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Highlight, themes, type Language } from "prism-react-renderer";
 import { useState } from "react";
 
 const stages = [
+  {
+    id: "proxy", label: "Proxy", icon: Plugs, language: "bash" as Language,
+    title: "Fastest path: change one base URL",
+    body: "Point provider calls at the Revive proxy. Mutations are ledgered, replays are blocked at the wire, and dead credentials open a recovery case. No SDK required.",
+    code: `# was: https://graph.microsoft.com/v1.0/me/sendMail
+curl -X POST "$REVIVE_URL/proxy/v1.0/me/sendMail" \\
+  -H "Authorization: Bearer rv_live_…" \\
+  -H "X-Revive-Connection-Id: $CONNECTION_ID" \\
+  -H "X-Revive-Run-Id: $RUN_ID" \\
+  -H "Content-Type: application/json" \\
+  -d "$MESSAGE_JSON"
+
+# reads pass straight through (no ledger entry):
+#   GET  /proxy/v1.0/me
+# optional headers:
+#   X-Revive-Action-Key:       send_followup_email
+#   X-Revive-Checkpoint-Id:    ckpt_4
+#   X-Revive-Idempotency-Key:  your own key (else derived)
+#   X-Revive-Lease-Generation: fences stale workers (409)
+# responses:
+#   x-revive-ledger: committed          side effect recorded
+#   x-revive-replay: blocked            duplicate stopped, stored result returned
+#   401 + recoveryUrl                   credential dead, case opened`,
+    result: "Every mutating call is exactly-once without touching your agent code.",
+  },
   {
     id: "install", label: "Install", icon: Package, language: "bash" as Language,
     title: "Add the action SDK",
@@ -62,7 +87,7 @@ export function QuickstartFlow() {
   const reduceMotion = useReducedMotion();
   const stage = stages[active];
   return <section className="border border-[#151922] bg-[#fbfcf8] shadow-[7px_7px_0_#d9ddd6]">
-    <nav className="grid border-b border-[#151922] sm:grid-cols-4" aria-label="Quickstart steps">{stages.map((item, index) => { const Icon = item.icon; const current = index === active; const complete = index < active; return <button key={item.id} onClick={() => setActive(index)} className={`relative flex min-h-14 items-center gap-3 border-b border-[#d8dde3] px-4 text-left transition last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0 ${current ? "bg-[#edf0ff] text-[#2e49c8]" : "text-[#687180] hover:bg-[#f4f5f1]"}`}>{current && <motion.span layoutId="quickstart-active" className="absolute inset-x-0 bottom-0 h-[3px] bg-[#4967f2]" />}<span className={`flex h-7 w-7 items-center justify-center border ${current ? "border-[#4967f2]" : "border-[#c8cdd2]"}`}>{complete ? <CheckCircle size={14} weight="fill" className="text-[#18724e]" /> : <Icon size={14} />}</span><span className="text-[10.5px] font-semibold">{item.label}</span></button>; })}</nav>
+    <nav className="grid border-b border-[#151922] sm:grid-cols-5" aria-label="Quickstart steps">{stages.map((item, index) => { const Icon = item.icon; const current = index === active; const complete = index < active; return <button key={item.id} onClick={() => setActive(index)} className={`relative flex min-h-14 items-center gap-3 border-b border-[#d8dde3] px-4 text-left transition last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0 ${current ? "bg-[#edf0ff] text-[#2e49c8]" : "text-[#687180] hover:bg-[#f4f5f1]"}`}>{current && <motion.span layoutId="quickstart-active" className="absolute inset-x-0 bottom-0 h-[3px] bg-[#4967f2]" />}<span className={`flex h-7 w-7 items-center justify-center border ${current ? "border-[#4967f2]" : "border-[#c8cdd2]"}`}>{complete ? <CheckCircle size={14} weight="fill" className="text-[#18724e]" /> : <Icon size={14} />}</span><span className="text-[10.5px] font-semibold">{item.label}</span></button>; })}</nav>
 
     <AnimatePresence mode="wait" initial={false}><motion.div key={stage.id} initial={reduceMotion ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={reduceMotion ? undefined : { opacity: 0, y: -5 }} transition={{ duration: .2 }} className="grid min-h-[430px] lg:grid-cols-[.74fr_1.26fr]">
       <div className="flex flex-col justify-between border-b border-[#151922] p-6 sm:p-8 lg:border-b-0 lg:border-r">
