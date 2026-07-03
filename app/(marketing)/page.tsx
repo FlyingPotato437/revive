@@ -52,6 +52,13 @@ export default function Home() {
       </div>
     </section>
 
+    <div className="recovery-ticker font-mono" aria-hidden="true">
+      <div className="recovery-ticker-track">
+        <TickerRun />
+        <TickerRun />
+      </div>
+    </div>
+
     <section id="product" className="mx-auto grid max-w-[1380px] gap-16 px-5 py-24 sm:px-8 lg:grid-cols-[.75fr_1.25fr] lg:py-36">
       <Reveal className="lg:sticky lg:top-28 lg:self-start">
         <p className="text-[11px] font-semibold text-[#4967f2]">What actually broke</p>
@@ -123,6 +130,15 @@ export default function Home() {
       </Reveal>
     </section>
   </div>;
+}
+
+function TickerRun() {
+  const items = [
+    ["CHECKPOINT", "PRESERVED"], ["CREDENTIAL GENERATION", "01 → 02"], ["STALE WORKER", "FENCED"],
+    ["SIDE EFFECT", "RECONCILED"], ["IDENTITY", "SAME SUBJECT · SAME TENANT"], ["REPLAY VERDICT", "ALREADY_COMMITTED"],
+    ["DUPLICATE SENDS", "0 OBSERVED"], ["RUN", "RESUMED AT CKPT_05"],
+  ] as const;
+  return <>{items.map(([label, value]) => <span key={label}>{label} <em>{value}</em></span>)}</>;
 }
 
 function BoundaryCell({ label, title, detail, tone }: { label: string; title: string; detail: string; tone: "fail" | "active" | "ok" }) {
