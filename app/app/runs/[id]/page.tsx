@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSession } from "@/lib/store";
+import { hydrateSession } from "@/lib/store";
 import { listActions } from "@/lib/control-plane";
 import { PageHeader, StatusBadge, SummaryStrip } from "@/components/app/ConsolePrimitives";
 import { RecoveryTrace } from "@/components/app/RecoveryTrace";
@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 
 export default async function RecoveryCaseDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = getSession(id);
+  // Hydrate from Postgres: on serverless the case may live on another instance.
+  const session = await hydrateSession(id);
   if (!session) notFound();
   const run = session.revive;
   const recovery = run.recoveryCase;
