@@ -190,6 +190,33 @@ export function listSessions(): SessionState[] {
   return [...store.sessions.values()].sort((a, b) => b.createdAt - a.createdAt);
 }
 
+/** Workspace sessions from Postgres merged with anything already in memory.
+ *  This is what the console lists so SDK-created cases (mirrored into console
+ *  sessions and written through to Postgres) appear on any serverless
+ *  instance, not only the one that created them. */
+export async function listSessionsForWorkspace(workspaceId: string): Promise<SessionState[]> {
+  const byId = new Map<string, SessionState>();
+  for (const s of store.sessions.values()) {
+    if (!s.workspaceId || s.workspaceId === workspaceId) byId.set(s.id, s);
+  }
+  if (hostedDatabaseEnabled()) {
+    try {
+      const rows = await sqlClient()<{ data: SessionState }[]>`
+        select data from revive_console_sessions
+        where data->>'workspaceId' = ${workspaceId}
+        order by updated_at desc limit 200
+      `;
+      for (const row of rows) {
+        if (!byId.has(row.data.id)) byId.set(row.data.id, row.data);
+        store.sessions.set(row.data.id, row.data);
+      }
+    } catch (error) {
+      console.error("console session list failed", error);
+    }
+  }
+  return [...byId.values()].sort((a, b) => b.createdAt - a.createdAt);
+}
+
 export function subscribe(sessionId: string, fn: Listener): () => void {
   let set = store.listeners.get(sessionId);
   if (!set) {

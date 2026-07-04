@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { startSession } from "@/lib/engine";
 import { DEFAULT_FAILURE_STEP, RUN_SCRIPT } from "@/lib/steps";
-import { listSessions } from "@/lib/store";
+import { listSessionsForWorkspace } from "@/lib/store";
 import { sessionFromCookies } from "@/lib/auth";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const auth = sessionFromCookies(req.cookies);
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const workspace = await selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
-  const sessions = listSessions().filter((session) => !session.workspaceId || session.workspaceId === workspace.id).map((session) => ({
+  const sessions = (await listSessionsForWorkspace(workspace.id)).map((session) => ({
     id: session.id,
     createdAt: session.createdAt,
     deathCode: session.deathCode,

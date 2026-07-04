@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { PageHeader, SectionHeading, StatusBadge, SummaryStrip } from "@/components/app/ConsolePrimitives";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
-import { listSessions } from "@/lib/store";
+import { listSessionsForWorkspace } from "@/lib/store";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export default async function OverviewPage() {
   const jar = await cookies();
   const auth = verifySession(jar.get(SESSION_COOKIE)?.value)!;
   const workspace = await selectedWorkspace(auth.email, jar.get(WORKSPACE_COOKIE)?.value);
-  const sessions = listSessions().filter((session) => !session.workspaceId || session.workspaceId === workspace.id);
+  const sessions = await listSessionsForWorkspace(workspace.id);
   const recovered = sessions.filter((session) => session.revive.status === "completed").length;
   const actions = sessions.flatMap((session) => session.revive.actions);
   const committed = actions.filter((action) => action.state === "committed" || action.state === "reconciled").length;
