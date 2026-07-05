@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     record = await transition(auth.workspace.id, record.id, { to: "parked", expectedVersion: record.version, actor: auth.keyPrefix });
     void notifyCaseOpened(record);
   }
-  mirrorCaseToConsole(record);
+  await mirrorCaseToConsole(record);
   await audit({ workspaceId: auth.workspace.id, actor: auth.keyPrefix, subjectKind: "case", subjectId: record.id, event: "opened", detail: { runId: record.runId, state: record.state, reason: record.reason.slice(0, 120), failureClass: failure.failureClass, resumeDecision: resume.decision, resumeRule: resume.ruleId, actionClass: resume.actionClass } });
   return NextResponse.json({
     failureClass: failure.failureClass,

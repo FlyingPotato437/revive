@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (record.state === "identity_verified") {
       rotatedGeneration = await advanceLease(auth.workspace.id, record.connectionId);
     }
-    mirrorCaseToConsole(record);
+    await mirrorCaseToConsole(record);
     await audit({ workspaceId: auth.workspace.id, actor: auth.keyPrefix, subjectKind: "case", subjectId: record.id, event: `transition:${record.state}`, detail: { version: record.version } });
     return NextResponse.json({ id: record.id, state: record.state, version: record.version, rotatedGeneration, events: record.events });
   } catch (error) {

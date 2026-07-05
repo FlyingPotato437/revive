@@ -1,6 +1,6 @@
 // Mirrors control-plane cases into the console session store so Overview and
 // Recovery cases render hosted-API activity without a second read path.
-import { getSession, putSession } from "./store";
+import { flushSession, getSession, putSession } from "./store";
 import type { ControlCase } from "./control-plane";
 import type { Provider, RecoveryStatus, RunState, RunStatus, SessionState } from "./types";
 
@@ -46,7 +46,7 @@ function emptyRun(lane: "baseline" | "revive", runId: string): RunState {
   };
 }
 
-export function mirrorCaseToConsole(record: ControlCase): void {
+export async function mirrorCaseToConsole(record: ControlCase): Promise<void> {
   const sessionId = `cp_${record.id}`;
   let session = getSession(sessionId);
   if (!session) {
@@ -81,4 +81,8 @@ export function mirrorCaseToConsole(record: ControlCase): void {
     events: record.events,
   };
   putSession(session);
+  // Await the durable write: on serverless the instance can freeze the moment
+  // the HTTP response is sent, so a fire-and-forget persist may never land and
+  // the case would vanish from the console list / detail on the next request.
+  await flushSession(session);
 }
