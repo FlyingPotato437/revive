@@ -218,6 +218,10 @@ async function main() {
   // 8. A runtime resume is accepted only after a signed, matching checkpoint acknowledgement.
   const resumeSecret = `runtime-test-${Date.now()}`;
   process.env.REVIVE_RUNTIME_RESUME_SECRET = resumeSecret;
+  // Delivery resolves config per workspace with an env fallback that needs the
+  // URL too; the test endpoint is only known after listen(), so point the env
+  // URL at a placeholder now and rely on the payload endpoint below.
+  process.env.REVIVE_RUNTIME_RESUME_URL = "http://127.0.0.1:1";
   const runtimeRun = `${run}-runtime`;
   const checkpointId = `checkpoint-${Date.now()}`;
   let runtimeCase = await openCase("ws_revive_local", {

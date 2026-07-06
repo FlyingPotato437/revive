@@ -6,6 +6,16 @@ import { allowedNangoIntegrations, fetchNangoMicrosoftIdentity, MICROSOFT_GRAPH_
 import { resolveRecoveryTarget } from "@/lib/recovery-target";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { enqueueRuntimeResume } from "@/lib/webhooks";
+import { autoReconcileRun } from "@/lib/auto-reconcile";
+
+// Wrong-account recovery attempts get a structured, user-explainable block
+// instead of a generic 409 — the recovery page renders it as "wrong account".
+class IdentityMismatchError extends Error {
+  constructor(message: string, readonly boundAccount?: string) {
+    super(message);
+    this.name = "IdentityMismatchError";
+  }
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,8 +47,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
         throw new Error("the connection is missing its creation-time identity binding");
       }
     } else {
-      if (expected.subject !== identity.subject) throw new Error("the authorized Microsoft account does not match this connection");
-      if (expected.tenant !== identity.tenant) throw new Error("the authorized Microsoft tenant does not match this connection");
+      if (expected.subject !== identity.subject) {
+        throw new IdentityMismatchError("the authorized Microsoft account does not match the account bound to this connection", expected.accountId);
+      }
+      if (expected.tenant !== identity.tenant) {
+        throw new IdentityMismatchError("the authorized Microsoft tenant does not match the tenant bound to this connection", expected.accountId);
+      }
     }
 
     await saveExternalVaultConnection({
@@ -70,6 +84,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
       note: `Microsoft subject ${identity.subject}`,
     });
     const generation = await advanceLease(record.workspaceId, record.connectionId);
+    // Auto-reconciliation BEFORE resume: settle every unknown-outcome action of
+    // this run against the provider, so the runtime resumes into a ledger of
+    // known verdicts — never a blind retry of something that already committed.
+    const reconciliation = await autoReconcileRun({
+      workspaceId: record.workspaceId,
+      runId: record.runId,
+      connectionId: record.connectionId,
+      integrationId,
+      actor: "nango-connect",
+    });
     const resumeJobId = await enqueueRuntimeResume(record, generation);
     await audit({
       workspaceId: record.workspaceId,
@@ -85,10 +109,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
       state: record.state,
       generation,
       accountId: identity.accountId,
+      reconciliation,
       resumeQueued: Boolean(resumeJobId),
       resumeJobId,
     });
   } catch (error) {
+    if (error instanceof IdentityMismatchError) {
+      await audit({
+        workspaceId: target.record.workspaceId,
+        actor: "nango-connect",
+        subjectKind: "auth",
+        subjectId: target.record.id,
+        event: "identity_mismatch_blocked",
+        detail: { reason: error.message, boundAccount: error.boundAccount },
+      });
+      return NextResponse.json(
+        { ok: false, code: "identity_mismatch", reason: error.message, boundAccount: error.boundAccount },
+        { status: 403 },
+      );
+    }
     const status = error instanceof TransitionError ? error.status : 409;
     await audit({
       workspaceId: target.record.workspaceId,

@@ -4,6 +4,8 @@ import { advanceLease, transition, TransitionError, type CaseState } from "@/lib
 import { mirrorCaseToConsole } from "@/lib/console-mirror";
 import { audit } from "@/lib/audit";
 import { enqueueRuntimeResume } from "@/lib/webhooks";
+import { autoReconcileRun } from "@/lib/auto-reconcile";
+import { allowedNangoIntegrations } from "@/lib/integrations/nango";
 
 export const dynamic = "force-dynamic";
 
@@ -39,13 +41,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // then queue the signed resume callback to the workspace's runtime endpoint.
     let rotatedGeneration: number | undefined;
     let resumeJobId: string | null = null;
+    let reconciliation;
     if (record.state === "identity_verified") {
       rotatedGeneration = await advanceLease(auth.workspace.id, record.connectionId);
+      // Settle unknown-outcome actions against the provider before the resume
+      // callback fires, so the runtime never blind-retries a committed effect.
+      reconciliation = await autoReconcileRun({
+        workspaceId: auth.workspace.id,
+        runId: record.runId,
+        connectionId: record.connectionId,
+        integrationId: allowedNangoIntegrations()[0] || "microsoft-tenant-specific",
+        actor: auth.keyPrefix,
+      });
       resumeJobId = await enqueueRuntimeResume(record, rotatedGeneration);
     }
     await mirrorCaseToConsole(record);
     await audit({ workspaceId: auth.workspace.id, actor: auth.keyPrefix, subjectKind: "case", subjectId: record.id, event: `transition:${record.state}`, detail: { version: record.version, resumeJobId } });
-    return NextResponse.json({ id: record.id, state: record.state, version: record.version, rotatedGeneration, resumeQueued: Boolean(resumeJobId), resumeJobId, events: record.events });
+    return NextResponse.json({ id: record.id, state: record.state, version: record.version, rotatedGeneration, reconciliation, resumeQueued: Boolean(resumeJobId), resumeJobId, events: record.events });
   } catch (error) {
     if (error instanceof TransitionError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

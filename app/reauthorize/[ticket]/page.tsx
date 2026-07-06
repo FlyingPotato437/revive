@@ -17,7 +17,7 @@ import Nango from "@nangohq/frontend";
 import { use, useEffect, useState } from "react";
 import type { ClassifierResult, ReconsentTicket } from "@/lib/types";
 
-type Phase = "loading" | "ready" | "approving" | "done" | "error";
+type Phase = "loading" | "ready" | "approving" | "done" | "error" | "blocked";
 
 type RecoveryData = {
   ticket: ReconsentTicket;
@@ -59,6 +59,7 @@ export default function Reauthorize({ params }: { params: Promise<{ ticket: stri
   const [phase, setPhase] = useState<Phase>("loading");
   const [data, setData] = useState<RecoveryData | null>(null);
   const [completion, setCompletion] = useState<CompletionData | null>(null);
+  const [blocked, setBlocked] = useState<{ reason: string; boundAccount?: string } | null>(null);
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -130,11 +131,14 @@ export default function Reauthorize({ params }: { params: Promise<{ ticket: stri
                 integrationId: event.payload.providerConfigKey,
               }),
             });
-            const result = await completion.json().catch(() => ({})) as Partial<CompletionData>;
+            const result = await completion.json().catch(() => ({})) as Partial<CompletionData> & { code?: string; reason?: string; boundAccount?: string };
             connect.close();
             if (completion.ok) {
               setCompletion({ resumeQueued: Boolean(result.resumeQueued), state: String(result.state || "identity_verified") });
               setPhase("done");
+            } else if (result.code === "identity_mismatch") {
+              setBlocked({ reason: result.reason || "The account you signed in with is not the one bound to this run.", boundAccount: result.boundAccount });
+              setPhase("blocked");
             } else {
               setPhase("error");
             }
@@ -207,6 +211,7 @@ export default function Reauthorize({ params }: { params: Promise<{ ticket: stri
                 >
                   {phase === "loading" && <LoadingState />}
                   {phase === "error" && <ErrorState />}
+                  {phase === "blocked" && <BlockedState reason={blocked?.reason || ""} boundAccount={blocked?.boundAccount} onRetry={() => setPhase("ready")} />}
                   {(phase === "ready" || phase === "approving") && data && (
                     <ReadyState data={data} approving={phase === "approving"} approve={approve} />
                   )}
@@ -292,6 +297,27 @@ function ErrorState() {
           Return home
         </Link>
       </div>
+    </div>
+  );
+}
+
+function BlockedState({ reason, boundAccount, onRetry }: { reason: string; boundAccount?: string; onRetry: () => void }) {
+  return (
+    <div className="flex min-h-[370px] flex-col justify-center">
+      <span className="flex h-12 w-12 items-center justify-center border border-[#c2413a] bg-[#fcedeb] text-[#c2413a]">
+        <Fingerprint size={21} weight="bold" />
+      </span>
+      <div className="mt-8 font-mono text-[9px] tracking-[.12em] text-[#9a3b36]">WRONG ACCOUNT · RECOVERY BLOCKED</div>
+      <h1 className="mt-3 max-w-[640px] text-[clamp(2rem,5vw,4rem)] font-semibold leading-[.98] tracking-[-.055em]">
+        That account can&rsquo;t recover this run.
+      </h1>
+      <p className="mt-5 max-w-[54ch] text-[13px] leading-[1.7] text-[#66707e]">
+        {reason} No credential was rotated and the run stays safely parked.
+        {boundAccount ? <> Sign in as <span className="font-mono text-[12px] text-[#151922]">{boundAccount}</span> to continue.</> : " Sign in with the account originally bound to this workflow."}
+      </p>
+      <button onClick={onRetry} className="mt-8 inline-flex h-11 w-fit items-center justify-center gap-2 border border-[#151922] bg-[#151922] px-5 text-[11px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">
+        Try again with the right account
+      </button>
     </div>
   );
 }

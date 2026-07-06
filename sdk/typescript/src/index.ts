@@ -47,6 +47,17 @@ export interface ActionRegistration {
   resultRef?: string;
 }
 
+/** Provider probe fields attached at registration so recovery can auto-answer
+ *  "did this side effect already happen?" before the run resumes. */
+export interface ReconcileHints {
+  provider?: "microsoft" | "google";
+  subject?: string;
+  internetMessageId?: string;
+  messageId?: string;
+  rfc822MessageId?: string;
+  windowMinutes?: number;
+}
+
 export interface ReconcileResult<TResult = unknown> {
   committed: boolean;
   value?: TResult;
@@ -78,6 +89,8 @@ export interface ProtectActionInput<TCredential, TResult> {
   actionKey: string;
   idempotencyKey?: string;
   metadata?: Record<string, unknown>;
+  /** Provider probe fields so recovery can auto-reconcile before resume. */
+  reconcileHints?: ReconcileHints;
   signal?: AbortSignal;
   credential: () => Promise<CredentialLease<TCredential>> | CredentialLease<TCredential>;
   execute: (context: ProtectedActionContext<TCredential>) => Promise<TResult>;
@@ -111,6 +124,7 @@ export interface ReviveTransport {
     actionKey: string;
     idempotencyKey: string;
     metadata?: Record<string, unknown>;
+    reconcileHints?: ReconcileHints;
   }): Promise<ActionRegistration>;
   markStarted(input: { actionId: string; idempotencyKey: string }): Promise<void>;
   completeAction(input: {
@@ -171,6 +185,7 @@ export class ReviveClient {
       actionKey: input.actionKey,
       idempotencyKey,
       metadata: input.metadata,
+      reconcileHints: input.reconcileHints,
     });
 
     // Ledger verdict gate: never execute an action the control plane already

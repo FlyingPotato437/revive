@@ -41,10 +41,23 @@ export async function POST(req: NextRequest) {
       throw error;
     }
   }
+  // Reconcile hints: provider probe fields (subject / internetMessageId /
+  // messageId) the SDK attaches so recovery can auto-answer "did this side
+  // effect already happen?" before resume.
+  let metadata: Record<string, unknown> | undefined;
+  if (body.reconcileHints && typeof body.reconcileHints === "object") {
+    const raw = body.reconcileHints as Record<string, unknown>;
+    const hints: Record<string, unknown> = {};
+    for (const field of ["provider", "subject", "internetMessageId", "messageId", "rfc822MessageId"] as const) {
+      if (typeof raw[field] === "string") hints[field] = String(raw[field]).slice(0, 300);
+    }
+    if (typeof raw.windowMinutes === "number") hints.windowMinutes = raw.windowMinutes;
+    if (Object.keys(hints).length) metadata = { reconcileHints: hints };
+  }
   let action;
   try {
     action = await registerAction(auth.workspace.id, {
-      runId, connectionId, actionKey, idempotencyKey,
+      runId, connectionId, actionKey, idempotencyKey, metadata,
       checkpointId: body.checkpointId ? String(body.checkpointId).slice(0, 200) : undefined,
     });
   } catch (error) {

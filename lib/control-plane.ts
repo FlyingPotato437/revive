@@ -85,6 +85,8 @@ export interface ControlAction {
   remoteId?: string;
   note?: string;
   resultRef?: string;
+  /** Reconcile hints (subject / internetMessageId / messageId / provider). */
+  metadata?: Record<string, unknown>;
   createdAt: number;
   updatedAt: number;
 }
@@ -137,6 +139,7 @@ type ActionInput = {
   connectionId: string;
   actionKey: string;
   idempotencyKey: string;
+  metadata?: Record<string, unknown>;
 };
 
 type OpenCaseInput = {
@@ -173,6 +176,7 @@ interface DbAction {
   remote_id: string | null;
   note: string | null;
   result_ref: string | null;
+  metadata: Record<string, unknown> | null;
   created_at: Date | string;
   updated_at: Date | string;
 }
@@ -217,6 +221,7 @@ function mapAction(row: DbAction): ControlAction {
     remoteId: row.remote_id || undefined,
     note: row.note || undefined,
     resultRef: row.result_ref || undefined,
+    metadata: row.metadata || undefined,
     createdAt: timestamp(row.created_at),
     updatedAt: timestamp(row.updated_at),
   };
@@ -279,7 +284,7 @@ export async function registerAction(workspaceId: string, input: ActionInput): P
       id: id("act"), workspaceId, runId: input.runId, checkpointId: input.checkpointId,
       connectionId: input.connectionId, actionKey: input.actionKey,
       idempotencyKey: input.idempotencyKey, state: "prepared", version: 1, attempts: 1,
-      createdAt: Date.now(), updatedAt: Date.now(),
+      metadata: input.metadata, createdAt: Date.now(), updatedAt: Date.now(),
     };
     data.actions.push(action);
     writeLocal(data);
@@ -291,9 +296,9 @@ export async function registerAction(workspaceId: string, input: ActionInput): P
     if (!existing) {
       const inserted = await sql<DbAction[]>`
         insert into revive_actions
-          (id, workspace_id, run_id, checkpoint_id, connection_id, action_key, idempotency_key, state, version, attempts)
+          (id, workspace_id, run_id, checkpoint_id, connection_id, action_key, idempotency_key, state, version, attempts, metadata)
         values
-          (${id("act")}, ${workspaceId}, ${input.runId}, ${input.checkpointId || null}, ${input.connectionId}, ${input.actionKey}, ${input.idempotencyKey}, 'prepared', 1, 1)
+          (${id("act")}, ${workspaceId}, ${input.runId}, ${input.checkpointId || null}, ${input.connectionId}, ${input.actionKey}, ${input.idempotencyKey}, 'prepared', 1, 1, ${input.metadata ? sql.json(JSON.parse(JSON.stringify(input.metadata))) : null})
         on conflict (workspace_id, run_id, action_key, idempotency_key) do nothing
         returning *
       `;
@@ -415,6 +420,42 @@ function mutateActionLocal(
   action.updatedAt = Date.now();
   writeLocal(data);
   return action;
+}
+
+/** Provider proved the side effect never committed: started|uncertain → prepared,
+ *  so the runtime may safely execute it (once) on resume. */
+export async function resetActionSafe(workspaceId: string, actionId: string, note?: string): Promise<ControlAction> {
+  if (!hostedDatabaseEnabled()) {
+    return mutateActionLocal(workspaceId, actionId, (action) => {
+      if (action.state !== "started" && action.state !== "uncertain") {
+        throw new TransitionError(`only started/uncertain actions can be reset (state: ${action.state})`);
+      }
+      action.state = "prepared";
+      if (note) action.note = note.slice(0, 300);
+    });
+  }
+  return withWorkspaceTransaction(workspaceId, async (sql) => {
+    const rows = await sql<DbAction[]>`
+      update revive_actions
+      set state = 'prepared', note = ${note?.slice(0, 300) || null}, version = version + 1, updated_at = now()
+      where id = ${actionId} and workspace_id = ${workspaceId} and state in ('started','uncertain')
+      returning *
+    `;
+    if (!rows[0]) throw new TransitionError("only started/uncertain actions can be reset");
+    return mapAction(rows[0]);
+  });
+}
+
+export async function listActionsForRun(workspaceId: string, runId: string): Promise<ControlAction[]> {
+  if (!hostedDatabaseEnabled()) {
+    return readLocal().actions.filter((a) => a.workspaceId === workspaceId && a.runId === runId);
+  }
+  return withWorkspaceTransaction(workspaceId, async (sql) => {
+    const rows = await sql<DbAction[]>`
+      select * from revive_actions where workspace_id = ${workspaceId} and run_id = ${runId} limit 100
+    `;
+    return rows.map(mapAction);
+  });
 }
 
 export async function getAction(workspaceId: string, actionId: string): Promise<ControlAction | null> {
