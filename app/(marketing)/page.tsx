@@ -28,9 +28,15 @@ export default function Home() {
   return <div className="revive-home">
     <section className="border-b border-[#e0e3dd]">
       <div className="grid lg:grid-cols-[minmax(0,1.04fr)_minmax(460px,.96fr)] lg:items-stretch">
-        <div className="flex min-w-0 items-center px-5 py-16 sm:px-8 lg:px-[max(3.5rem,calc((100vw-1380px)/2+2rem))] lg:py-28">
-          <div className="max-w-[620px]">
-            <div className="font-mono text-[10px] font-medium uppercase tracking-[0.13em] text-[#4967f2]">Agent recovery control plane</div>
+        <div className="relative flex min-w-0 items-center px-5 py-16 sm:px-8 lg:px-[max(3.5rem,calc((100vw-1380px)/2+2rem))] lg:py-28">
+          <div className="hero-intro-content max-w-[620px]">
+            <div className="inline-flex items-center gap-2.5 border border-[#151922] bg-[#fbfcf8] px-3 py-2 shadow-[3px_3px_0_rgba(21,25,34,.12)]">
+              <span className="relative flex h-1.5 w-1.5" aria-hidden>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4967f2] opacity-60 motion-reduce:hidden" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#4967f2]" />
+              </span>
+              <span className="font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[#151922]">Agent recovery control plane</span>
+            </div>
             <h1 className="mt-6 text-[clamp(42px,5vw,64px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]"><span className="block">Access breaks.</span><span className="block">The run survives.</span></h1>
             <p className="mt-6 max-w-[440px] text-[17px] leading-[1.6] text-[#5f6876]">Reconnect the right account and continue the same workflow without repeating completed work.</p>
             <div className="mt-9 flex flex-wrap gap-3">

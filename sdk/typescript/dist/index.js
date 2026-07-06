@@ -21,6 +21,7 @@ export class ReviveClient {
             actionKey: input.actionKey,
             idempotencyKey,
             metadata: input.metadata,
+            reconcileHints: input.reconcileHints,
         });
         // Ledger verdict gate: never execute an action the control plane already
         // knows the outcome of. Only "new" may run the side effect.

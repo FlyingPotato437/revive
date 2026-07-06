@@ -39,7 +39,7 @@ export default function RootLayout({
   const content = clerkEnabled ? (
     <ClerkProvider
       signInUrl="/sso"
-      signUpUrl="/sso"
+      signUpUrl="/sign-up"
       signInForceRedirectUrl="/api/auth/clerk/bridge"
       signUpForceRedirectUrl="/api/auth/clerk/bridge"
       afterSignOutUrl="/"
@@ -50,6 +50,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${inter.variable} ${jetbrains.variable} ${spaceGrotesk.variable}`}
     >
       <body className="min-h-screen antialiased">{content}</body>

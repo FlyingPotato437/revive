@@ -1,230 +1,135 @@
 "use client";
 
-import {
-  ArrowRight,
-  Check,
-  Key,
-  LinkBreak,
-  UserCircle,
-} from "@phosphor-icons/react";
-import {
-  AnimatePresence,
-  motion,
-  useMotionValueEvent,
-  useReducedMotion,
-  useScroll,
-  useSpring,
-  useTransform,
-} from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { Check, Key, LinkBreak, Pause } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 
-const phases = [
-  {
-    key: "running",
-    label: "Run in progress",
-    detail: "credential generation 01",
-  },
-  {
-    key: "blocked",
-    label: "Access rejected",
-    detail: "run held at checkpoint 05",
-  },
-  {
-    key: "reconnect",
-    label: "Owner reconnecting",
-    detail: "subject and tenant verified",
-  },
-  {
-    key: "resumed",
-    label: "Same run resumed",
-    detail: "credential generation 02",
-  },
-] as const;
+type EventKind = "ok" | "fail" | "hold" | "auth";
+
+const EVENTS: { t: string; label: string; status: string; kind: EventKind; pause: number }[] = [
+  { t: "09:14:02", label: "fetch_invoices", status: "committed", kind: "ok", pause: 750 },
+  { t: "09:14:05", label: "draft_summary", status: "committed", kind: "ok", pause: 750 },
+  { t: "09:14:07", label: "send_email · gmail", status: "grant rejected", kind: "fail", pause: 1500 },
+  { t: "09:14:07", label: "run parked at checkpoint 05", status: "nothing lost", kind: "hold", pause: 1500 },
+  { t: "09:16:31", label: "owner reconnected", status: "same subject · same tenant", kind: "auth", pause: 1100 },
+  { t: "09:16:32", label: "send_email · gmail", status: "resumed · not replayed", kind: "ok", pause: 750 },
+];
+
+const ICONS: Record<EventKind, { icon: typeof Check; color: string }> = {
+  ok: { icon: Check, color: "#2946cf" },
+  fail: { icon: LinkBreak, color: "#c2413a" },
+  hold: { icon: Pause, color: "#66707e" },
+  auth: { icon: Key, color: "#151922" },
+};
+
+function phaseFor(count: number) {
+  if (count <= 2) return { label: "RUNNING", className: "bg-[#dfe4ff] text-[#2e49c8]" };
+  if (count <= 4) return { label: "PARKED", className: "bg-[#fcedeb] text-[#c2413a]" };
+  if (count === 5) return { label: "RECOVERING", className: "bg-[#f6e3b4] text-[#151922]" };
+  return { label: "RESUMED", className: "bg-[#151922] text-white" };
+}
 
 export function HeroVisual() {
-  const scene = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
-  const [phase, setPhase] = useState(reduceMotion ? 3 : 0);
-  const { scrollYProgress } = useScroll({
-    target: scene,
-    offset: ["start start", "end start"],
-  });
-  const progress = useSpring(scrollYProgress, {
-    stiffness: 180,
-    damping: 30,
-    mass: 0.2,
-  });
-  const tokenRotation = useTransform(progress, [0, 0.26, 0.48, 0.74, 1], [-52, 14, 14, 112, 146]);
-  const tokenCounterRotation = useTransform(tokenRotation, (value) => -value);
-  const ringRotation = useTransform(progress, [0, 1], [-10, 32]);
-  const outerRingRotation = useTransform(progress, [0, 1], [16, -24]);
-  const discY = useTransform(progress, [0, 1], [0, 76]);
-  const discScale = useTransform(progress, [0, 0.42, 1], [0.98, 1, 1.06]);
-  const gateX = useTransform(progress, [0, 0.3, 0.55, 1], [0, 0, -18, -4]);
-  const ambientOpacity = useTransform(progress, [0, 0.45, 1], [0.32, 0.68, 0.18]);
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
     if (reduceMotion) {
-      setPhase(3);
+      setCount(EVENTS.length);
+      return;
     }
+    let step = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      step += 1;
+      setCount(step);
+      if (step < EVENTS.length) {
+        timer = setTimeout(tick, EVENTS[step - 1].pause);
+      } else {
+        timer = setTimeout(() => {
+          step = 0;
+          setCount(0);
+          timer = setTimeout(tick, 700);
+        }, 4600);
+      }
+    };
+    timer = setTimeout(tick, 800);
+    return () => clearTimeout(timer);
   }, [reduceMotion]);
 
-  useMotionValueEvent(progress, "change", (value) => {
-    if (reduceMotion) return;
-    const next = value < 0.23 ? 0 : value < 0.46 ? 1 : value < 0.7 ? 2 : 3;
-    setPhase((currentPhase) => currentPhase === next ? currentPhase : next);
-  });
-
-  const current = phases[phase];
-  const blocked = phase === 1;
-  const reconnecting = phase === 2;
-  const resumed = phase === 3;
+  const phase = phaseFor(Math.max(count, 1));
+  const resumed = count >= EVENTS.length;
 
   return (
-    <div
-      ref={scene}
-      className="relative min-w-0 lg:min-h-[124dvh]"
-    >
+    <div className="hero-intro-visual relative min-w-0">
       <figure
-        className="continuity-relay relative flex min-h-[520px] items-center justify-center overflow-hidden border-t border-[#151922] bg-[#2946cf] px-5 py-12 sm:min-h-[610px] sm:px-10 lg:sticky lg:top-[63px] lg:min-h-[calc(100dvh-63px)] lg:border-l lg:border-t-0"
-        aria-label="A Revive recovery relay keeps one workflow run intact while its credential is replaced"
+        className="relative flex h-full min-h-[560px] items-center justify-center overflow-hidden border-t border-[#151922] bg-[#2946cf] px-5 py-16 sm:px-10 lg:border-l lg:border-t-0"
+        aria-label="A Revive recovery case: a run fails on a rejected grant, parks at its checkpoint, and resumes after the account owner reconnects"
       >
-        <motion.div
+        <div
           aria-hidden="true"
-          className="absolute aspect-square w-[112%] rounded-full border border-[#f4f5f1]/25"
-          style={reduceMotion ? { rotate: 0, opacity: 0.25 } : { rotate: outerRingRotation, opacity: ambientOpacity }}
+          className="absolute aspect-square w-[130%] rounded-full border border-dashed border-[#f4f5f1]/20"
         />
-        <motion.div
+        <div
           aria-hidden="true"
-          className="absolute aspect-square w-[86%] rounded-full border border-[#151922]/30"
-          style={reduceMotion ? { rotate: 0 } : { rotate: ringRotation }}
-        >
-          <span className="absolute left-1/2 top-[-5px] h-[10px] w-14 -translate-x-1/2 border border-[#151922] bg-[#f1c55b]" />
-        </motion.div>
+          className="absolute aspect-square w-[94%] rounded-full border border-[#151922]/20"
+        />
 
-        <motion.div
-          initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="relay-disc relative aspect-square w-full max-w-[560px]"
-          style={reduceMotion ? undefined : { y: discY, scale: discScale }}
-        >
-        <svg
-          aria-hidden="true"
-          className="absolute inset-[7%] h-[86%] w-[86%] -rotate-[38deg]"
-          viewBox="0 0 500 500"
-        >
-          <circle
-            cx="250"
-            cy="250"
-            r="203"
-            fill="none"
-            stroke="rgba(21,25,34,.18)"
-            strokeWidth="2"
-            strokeDasharray="8 9"
-          />
-          <motion.circle
-            cx="250"
-            cy="250"
-            r="203"
-            fill="none"
-            stroke="#151922"
-            strokeLinecap="square"
-            strokeWidth="5"
-            pathLength="1"
-            strokeDasharray=".82 .18"
-            initial={{ pathLength: 0.82, opacity: 1 }}
-            animate={{
-              pathLength: blocked || reconnecting ? 0.72 : resumed ? 1 : 0.82,
-              opacity: blocked ? 0.58 : 1,
-            }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          />
-        </svg>
-
-        <div className="absolute inset-[18%] flex flex-col items-center justify-center rounded-full border border-[#151922] bg-[#f4f5f1] text-center shadow-[8px_10px_0_rgba(21,25,34,.18)]">
-          <span className="font-mono text-[8px] tracking-[.14em] text-[#6a7380]">
-            SAME LOGICAL RUN
-          </span>
-          <span className="mt-2 text-[clamp(34px,4.2vw,58px)] font-semibold tracking-[-.07em] text-[#151922]">
-            run_7f2
-          </span>
-          <div className="mt-5 h-[48px] overflow-hidden px-5">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={current.key}
-                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+        <div className="relative w-full max-w-[500px] border border-[#151922] bg-[#fbfcf8] shadow-[10px_12px_0_rgba(21,25,34,.28)]">
+          <div className="flex items-center justify-between border-b border-[#e0e3dd] px-5 py-3.5">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-1.5 w-1.5" aria-hidden>
+                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:hidden ${resumed ? "bg-[#2946cf]" : "bg-[#c2413a]"}`} />
+                <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${resumed ? "bg-[#2946cf]" : "bg-[#c2413a]"}`} />
+              </span>
+              <span className="font-mono text-[10px] font-medium tracking-[.08em] text-[#151922]">RECOVERY CASE · run_7f2</span>
+            </div>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={phase.label}
+                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? {} : { opacity: 0, y: -10 }}
-                transition={{ duration: 0.28 }}
+                exit={reduceMotion ? {} : { opacity: 0, y: -4 }}
+                transition={{ duration: 0.2 }}
+                className={`px-2 py-1 font-mono text-[9px] font-semibold tracking-[.08em] ${phase.className}`}
               >
-                <div className="text-[13px] font-semibold text-[#151922]">
-                  {current.label}
-                </div>
-                <div className="mt-1 font-mono text-[7px] tracking-[.06em] text-[#727b88]">
-                  {current.detail.toUpperCase()}
-                </div>
-              </motion.div>
+                {phase.label}
+              </motion.span>
             </AnimatePresence>
           </div>
-        </div>
 
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-[7%]"
-          style={reduceMotion ? { rotate: 112 } : { rotate: tokenRotation }}
-        >
-          <motion.div
-            className="relay-token absolute right-[-22px] top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#151922] bg-[#f4f5f1] shadow-[4px_4px_0_rgba(21,25,34,.22)]"
-            style={reduceMotion ? { rotate: -112 } : { rotate: tokenCounterRotation }}
-            animate={{ scale: blocked ? 0.9 : 1 }}
-          >
-            {blocked ? (
-              <LinkBreak size={20} weight="bold" color="#b7473f" />
-            ) : resumed ? (
-              <Check size={20} weight="bold" color="#2946cf" />
-            ) : (
-              <ArrowRight size={20} weight="bold" color="#2946cf" />
-            )}
-          </motion.div>
-        </motion.div>
-
-        <motion.div
-          className="absolute right-[-2%] top-[31%] flex items-center gap-2 border border-[#151922] bg-[#f1c55b] px-3 py-2 shadow-[4px_4px_0_rgba(21,25,34,.2)]"
-          style={reduceMotion ? undefined : { x: gateX }}
-          animate={{ opacity: blocked || reconnecting ? 1 : 0.34, rotate: reconnecting ? -3 : 0 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {reconnecting ? <Key size={17} weight="fill" /> : <LinkBreak size={17} weight="bold" />}
-          <span className="font-mono text-[8px] font-semibold tracking-[.08em]">
-            {reconnecting ? "NEW GRANT" : "ACCESS GATE"}
-          </span>
-        </motion.div>
-
-        <div className="absolute bottom-[3%] left-[2%] border border-[#151922] bg-[#f4f5f1] px-4 py-3 shadow-[4px_4px_0_rgba(21,25,34,.18)]">
-          <div className="flex items-center gap-2">
-            <UserCircle size={17} weight="bold" color="#2946cf" />
-            <span className="font-mono text-[7px] tracking-[.1em] text-[#66707e]">
-              ACCOUNT OWNER
-            </span>
+          <div className="min-h-[318px] px-5 py-4">
+            {EVENTS.slice(0, count).map((event, index) => {
+              const { icon: Icon, color } = ICONS[event.kind];
+              return (
+                <motion.div
+                  key={`${event.label}-${index}`}
+                  initial={reduceMotion ? false : { opacity: 0, y: 7 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                  className={`grid grid-cols-[64px_20px_1fr_auto] items-center gap-3 border-b border-[#eef0eb] py-3 last:border-0 ${event.kind === "hold" ? "opacity-80" : ""}`}
+                >
+                  <span className="font-mono text-[10px] text-[#9aa1aa]">{event.t}</span>
+                  <span className="flex h-5 w-5 items-center justify-center border border-[#e0e3dd] bg-white">
+                    <Icon size={11} weight="bold" color={color} />
+                  </span>
+                  <span className="truncate font-mono text-[12px] text-[#151922]">{event.label}</span>
+                  <span className={`font-mono text-[9px] tracking-[.04em] ${event.kind === "fail" ? "text-[#c2413a]" : "text-[#7b8491]"}`}>
+                    {event.status.toUpperCase()}
+                  </span>
+                </motion.div>
+              );
+            })}
           </div>
-          <div className="mt-2 text-[11px] font-semibold text-[#151922]">
-            Same subject. Same tenant.
+
+          <div className="flex items-center justify-between border-t border-[#e0e3dd] bg-[#f4f5f1] px-5 py-3 font-mono text-[9px] tracking-[.06em] text-[#7b8491]">
+            <span>CHECKPOINT 05 PRESERVED</span>
+            <span>{resumed ? "GEN 01 → 02" : "GEN 01"} · 0 REPLAYED</span>
           </div>
         </div>
-
-        <div className="absolute left-[2%] top-[9%] bg-[#151922] px-3 py-2 text-[#f4f5f1]">
-          <div className="font-mono text-[7px] tracking-[.1em] text-[#aeb8d8]">
-            SIDE EFFECT LEDGER
-          </div>
-          <div className="mt-1 font-mono text-[9px] font-semibold">
-            1 COMMITTED / 0 REPLAYED
-          </div>
-        </div>
-        </motion.div>
 
         <figcaption className="sr-only">
-          Scroll to follow one run from credential rejection through verified reconnection and resume.
+          One run fails on a rejected credential, parks at its checkpoint, and the same run resumes after the account owner reconnects — with no committed action replayed.
         </figcaption>
       </figure>
     </div>

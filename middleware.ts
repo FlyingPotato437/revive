@@ -26,5 +26,5 @@ const middleware = clerkEnabled
 export default middleware;
 
 export const config = {
-  matcher: ["/app", "/app/:path*", "/sso/:path*", "/api/auth/clerk/:path*", "/__clerk/:path*"],
+  matcher: ["/app", "/app/:path*", "/sso/:path*", "/sign-up/:path*", "/api/auth/clerk/:path*", "/__clerk/:path*"],
 };

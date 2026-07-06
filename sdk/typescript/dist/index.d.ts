@@ -32,6 +32,16 @@ export interface ActionRegistration {
     /** Stored result reference for completed/reconciled actions. */
     resultRef?: string;
 }
+/** Provider probe fields attached at registration so recovery can auto-answer
+ *  "did this side effect already happen?" before the run resumes. */
+export interface ReconcileHints {
+    provider?: "microsoft" | "google";
+    subject?: string;
+    internetMessageId?: string;
+    messageId?: string;
+    rfc822MessageId?: string;
+    windowMinutes?: number;
+}
 export interface ReconcileResult<TResult = unknown> {
     committed: boolean;
     value?: TResult;
@@ -60,6 +70,8 @@ export interface ProtectActionInput<TCredential, TResult> {
     actionKey: string;
     idempotencyKey?: string;
     metadata?: Record<string, unknown>;
+    /** Provider probe fields so recovery can auto-reconcile before resume. */
+    reconcileHints?: ReconcileHints;
     signal?: AbortSignal;
     credential: () => Promise<CredentialLease<TCredential>> | CredentialLease<TCredential>;
     execute: (context: ProtectedActionContext<TCredential>) => Promise<TResult>;
@@ -89,6 +101,7 @@ export interface ReviveTransport {
         actionKey: string;
         idempotencyKey: string;
         metadata?: Record<string, unknown>;
+        reconcileHints?: ReconcileHints;
     }): Promise<ActionRegistration>;
     markStarted(input: {
         actionId: string;

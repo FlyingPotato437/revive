@@ -28,7 +28,6 @@ export function Nav() {
         <Link href="/" aria-label="Revive home" className="group flex items-center gap-3">
           <span className="revive-mark" aria-hidden><span className="revive-mark-ring" /><span className="revive-mark-core" /></span>
           <span className="text-[15px] font-semibold tracking-[-.035em] text-[#151922]">Revive</span>
-          <span className="hidden font-mono text-[8px] tracking-[.1em] text-[#828a96] lg:inline">RECOVERY CONTROL PLANE</span>
         </Link>
 
         <nav className="ml-auto hidden h-full items-center md:flex" aria-label="Primary navigation">
