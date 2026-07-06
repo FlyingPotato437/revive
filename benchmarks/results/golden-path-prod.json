@@ -1,0 +1,11 @@
+{
+  "certification": "PRODUCTION golden path — full recovery loop over the public internet",
+  "recordedAt": "2026-07-05",
+  "environment": "revivelabs.app (Vercel) + Render queue worker + customer receiver behind public HTTPS tunnel",
+  "caseId": "case_gdWZvEAxMLim",
+  "walk": ["parked", "awaiting_authorization", "identity_verified (real Nango/Graph identity verify, lease gen 5)", "resumed (signed callback delivered by the PRODUCTION worker, HMAC-verified + acked by revive.receiver)", "completed"],
+  "resumeQueued": true,
+  "delivery": "prod queue -> Render worker drain -> signed recovery.resume_requested over the internet -> receiver ack -> case resumed, within one 6s poll",
+  "endpointRegistration": "per-workspace encrypted config via POST /v1/workspace/resume-endpoint; signed /test event verified before the run",
+  "caveats": "receiver hosted behind an ephemeral tunnel for the certification; a customer deployment is any public HTTPS endpoint"
+}

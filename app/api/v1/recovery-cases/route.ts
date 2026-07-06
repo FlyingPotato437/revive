@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { classifyToolFailure } from "@/lib/failure-classifier";
 import { notifyCaseOpened } from "@/lib/notify";
 import { evaluatePolicy } from "@/lib/policy";
+import { checkCaseQuota } from "@/lib/usage";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,21 @@ export async function POST(req: NextRequest) {
   const policy = String(body.policy);
   if (!["interactive_reauth", "step_up", "retry", "manual_reconcile"].includes(policy)) {
     return NextResponse.json({ error: "invalid policy" }, { status: 400 });
+  }
+  // Monthly case quota (the billed unit). Metering failures never block a
+  // recovery — checkCaseQuota fails open.
+  const quota = await checkCaseQuota(auth.workspace.id);
+  if (!quota.allowed) {
+    return NextResponse.json(
+      {
+        error: `monthly recovery-case limit reached (${quota.used}/${quota.limit} on the ${quota.plan} plan); upgrade to continue`,
+        code: "case_quota_exceeded",
+        plan: quota.plan,
+        used: quota.used,
+        limit: quota.limit,
+      },
+      { status: 402 },
+    );
   }
   let record = await openCase(auth.workspace.id, {
     runId: String(body.runId).slice(0, 200),
