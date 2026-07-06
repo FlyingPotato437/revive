@@ -22,10 +22,11 @@ export default function MarketingLayout({
         }}
       />
       <div className="intro-veil" aria-hidden="true">
-        <svg className="intro-veil-mark" viewBox="0 0 120 120" width="120" height="120" fill="none">
-          <circle className="iv-fill" cx="60" cy="60" r="41.5" fill="#2946cf" />
-          <circle className="iv-ring" cx="60" cy="60" r="46" stroke="#4967f2" strokeWidth="9" />
-          <circle className="iv-dot" cx="60" cy="60" r="7" fill="#151922" />
+        <svg className="intro-veil-mark" viewBox="0 0 64 64" width="140" height="140" fill="none">
+          <rect className="iv-box-fill" x="1" y="1" width="62" height="62" fill="#edf0ff" />
+          <rect className="iv-box" x="1" y="1" width="62" height="62" stroke="#151922" strokeWidth="2" />
+          <circle className="iv-ring" cx="32" cy="32" r="14" stroke="#4967f2" strokeWidth="5.5" />
+          <circle className="iv-dot" cx="32" cy="32" r="4" fill="#151922" />
         </svg>
       </div>
       <Nav />

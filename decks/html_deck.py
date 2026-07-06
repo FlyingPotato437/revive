@@ -132,7 +132,7 @@ def frame(body, n, dark=False, dot=True, ghost=True, runner=True, ticks=True):
     cls = ("dark " if dark else "") + ("dot" if dot else "")
     g = f'<div class="ghost">{n:02d}</div>' if ghost else ""
     t = '<div class="tick tl"></div><div class="tick tr"></div><div class="tick bl"></div><div class="tick br"></div>' if ticks else ""
-    r = '<div class="runner">REVIVE — SEED</div>' if runner else ""
+    r = '<div class="runner">REVIVE · SEED</div>' if runner else ""
     pn = f'<div class="pageno">{n:02d} / 14</div>' if n else ""
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}</style></head>
 <body class="{cls}">{g}{t}{r}{pn}{body}</body></html>"""
@@ -211,7 +211,7 @@ S.append(frame(f"""
         <span style="color:#4a5468">03:07:41</span>&nbsp;&nbsp;<span style="color:#9aa6c8">POST /v1/charges &nbsp;$49.00 ......... ok</span><br>
         <span style="color:#4a5468">03:07:44</span>&nbsp;&nbsp;<span style="color:#e0b34c">credential expired mid-run</span><br>
         <span style="color:#4a5468">03:07:52</span>&nbsp;&nbsp;<span style="color:#e6e9f0">retry #1 &nbsp;POST /v1/charges &nbsp;$49.00 .. ok</span><br>
-        <span style="display:inline-block;background:#3a1f20;border-left:4px solid #e86a5f;padding:2px 18px;margin-left:-18px"><span style="color:#4a5468">03:07:52</span>&nbsp;&nbsp;<b style="color:#e86a5f">DUPLICATE CHARGE — customer billed twice</b></span>
+        <span style="display:inline-block;background:#3a1f20;border-left:4px solid #e86a5f;padding:2px 18px;margin-left:-18px"><span style="color:#4a5468">03:07:52</span>&nbsp;&nbsp;<b style="color:#e86a5f">DUPLICATE CHARGE: customer billed twice</b></span>
       </div>
     </div>
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:52px">
