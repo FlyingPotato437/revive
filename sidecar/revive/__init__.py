@@ -27,6 +27,7 @@ from .engine import (AmbiguousSideEffect, Completed, Engine, NeedsApproval,
                      WrongRecoveryIdentity)
 from .providers import AuthError, Provider, Token, TokenError
 from .rendezvous import Kind, Rendezvous, console_channel, webhook_channel
+from .receiver import ResumeReceiver, verify_signature
 from .postgres import PostgresCheckpointStore
 from .reporter import Reporter
 
@@ -41,5 +42,6 @@ __all__ = [
     "Reporter",
     "classify", "ClassifierResult", "Verdict",
     "Rendezvous", "Kind", "console_channel", "webhook_channel",
+    "ResumeReceiver", "verify_signature",
 ]
 __version__ = "0.1.0"

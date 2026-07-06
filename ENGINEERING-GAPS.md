@@ -71,8 +71,19 @@ Blocked on accounts/infra the team must provision (not code):
   `benchmarks/results/golden-path-live.json`. NOTE: uses Nango's own valid Entra
   secret, so the direct-PKCE `ENTRA_CLIENT_SECRET` (fails AADSTS7000215 — secret
   VALUE vs ID) is no longer a blocker for this path.
-  REMAINING: deployed LangGraph callback to take identity_verified→resumed→
-  completed (resumeQueued was false — no runtime endpoint yet).
+  REMAINING half DONE (2026-07-05): per-workspace resume endpoint registration
+  shipped — `POST /v1/workspace/resume-endpoint` stores URL + shared secret
+  envelope-encrypted in `revive_workspace_secrets`; `identity_verified` (via v1
+  transition or Nango completion) now enqueues the signed
+  `recovery.resume_requested` callback against the workspace endpoint (env pair
+  remains the single-tenant fallback), and delivery resolves the secret at send
+  time. Verified locally end to end: case case_XHfwtWcZBAWt walked
+  identity_verified→resumed→completed with the reference receiver
+  (`revive.receiver`) verifying HMAC and acking; LangGraph same-thread resume
+  demonstrated in `sidecar/examples/langgraph_resume_endpoint.py` (parked at
+  step 4/8, signed callback, finished 8/8 on one thread). REMAINING: deploy the
+  new control-plane code (the production worker still runs the env-var-only
+  build) and stand up a DEPLOYED customer receiver for the live golden path.
 - **Temporal certification.** Adapter is preview; needs a Temporal cluster.
 - **Evidence breadth.** Current evidence is correctness + local control-plane
   latency (`benchmarks/results/recovery-latency-local.json`, honestly caveated).

@@ -3,6 +3,7 @@ import { completeJob, enqueueJob, failJob, type QueueJob } from "./hosted";
 import { hmacHex } from "./secure-envelope";
 import { audit } from "./audit";
 import { getCase, transition, type ControlCase } from "./control-plane";
+import { getResumeEndpoint } from "./workspace-secrets";
 
 export interface WebhookEvent {
   id: string;
@@ -30,10 +31,27 @@ export async function enqueueWebhookEvent(type: string, data: Record<string, unk
   return enqueueJob("webhook.deliver", { event, endpoint: process.env.REVIVE_WEBHOOK_URL }, { id: `wh_${event.id}`, maxAttempts: 8 });
 }
 
+// Workspace-registered endpoint wins; the platform-level env pair remains as a
+// fallback for single-tenant deployments.
+async function resolveRuntimeResumeConfig(workspaceId: string): Promise<{ url: string; secret: string; source: "workspace" | "env" } | null> {
+  try {
+    const scoped = await getResumeEndpoint(workspaceId);
+    if (scoped) return { ...scoped, source: "workspace" };
+  } catch {
+    // fall through to the platform default
+  }
+  if (process.env.REVIVE_RUNTIME_RESUME_URL && process.env.REVIVE_RUNTIME_RESUME_SECRET) {
+    return { url: process.env.REVIVE_RUNTIME_RESUME_URL, secret: process.env.REVIVE_RUNTIME_RESUME_SECRET, source: "env" };
+  }
+  return null;
+}
+
 export async function enqueueRuntimeResume(record: ControlCase, generation: number): Promise<string | null> {
-  if (!process.env.REVIVE_RUNTIME_RESUME_URL || !process.env.REVIVE_RUNTIME_RESUME_SECRET) return null;
+  const config = await resolveRuntimeResumeConfig(record.workspaceId);
+  if (!config) return null;
   return enqueueJob("runtime.resume", {
-    endpoint: process.env.REVIVE_RUNTIME_RESUME_URL,
+    endpoint: config.url,
+    secretSource: config.source,
     workspaceId: record.workspaceId,
     caseId: record.id,
     runId: record.runId,
@@ -49,7 +67,7 @@ export async function enqueueRuntimeResume(record: ControlCase, generation: numb
   });
 }
 
-function safeWebhookEndpoint(raw: string): URL {
+export function safeWebhookEndpoint(raw: string): URL {
   const endpoint = new URL(raw);
   const local = endpoint.hostname === "localhost" || endpoint.hostname === "127.0.0.1";
   if (endpoint.protocol !== "https:" && !(local && process.env.NODE_ENV !== "production")) {
@@ -92,8 +110,11 @@ type RuntimeResumeAcknowledgement = {
 
 export async function deliverRuntimeResumeJob(job: QueueJob): Promise<void> {
   if (job.kind !== "runtime.resume") throw new Error(`unsupported job kind ${job.kind}`);
-  const secret = process.env.REVIVE_RUNTIME_RESUME_SECRET;
-  if (!secret) throw new Error("REVIVE_RUNTIME_RESUME_SECRET is not configured");
+  // Resolve the secret at delivery time so a rotation between enqueue and
+  // delivery signs with the current secret, never a stale copy in the payload.
+  const config = await resolveRuntimeResumeConfig(String(job.payload.workspaceId));
+  const secret = config?.secret;
+  if (!secret) throw new Error("no runtime resume endpoint is configured for this workspace");
   const endpoint = safeWebhookEndpoint(String(job.payload.endpoint));
   const data = {
     caseId: String(job.payload.caseId),

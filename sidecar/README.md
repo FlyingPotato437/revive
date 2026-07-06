@@ -52,6 +52,46 @@ guard = ReviveToolGuard(revive, connection_id="conn_microsoft_ops",
 # LangGraph — see revive.adapters.langgraph (install with: pip install "revive-sdk[langgraph]")
 ```
 
+## Resume endpoint — let the control plane restart your runs
+
+Register a resume endpoint once per workspace and recovery closes the loop
+automatically: the moment the account owner re-authorizes
+(`identity_verified`), the control plane rotates the credential lease and
+delivers a signed `recovery.resume_requested` callback to your runtime; your
+runtime resumes the parked run from its checkpoint and acks, and the case
+walks `identity_verified → resumed → completed`. Without a registered
+endpoint the run stays parked for an operator.
+
+```bash
+# register (URL + shared secret, stored encrypted per workspace)
+curl -X POST https://revivelabs.app/api/v1/workspace/resume-endpoint \
+  -H "authorization: Bearer $REVIVE_API_KEY" -H "content-type: application/json" \
+  -d '{"url": "https://agents.example.com/revive/resume", "secret": "'$REVIVE_RESUME_SECRET'"}'
+
+# send a signed test event to confirm the wiring
+curl -X POST https://revivelabs.app/api/v1/workspace/resume-endpoint/test \
+  -H "authorization: Bearer $REVIVE_API_KEY"
+```
+
+The receiver side is three lines with the bundled reference implementation
+(stdlib-only — HMAC verification, replay-window check, idempotent retries):
+
+```python
+from revive.receiver import ResumeReceiver, serve
+
+def resume(data):  # resume the parked run, e.g. LangGraph:
+    graph, config = runs[data["runId"]]
+    graph.invoke(Command(resume={"connection_id": data["connectionId"],
+                                 "lease_generation": data["generation"]}), config)
+
+serve(ResumeReceiver(secret=os.environ["REVIVE_RESUME_SECRET"], resume=resume), port=8752)
+```
+
+Reference receivers and a full runnable loop live in `examples/`:
+`resume_receiver_fastapi.py`, `resume_receiver_express.js`, and
+`langgraph_resume_endpoint.py` (park → signed callback → same-thread resume,
+end to end).
+
 ## What Revive is not
 
 Revive does not take custody of provider tokens — that stays with your

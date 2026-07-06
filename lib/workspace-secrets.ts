@@ -6,7 +6,7 @@
 import { sealJson, openJson } from "@/lib/secure-envelope";
 import { hostedDatabaseEnabled, withWorkspaceTransaction } from "@/lib/hosted";
 
-export type WorkspaceSecretName = "nango_secret_key";
+export type WorkspaceSecretName = "nango_secret_key" | "runtime_resume_endpoint";
 
 export async function setWorkspaceSecret(workspaceId: string, name: WorkspaceSecretName, value: string): Promise<void> {
   if (!hostedDatabaseEnabled()) throw new Error("workspace secrets require the hosted database");
@@ -31,6 +31,45 @@ export async function getWorkspaceSecret(workspaceId: string, name: WorkspaceSec
     if (!rows[0]) return null;
     return openJson<{ value: string }>(rows[0].encrypted_value, `workspace-secret:${workspaceId}:${name}`).value;
   });
+}
+
+export async function deleteWorkspaceSecret(workspaceId: string, name: WorkspaceSecretName): Promise<void> {
+  if (!hostedDatabaseEnabled()) return;
+  await withWorkspaceTransaction(workspaceId, async (sql) => {
+    await sql`
+      delete from revive_workspace_secrets
+      where workspace_id = ${workspaceId} and name = ${name}
+    `;
+  });
+}
+
+// Runtime resume endpoint: where the customer's agent runtime receives signed
+// recovery.resume_requested callbacks. URL and shared secret travel together in
+// one sealed envelope so a partial update can never pair a new URL with an old
+// secret.
+export interface ResumeEndpointConfig {
+  url: string;
+  secret: string;
+}
+
+export async function setResumeEndpoint(workspaceId: string, config: ResumeEndpointConfig): Promise<void> {
+  await setWorkspaceSecret(workspaceId, "runtime_resume_endpoint", JSON.stringify(config));
+}
+
+export async function getResumeEndpoint(workspaceId: string): Promise<ResumeEndpointConfig | null> {
+  const raw = await getWorkspaceSecret(workspaceId, "runtime_resume_endpoint");
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as ResumeEndpointConfig;
+    if (!parsed.url || !parsed.secret) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearResumeEndpoint(workspaceId: string): Promise<void> {
+  await deleteWorkspaceSecret(workspaceId, "runtime_resume_endpoint");
 }
 
 /** Workspace-specific Nango key when configured; platform default otherwise. */

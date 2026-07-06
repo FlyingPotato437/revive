@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   ArrowSquareOut, Buildings, CaretDown, Check, Command, Flask,
   FolderSimple, Gauge, Key, LinkSimple, ListBullets, MagnifyingGlass,
-  RocketLaunch, UserCircle, UsersThree, Wallet,
+  RocketLaunch, SlidersHorizontal, UserCircle, UsersThree, Wallet,
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
@@ -27,6 +27,7 @@ const ACCOUNT = [
   { href: "/app/projects", label: "Projects", icon: FolderSimple },
   { href: "/app/api-keys", label: "API keys", icon: Key },
   { href: "/app/usage", label: "Usage", icon: Wallet },
+  { href: "/app/settings", label: "Settings", icon: SlidersHorizontal },
 ] as const;
 
 const NAV = [...OPERATIONS, ...ACCOUNT] as const;

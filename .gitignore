@@ -31,3 +31,4 @@ video/vcheck*.jpg
 video/pconcat.txt
 video/total.txt
 .vercel
+sidecar/dist/
