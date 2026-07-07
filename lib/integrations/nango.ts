@@ -79,9 +79,16 @@ export async function createNangoConnectSession(input: NangoConnectSessionInput)
       integrations_config_defaults: serializeDefaults(input.integrationDefaults),
     }),
   });
-  const payload = await response.json() as { data?: { token?: string; expires_at?: string }; error?: string; message?: string };
+  const payload = await response.json() as {
+    data?: { token?: string; expires_at?: string };
+    error?: { message?: string; code?: string; errors?: { message?: string }[] } | string;
+    message?: string;
+  };
   if (!response.ok || !payload.data?.token || !payload.data.expires_at) {
-    throw new Error(payload.message || payload.error || `Nango connect session failed (${response.status})`);
+    const detail = typeof payload.error === "string"
+      ? payload.error
+      : payload.error?.message || payload.error?.errors?.[0]?.message || payload.error?.code;
+    throw new Error(payload.message || detail || `Nango connect session failed (${response.status})`);
   }
   return { token: payload.data.token, expiresAt: payload.data.expires_at };
 }

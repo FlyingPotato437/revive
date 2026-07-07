@@ -23,6 +23,16 @@ type Phase = "idle" | "connecting" | "binding";
 
 interface IntegrationOption { id: string; provider: string; label: string; provisional?: boolean }
 
+/** API errors should always be strings, but a nested provider payload must
+ *  never surface as "[object Object]" in the UI. */
+function errorText(value: unknown, fallback: string): string {
+  if (typeof value === "string" && value.trim()) return value;
+  if (value && typeof value === "object" && "message" in value && typeof (value as { message?: unknown }).message === "string") {
+    return (value as { message: string }).message;
+  }
+  return fallback;
+}
+
 export function ConnectionManager() {
   const [connections, setConnections] = useState<ConnectionSummary[] | null>(null);
   const [integrations, setIntegrations] = useState<IntegrationOption[]>([]);
@@ -35,7 +45,7 @@ export function ConnectionManager() {
     const response = await fetch("/api/workspaces/connections");
     const payload = await response.json().catch(() => ({}));
     if (response.ok) setConnections(payload.connections ?? []);
-    else setError(payload.error || "Could not load connections");
+    else setError(errorText(payload.error, "Could not load connections"));
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -59,8 +69,8 @@ export function ConnectionManager() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(integrationId ? { integrations: [integrationId] } : {}),
       });
-      const session = await sessionResponse.json() as { token?: string; error?: string };
-      if (!sessionResponse.ok || !session.token) throw new Error(session.error || "Could not start the connect session");
+      const session = await sessionResponse.json() as { token?: string; error?: unknown };
+      if (!sessionResponse.ok || !session.token) throw new Error(errorText(session.error, "Could not start the connect session"));
       const nango = new Nango({ connectSessionToken: session.token });
       let completed = false;
       const connectUi = nango.openConnectUI({
@@ -79,7 +89,7 @@ export function ConnectionManager() {
           });
           const result = await bind.json().catch(() => ({}));
           connectUi.close();
-          if (!bind.ok) setError(result.error || "Connection authorized but identity binding failed");
+          if (!bind.ok) setError(errorText(result.error, "Connection authorized but identity binding failed"));
           setPhase("idle");
           setActiveIntegration(null);
           await refresh();
