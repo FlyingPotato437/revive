@@ -6,10 +6,10 @@ export const dynamic = "force-dynamic";
 
 // GET /v1/recovery-cases/:id returns the full case with event timeline.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await authenticateApiKey(req);
+  const auth = await authenticateApiKey(req, "viewer");
   if (!auth.ok) return auth.response;
   const { id } = await params;
-  const record = await getCase(auth.workspace.id, id);
+  const record = await getCase(auth.workspace.id, id, auth.projectId);
   if (!record) return NextResponse.json({ error: "case not found" }, { status: 404 });
   return NextResponse.json({ case: record });
 }

@@ -45,11 +45,12 @@ export async function autoReconcileRun(input: {
   connectionId: string;
   integrationId: string;
   actor: string;
+  projectId?: string;
 }): Promise<AutoReconcileSummary> {
   const summary: AutoReconcileSummary = { checked: 0, committed: 0, safeToExecute: 0, unknown: 0, skippedNoHints: 0, results: [] };
   let actions: ControlAction[] = [];
   try {
-    actions = await listActionsForRun(input.workspaceId, input.runId);
+    actions = await listActionsForRun(input.workspaceId, input.runId, input.projectId);
   } catch {
     return summary;
   }
@@ -77,10 +78,10 @@ export async function autoReconcileRun(input: {
         await reconcileAction(input.workspaceId, action.id, {
           remoteId: result.remoteId,
           note: `auto-reconcile:${result.strategy}: ${result.detail}`.slice(0, 300),
-        });
+        }, input.projectId);
         summary.committed += 1;
       } else if (result.outcome === "not_found") {
-        await resetActionSafe(input.workspaceId, action.id, `auto-reconcile:${result.strategy}: provider confirmed not committed`);
+        await resetActionSafe(input.workspaceId, action.id, `auto-reconcile:${result.strategy}: provider confirmed not committed`, input.projectId);
         summary.safeToExecute += 1;
       } else {
         summary.unknown += 1;

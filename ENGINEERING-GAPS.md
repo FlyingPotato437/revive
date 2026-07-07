@@ -49,6 +49,28 @@ mistakes a demo for a product. Updated 2026-07-01.
 - Production recovery no longer permits first-use identity binding: a connection
   must already have subject + tenant identity. First-use remains local-sandbox only.
 
+- Connector registry (2026-07-06): identity adapters for Microsoft, Google
+  (userinfo + Gmail profile), GitHub, and Slack behind one provider registry
+  (`lib/integrations/providers.ts`). Connect-session defaults, creation-time
+  binding, recovery reconnect, and identity verification are provider-generic;
+  reconnect reuses the connection's own integration id instead of the
+  allowlist head. Console offers one connect button per allowlisted
+  integration; the recovery page renders provider-aware copy. Enable with
+  NANGO_ALLOWED_INTEGRATIONS (integrations must exist in the Nango project).
+  Microsoft remains the only CERTIFIED path; the others are provisional until
+  a live golden path is walked per provider.
+
+- Workspace custom connectors (2026-07-06): operators can register any Nango
+  integration id with a relative identity-probe path and safe subject, tenant,
+  and account dot paths. Built-ins take precedence. Subject and tenant must be
+  non-empty at creation-time binding and recovery, or Revive rejects the
+  connection. Custom definitions and connections are visibly provisional.
+- API-key least privilege (2026-07-06): every key now has one required project
+  and a viewer, operator, or admin role. Project id is persisted on actions and
+  recovery cases and enforced on lists, lookups, transitions, reconciliation,
+  and lifecycle ingest. Existing keys and records migrate to the workspace's
+  default project. Hosted cross-project mutation and listing tests pass.
+
 ## Design-partner review remainder (2026-07-02)
 
 Blocked on accounts/infra the team must provision (not code):

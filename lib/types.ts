@@ -168,6 +168,7 @@ export interface RunState {
 export interface SessionState {
   id: string;
   workspaceId?: string;
+  projectId?: string;
   failureStep: number;
   deathCode?: string; // which provider error to forge (default AADSTS700082)
   createdAt: number;

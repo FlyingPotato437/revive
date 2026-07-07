@@ -11,18 +11,20 @@ export async function GET(req: NextRequest) {
   const auth = sessionFromCookies(req.cookies);
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const workspace = await selectedWorkspace(auth.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
+  // Rows hydrated from Postgres can predate newer run-state fields; a single
+  // legacy row must not take down the whole case list.
   const sessions = (await listSessionsForWorkspace(workspace.id)).map((session) => ({
     id: session.id,
     createdAt: session.createdAt,
     deathCode: session.deathCode,
-    status: session.revive.status,
-    runId: session.revive.id,
-    recoveryCase: session.revive.recoveryCase,
-    completedSteps: session.revive.metrics.completedSteps,
-    totalSteps: session.revive.steps.length,
-    recoveredMs: session.revive.metrics.recoveredMs,
-    generation: session.revive.token.generation,
-    deduplicatedActions: session.revive.metrics.deduplicatedActions,
+    status: session.revive?.status ?? "idle",
+    runId: session.revive?.id ?? session.id,
+    recoveryCase: session.revive?.recoveryCase,
+    completedSteps: session.revive?.metrics?.completedSteps ?? 0,
+    totalSteps: session.revive?.steps?.length ?? 0,
+    recoveredMs: session.revive?.metrics?.recoveredMs,
+    generation: session.revive?.token?.generation ?? 1,
+    deduplicatedActions: session.revive?.metrics?.deduplicatedActions ?? 0,
   }));
   return NextResponse.json({ sessions });
 }

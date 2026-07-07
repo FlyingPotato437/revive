@@ -20,7 +20,11 @@ export interface WorkspaceApiKey {
   lastUsedAt?: number;
   expiresAt?: number;
   revokedAt?: number;
+  projectId: string;
+  role: ApiKeyRole;
 }
+
+export type ApiKeyRole = "viewer" | "operator" | "admin";
 
 export interface WorkspaceRecord {
   id: string;
@@ -33,6 +37,7 @@ export interface WorkspaceRecord {
 }
 
 export type WorkspaceIdentity = Pick<WorkspaceRecord, "id" | "name" | "organization">;
+export type ApiKeyIdentity = WorkspaceIdentity & { projectId: string; role: ApiKeyRole };
 
 interface WorkspaceFile {
   workspaces: WorkspaceRecord[];
@@ -89,6 +94,12 @@ function listLocalWorkspaces(email: string): WorkspaceRecord[] {
     write(data);
     workspaces = [initial];
   }
+  for (const workspace of workspaces) {
+    for (const key of workspace.apiKeys) {
+      key.projectId ||= workspace.projects[0]?.id;
+      key.role ||= "admin";
+    }
+  }
   return workspaces;
 }
 
@@ -132,8 +143,9 @@ export async function listWorkspaces(email: string): Promise<WorkspaceRecord[]> 
     const keys = await tx<{
       id: string; name: string; prefix: string; hash: string; created_at: Date;
       last_used_at: Date | null; expires_at: Date | null; revoked_at: Date | null;
+      project_id: string; role: ApiKeyRole;
     }[]>`
-      select id, name, prefix, hash, created_at, last_used_at, expires_at, revoked_at
+      select id, name, prefix, hash, created_at, last_used_at, expires_at, revoked_at, project_id, role
       from revive_api_keys where workspace_id = ${row.id} order by created_at desc
     `;
     return {
@@ -147,6 +159,7 @@ export async function listWorkspaces(email: string): Promise<WorkspaceRecord[]> 
         id: key.id, name: key.name, prefix: key.prefix, hash: key.hash,
         createdAt: key.created_at.getTime(), lastUsedAt: key.last_used_at?.getTime(),
         expiresAt: key.expires_at?.getTime(), revokedAt: key.revoked_at?.getTime(),
+        projectId: key.project_id, role: key.role,
       })),
     };
   })));
@@ -214,12 +227,14 @@ export async function createApiKey(
   email: string,
   workspaceId: string,
   name: string,
-  options: { expiresInDays?: number } = {},
+  options: { expiresInDays?: number; projectId: string; role: ApiKeyRole },
 ): Promise<{ key: string; record: WorkspaceApiKey }> {
   const cleanName = name.trim();
   if (cleanName.length < 2 || cleanName.length > 60) throw new Error("Key name must be 2-60 characters");
   const workspace = await selectedWorkspace(email, workspaceId);
   if (workspace.id !== workspaceId) throw new Error("Workspace not found");
+  if (!workspace.projects.some((project) => project.id === options.projectId)) throw new Error("Project not found in this workspace");
+  if (!["viewer", "operator", "admin"].includes(options.role)) throw new Error("role must be viewer, operator, or admin");
   const secret = crypto.randomBytes(24).toString("base64url");
   // Hosted keys carry a non-secret workspace locator so RLS can be established
   // before the hash lookup. The secret portion remains random and is never stored.
@@ -234,6 +249,8 @@ export async function createApiKey(
     id: id("key"), name: cleanName, prefix: key.slice(0, 15),
     hash: crypto.createHash("sha256").update(key).digest("hex"), createdAt: Date.now(),
     expiresAt: expiresInDays ? Date.now() + expiresInDays * 24 * 60 * 60 * 1000 : undefined,
+    projectId: options.projectId,
+    role: options.role,
   };
   await saveHostedApiKey({
     workspace: {
@@ -265,7 +282,7 @@ export function publicWorkspace(workspace: WorkspaceRecord) {
 }
 
 /** Resolve a raw API key (Bearer rv_live_…) to its workspace. Constant-time hash compare; touches lastUsedAt. */
-export async function workspaceForApiKey(rawKey: string): Promise<WorkspaceIdentity | null> {
+export async function workspaceForApiKey(rawKey: string): Promise<ApiKeyIdentity | null> {
   if (!rawKey || !rawKey.startsWith("rv_")) return null;
   if (hostedDatabaseEnabled()) return authenticateHostedApiKey(rawKey);
   const digest = crypto.createHash("sha256").update(rawKey).digest();
@@ -277,8 +294,11 @@ export async function workspaceForApiKey(rawKey: string): Promise<WorkspaceIdent
       const stored = Buffer.from(key.hash, "hex");
       if (stored.length === digest.length && crypto.timingSafeEqual(stored, digest)) {
         key.lastUsedAt = Date.now();
+        key.projectId ||= workspace.projects[0]?.id;
+        key.role ||= "admin";
+        if (!key.projectId) return null;
         write(data);
-        return workspace;
+        return { id: workspace.id, name: workspace.name, organization: workspace.organization, projectId: key.projectId, role: key.role };
       }
     }
   }

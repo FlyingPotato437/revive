@@ -1,20 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE, verifySession } from "@/lib/auth";
-import { allowedNangoIntegrations, createNangoConnectSession, MICROSOFT_GRAPH_USER_SCOPES } from "@/lib/integrations/nango";
+import { sessionFromCookies } from "@/lib/auth";
+import { createNangoConnectSession } from "@/lib/integrations/nango";
+import { connectSessionDefaults, nangoIntegrationsForWorkspace } from "@/lib/integrations/providers";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { requireWorkspaceRole } from "@/lib/rbac";
+import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const limited = await enforceRateLimit(req, "nango:connect-session", 20, 60);
   if (limited) return limited;
-  const user = verifySession(req.cookies.get(SESSION_COOKIE)?.value);
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const session = sessionFromCookies(req.cookies);
+  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
     const body = await req.json() as { integrations?: unknown; organizationId?: unknown };
-    // Server-side allowlist: browsers must not pick arbitrary Nango
-    // integration ids. Configure NANGO_ALLOWED_INTEGRATIONS (comma-separated).
-    const allowlist = allowedNangoIntegrations();
+    const workspace = await selectedWorkspace(session.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
+    await requireWorkspaceRole(session.email, workspace, "operator");
+    // Built-ins come from the server allowlist; custom ids come only from the
+    // operator-managed definitions in this workspace.
+    const allowlist = (await nangoIntegrationsForWorkspace(workspace.id)).map((integration) => integration.id);
     const requested = Array.isArray(body.integrations)
       ? body.integrations.filter((item): item is string => typeof item === "string" && /^[a-zA-Z0-9_-]+$/.test(item)).slice(0, 20)
       : [];
@@ -25,17 +30,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "requested integrations are not in the server allowlist" }, { status: 400 });
     }
     const result = await createNangoConnectSession({
-      endUser: { id: user.email, email: user.email },
+      endUser: { id: session.email, email: session.email },
       organization: typeof body.organizationId === "string" ? { id: body.organizationId } : undefined,
       allowedIntegrations: integrations,
-      integrationDefaults: integrations.includes("microsoft-tenant-specific") && process.env.ENTRA_TENANT_ID
-        ? {
-            "microsoft-tenant-specific": {
-              connectionConfig: { tenant: process.env.ENTRA_TENANT_ID },
-              userScopes: MICROSOFT_GRAPH_USER_SCOPES,
-            },
-          }
-        : undefined,
+      integrationDefaults: connectSessionDefaults(integrations),
     });
     return NextResponse.json(result);
   } catch (error) {

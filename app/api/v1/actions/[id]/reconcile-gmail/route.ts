@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiKey } from "@/lib/api-auth";
 import { getAction, reconcileAction, TransitionError } from "@/lib/control-plane";
 import { reconcileGmailSentMail } from "@/lib/reconcile/gmail";
-import { allowedNangoIntegrations } from "@/lib/integrations/nango";
+import { nangoIntegrationAvailable } from "@/lib/integrations/providers";
+import { loadConnectionBinding } from "@/lib/hosted";
 import { audit } from "@/lib/audit";
 
 export const runtime = "nodejs";
@@ -21,11 +22,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } catch {
     return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
   }
-  const action = await getAction(auth.workspace.id, id);
+  const action = await getAction(auth.workspace.id, id, auth.projectId);
   if (!action) return NextResponse.json({ error: "unknown action" }, { status: 404 });
-  const integrationId = String(body.integrationId || "");
-  if (!allowedNangoIntegrations().includes(integrationId)) {
-    return NextResponse.json({ error: "the Nango integration is not allowlisted" }, { status: 400 });
+  const binding = await loadConnectionBinding(action.connectionId, auth.workspace.id);
+  const integrationId = String(body.integrationId || binding?.integrationId || "");
+  if (binding?.integrationId && integrationId !== binding.integrationId) {
+    return NextResponse.json({ error: "the Nango integration does not match the action connection" }, { status: 409 });
+  }
+  if (!(await nangoIntegrationAvailable(auth.workspace.id, integrationId))) {
+    return NextResponse.json({ error: "the Nango integration is not registered for this workspace" }, { status: 400 });
   }
   const result = await reconcileGmailSentMail({
     integrationId,
@@ -37,7 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
   if (result.outcome === "committed") {
     try {
-      await reconcileAction(auth.workspace.id, id, { remoteId: result.remoteId, note: `gmail:${result.strategy}: ${result.detail}`.slice(0, 300) });
+      await reconcileAction(auth.workspace.id, id, { remoteId: result.remoteId, note: `gmail:${result.strategy}: ${result.detail}`.slice(0, 300) }, auth.projectId);
     } catch (error) {
       if (!(error instanceof TransitionError)) throw error;
     }

@@ -14,6 +14,13 @@ export default function WorkspaceSettingsPage() {
       />
       <section className="instrument-panel mt-5 overflow-hidden">
         <SectionHeading title="Resume endpoint" meta="recovery.resume_requested" />
+        <div className="grid border-b border-[#e2e3df] sm:grid-cols-3">
+          {[
+            ["01", "Identity verified", "Revive confirms the returning provider subject and tenant."],
+            ["02", "Signed callback", "Revive posts the saved checkpoint and new lease generation to your endpoint."],
+            ["03", "Runtime acknowledges", "Your worker resumes that checkpoint and returns 2xx; Revive advances the case."],
+          ].map(([step, title, detail]) => <div key={step} className="border-b border-[#e2e3df] p-4 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0"><div className="font-mono text-[8px] text-[#4967f2]">{step}</div><div className="mt-1.5 text-[10.5px] font-semibold text-[#151922]">{title}</div><p className="mt-1 text-[9.5px] leading-4 text-[#737c89]">{detail}</p></div>)}
+        </div>
         <div className="p-5">
           <ResumeEndpointManager />
         </div>

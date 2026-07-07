@@ -19,7 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     /* body optional */
   }
   try {
-    const action = await reconcileAction(auth.workspace.id, id, { remoteId, note });
+    const action = await reconcileAction(auth.workspace.id, id, { remoteId, note }, auth.projectId);
     return NextResponse.json({ id: action.id, state: action.state, version: action.version });
   } catch (error) {
     if (error instanceof TransitionError) {

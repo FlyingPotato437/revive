@@ -26,17 +26,21 @@ async function main() {
   // bootstrap: demo session → workspace API key
   const login = await fetch(`${BASE}/api/auth/demo`, { method: "POST" });
   const cookie = login.headers.getSetCookie().map((value) => value.split(";")[0]).join("; ");
+  const workspaceResponse = await fetch(`${BASE}/api/workspaces`, { headers: { cookie } });
+  const workspacePayload = await workspaceResponse.json() as { workspaces?: Array<{ projects?: Array<{ id: string }> }> };
+  const projectId = workspacePayload.workspaces?.[0]?.projects?.[0]?.id;
+  if (!projectId) throw new Error("bootstrap workspace has no project");
   const keyResponse = await fetch(`${BASE}/api/workspaces/api-keys`, {
     method: "POST",
     headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ name: `itest-${Date.now()}` }),
+    body: JSON.stringify({ name: `itest-${Date.now()}`, projectId, role: "admin" }),
   });
   const { key } = await keyResponse.json() as { key: string };
   check("bootstrap: api key minted", typeof key === "string" && key.startsWith("rv_"));
   const expiringKeyResponse = await fetch(`${BASE}/api/workspaces/api-keys`, {
     method: "POST",
     headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ name: `expiring-${Date.now()}`, expiresInDays: 30 }),
+    body: JSON.stringify({ name: `expiring-${Date.now()}`, projectId, role: "operator", expiresInDays: 30 }),
   });
   const expiringKey = await expiringKeyResponse.json() as { record?: { expiresAt?: number } };
   check(

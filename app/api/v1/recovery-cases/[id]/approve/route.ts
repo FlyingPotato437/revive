@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       expectedVersion: Number(body.expectedVersion),
       actor: approver,
       note: `resume approved by ${approver}`.slice(0, 300),
-    });
+    }, auth.projectId);
     await mirrorCaseToConsole(record);
     await audit({ workspaceId: auth.workspace.id, actor: approver, subjectKind: "case", subjectId: record.id, event: "resume_approved", detail: { version: record.version } });
     return NextResponse.json({ id: record.id, state: record.state, version: record.version, approvedBy: approver });

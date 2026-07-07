@@ -12,7 +12,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!auth.ok) return auth.response;
   const { id } = await params;
   try {
-    const action = await startAction(auth.workspace.id, id);
+    const action = await startAction(auth.workspace.id, id, auth.projectId);
     return NextResponse.json({ id: action.id, state: action.state, version: action.version });
   } catch (error) {
     if (error instanceof TransitionError) {

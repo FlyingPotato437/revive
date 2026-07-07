@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
     );
   }
   let record = await openCase(auth.workspace.id, {
+    projectId: auth.projectId,
     runId: String(body.runId).slice(0, 200),
     checkpointId: body.checkpointId ? String(body.checkpointId).slice(0, 200) : undefined,
     connectionId: String(body.connectionId).slice(0, 200),
@@ -99,8 +100,8 @@ export async function POST(req: NextRequest) {
 
 // GET /v1/recovery-cases?open=1 returns the workspace case queue.
 export async function GET(req: NextRequest) {
-  const auth = await authenticateApiKey(req);
+  const auth = await authenticateApiKey(req, "viewer");
   if (!auth.ok) return auth.response;
   const open = req.nextUrl.searchParams.get("open") === "1";
-  return NextResponse.json({ cases: (await listCases(auth.workspace.id, { open })).slice(0, 200) });
+  return NextResponse.json({ cases: (await listCases(auth.workspace.id, { open, projectId: auth.projectId })).slice(0, 200) });
 }

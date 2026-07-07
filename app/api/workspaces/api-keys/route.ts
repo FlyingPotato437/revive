@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessionFromCookies } from "@/lib/auth";
-import { createApiKey, revokeApiKey, selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
+import { createApiKey, revokeApiKey, selectedWorkspace, WORKSPACE_COOKIE, type ApiKeyRole } from "@/lib/workspaces";
 import { requireWorkspaceRole } from "@/lib/rbac";
 
 export async function POST(request: NextRequest) {
@@ -13,7 +13,11 @@ export async function POST(request: NextRequest) {
     const expiresInDays = body.expiresInDays === undefined || body.expiresInDays === null || body.expiresInDays === "never"
       ? undefined
       : Number(body.expiresInDays);
-    const result = await createApiKey(session.email, workspace.id, String(body.name || ""), { expiresInDays });
+    const result = await createApiKey(session.email, workspace.id, String(body.name || ""), {
+      expiresInDays,
+      projectId: String(body.projectId || ""),
+      role: String(body.role || "operator") as ApiKeyRole,
+    });
     return NextResponse.json({ key: result.key, record: { ...result.record, hash: undefined } }, { status: 201 });
   } catch (error) {
     const status = error instanceof Error && error.message === "forbidden" ? 403 : 400;

@@ -19,8 +19,9 @@ export default function ConnectionsPage() {
         </div>
       </section>
       <div className="mt-5 border border-[#f0e2c0] bg-[#fdf7e7] p-4 text-[10.5px] leading-5 text-[#7a6224]">
-        The allowlist of connectable integrations is server-configured (NANGO_ALLOWED_INTEGRATIONS). Microsoft Entra is
-        the certified provider today; more vault integrations are open work.
+        Microsoft 365, Gmail, GitHub and Slack are offered out of the box (each must exist in the Nango project);
+        NANGO_ALLOWED_INTEGRATIONS extends the catalog, and operators can register provisional custom connectors
+        via the Custom connector button. Microsoft Entra remains the certified recovery path today.
       </div>
     </div>
   );

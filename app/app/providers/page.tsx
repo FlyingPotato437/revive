@@ -1,16 +1,15 @@
 import { PageHeader, StatusBadge } from "@/components/app/ConsolePrimitives";
 
-export default function ConnectionsPage() {
+export default function AdaptersPage() {
   const connections = [
     { name: "Microsoft Entra", group: "Credential systems", role: "Identity provider", detail: "Authorization Code + PKCE with Graph profile binding", configured: Boolean(process.env.ENTRA_CLIENT_ID && process.env.ENTRA_REDIRECT_URI), logo: "/logos/microsoft.png", mark: "M", color: "#0b76ce" },
     { name: "Nango", group: "Credential systems", role: "Credential vault", detail: "Scoped connect sessions and authenticated proxy", configured: Boolean(process.env.NANGO_SECRET_KEY), logo: "/logos/NangoHQ.png", mark: "N", color: "#25282e" },
-    { name: "Auth0 Token Vault", group: "Credential systems", role: "Credential vault", detail: "Backend federated token exchange", configured: Boolean(process.env.AUTH0_DOMAIN && process.env.AUTH0_CLIENT_ID && process.env.AUTH0_CLIENT_SECRET), logo: "/logos/auth0.png", mark: "A", color: "#e45d3f" },
     { name: "LangGraph", group: "Durable runtimes", role: "Runtime adapter", detail: "Native interrupt and checkpoint handoff", configured: null, logo: "/logos/langchain-ai.png", mark: "L", color: "#24745b" },
     { name: "Temporal", group: "Durable runtimes", role: "Runtime adapter", detail: "Signal workflows with opaque lease references", configured: null, logo: "/logos/temporalio.png", mark: "T", color: "#625be7" },
     { name: "Signed webhooks", group: "Delivery", role: "Event delivery", detail: "HMAC signatures and Postgres-backed retry jobs", configured: Boolean(process.env.DATABASE_URL && process.env.REVIVE_WEBHOOK_URL && process.env.REVIVE_WEBHOOK_SECRET), logo: null, mark: "W", color: "#775c3e" },
   ];
   return <div className="mx-auto max-w-[1400px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
-    <PageHeader eyebrow="Integration surface" title="Connections" description="Credential systems own tokens. Durable runtimes own execution. Revive owns the recovery evidence between them." actions={<StatusBadge tone="cobalt">6 implementation paths</StatusBadge>} />
+    <PageHeader eyebrow="Integration surface" title="Adapters" description="Credential systems own tokens. Durable runtimes own execution. Revive owns the recovery evidence between them. Manage the accounts your agents act as under Connections." actions={<StatusBadge tone="cobalt">5 implementation paths</StatusBadge>} />
 
     <div className="mt-5 grid gap-5 xl:grid-cols-[1.25fr_.75fr]">
       <section className="instrument-panel overflow-hidden rounded-[8px]">

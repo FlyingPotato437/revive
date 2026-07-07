@@ -79,7 +79,19 @@ export function classifyToolFailure(error: ToolErrorShape): ToolFailure {
   if (error.identityMismatch) return make("wrong_identity", error.message || "authorized identity does not match the connection binding");
   if (error.partial) return make("partial_success", error.message || "provider applied some but not all sub-operations");
 
-  if (error.status === 401 || lower.includes("invalid_grant") || lower.includes("aadsts") || lower.includes("token expired") || lower.includes("revoked")) {
+  if (
+    error.status === 401 ||
+    lower.includes("invalid_grant") ||
+    lower.includes("aadsts") ||
+    lower.includes("token expired") ||
+    lower.includes("revoked") ||
+    // Slack: token_revoked / invalid_auth / account_inactive; GitHub: bad credentials; Google RPC: UNAUTHENTICATED
+    lower.includes("token_revoked") ||
+    lower.includes("invalid_auth") ||
+    lower.includes("account_inactive") ||
+    lower.includes("bad credentials") ||
+    lower.includes("unauthenticated")
+  ) {
     return make("credential_rejected", error.message || "credential rejected by provider");
   }
   if (error.status === 403 || lower.includes("insufficient") || lower.includes("consent") || lower.includes("forbidden")) {

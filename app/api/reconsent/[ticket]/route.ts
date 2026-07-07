@@ -4,6 +4,7 @@ import { nangoConfigured } from "@/lib/integrations/nango";
 import { loadConnectionBinding } from "@/lib/hosted";
 import { resolveRecoveryTarget } from "@/lib/recovery-target";
 import { MICROSOFT_GRAPH_RECOVERY_SCOPES } from "@/lib/integrations/nango";
+import { providerForIntegration } from "@/lib/integrations/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -29,15 +30,23 @@ export async function GET(
   }
 
   const binding = await loadConnectionBinding(target.record.connectionId, target.record.workspaceId);
+  const provider = binding?.integrationId
+    ? await providerForIntegration(binding.integrationId, target.record.workspaceId)
+    : null;
   const expiresAt = target.claims.exp * 1000;
   return NextResponse.json({
     ticket: {
       id: ticket,
       runId: target.record.runId,
       sessionId: `control:${target.record.id}`,
-      provider: target.record.provider === "google" ? "google" : "microsoft",
+      provider: binding?.provider || target.record.provider || "microsoft",
+      providerLabel: provider?.label,
       account: binding?.accountId || target.record.connectionId,
-      scopes: [...new Set([...(binding?.scopes || []), ...MICROSOFT_GRAPH_RECOVERY_SCOPES])],
+      scopes: binding?.scopes?.length
+        ? binding.scopes
+        : (binding?.provider || target.record.provider || "microsoft") === "microsoft"
+          ? [...MICROSOFT_GRAPH_RECOVERY_SCOPES]
+          : [],
       url: target.record.url || `/reauthorize/${ticket}`,
       reason: target.record.reason,
       code: target.record.reason.split(":", 1)[0] || "credential_rejected",

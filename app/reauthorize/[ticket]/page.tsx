@@ -20,7 +20,7 @@ import type { ClassifierResult, ReconsentTicket } from "@/lib/types";
 type Phase = "loading" | "ready" | "approving" | "done" | "error" | "blocked";
 
 type RecoveryData = {
-  ticket: ReconsentTicket;
+  ticket: ReconsentTicket & { providerLabel?: string };
   classifier?: ClassifierResult;
   authorization: { mode: "entra_pkce" | "nango_connect" | "sandbox" | "unavailable"; url: string | null };
 };
@@ -35,11 +35,25 @@ const SCOPE_PERMS: Record<string, string> = {
   "Files.Read.All": "Read files this account can access",
 };
 
+const PROVIDER_META: Record<string, { label: string; api: string; logo?: string }> = {
+  microsoft: { label: "Microsoft", api: "Microsoft Graph", logo: "/logos/microsoft.png" },
+  google: { label: "Google", api: "Google" },
+  github: { label: "GitHub", api: "GitHub" },
+  slack: { label: "Slack", api: "Slack" },
+};
+
+function providerMeta(provider?: string, providerLabel?: string) {
+  return PROVIDER_META[provider || "microsoft"] ?? {
+    label: providerLabel || provider || "Provider",
+    api: providerLabel || provider || "The provider",
+  };
+}
+
 const CONTROLS = [
   {
     icon: Fingerprint,
     title: "Account binding",
-    detail: "The Microsoft account must match the identity already bound to this run.",
+    detail: "The authorized account must match the identity already bound to this run.",
   },
   {
     icon: LockKey,
@@ -189,9 +203,9 @@ export default function Reauthorize({ params }: { params: Promise<{ ticket: stri
         <section className="border border-[#151922] bg-[#fbfcf8] shadow-[10px_10px_0_#d9ddd6]">
           <div className="flex min-h-12 flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#151922] px-4 py-3 sm:px-5">
             <div className="flex items-center gap-2.5">
-              <Image src="/logos/microsoft.png" alt="Microsoft" width={18} height={18} className="h-[18px] w-[18px] object-contain" />
+              <ProviderMark provider={data?.ticket.provider} providerLabel={data?.ticket.providerLabel} size={18} />
               <span className="font-mono text-[9px] font-medium tracking-[.11em] text-[#596273]">
-                MICROSOFT ENTRA / CREDENTIAL RECOVERY
+                {providerMeta(data?.ticket.provider, data?.ticket.providerLabel).label.toUpperCase()} / CREDENTIAL RECOVERY
               </span>
             </div>
             <span className="ml-auto font-mono text-[8px] text-[#8a929d]">
@@ -322,7 +336,24 @@ function BlockedState({ reason, boundAccount, onRetry }: { reason: string; bound
   );
 }
 
+function ProviderMark({ provider, providerLabel, size }: { provider?: string; providerLabel?: string; size: number }) {
+  const meta = providerMeta(provider, providerLabel);
+  if (meta.logo) {
+    return <Image src={meta.logo} alt={meta.label} width={size} height={size} style={{ height: size, width: size }} className="object-contain" />;
+  }
+  return (
+    <span
+      className="flex items-center justify-center border border-[#bfc5cc] bg-white font-mono font-semibold text-[#2e49c8]"
+      style={{ height: size, width: size, fontSize: Math.round(size * 0.55) }}
+      aria-hidden
+    >
+      {meta.label.slice(0, 1)}
+    </span>
+  );
+}
+
 function ReadyState({ data, approving, approve }: { data: RecoveryData; approving: boolean; approve: () => void }) {
+  const meta = providerMeta(data.ticket.provider, data.ticket.providerLabel);
   return (
     <div>
       <div className="font-mono text-[9px] tracking-[.12em] text-[#2e49c8]">AUTHORIZATION REQUIRED</div>
@@ -331,16 +362,16 @@ function ReadyState({ data, approving, approve }: { data: RecoveryData; approvin
         <span className="block">Resume the same run.</span>
       </h1>
       <p className="mt-5 max-w-[58ch] text-[13px] leading-[1.7] text-[#66707e]">
-        Microsoft Graph rejected the current grant. Reauthorize the bound account to rotate its credential generation and release the parked workflow.
+        {meta.api} rejected the current grant. Reauthorize the bound account to rotate its credential generation and release the parked workflow.
       </p>
 
       <div className="mt-8 grid border border-[#151922] sm:grid-cols-[minmax(0,1fr)_auto]">
         <div className="flex min-w-0 items-center gap-3 p-4">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center border border-[#bfc5cc] bg-white">
-            <Image src="/logos/microsoft.png" alt="" width={24} height={24} className="h-6 w-6 object-contain" />
+            <ProviderMark provider={data.ticket.provider} providerLabel={data.ticket.providerLabel} size={24} />
           </span>
           <div className="min-w-0">
-            <div className="text-[11px] font-semibold">Microsoft Graph</div>
+            <div className="text-[11px] font-semibold">{meta.api}</div>
             <div className="mt-1 truncate font-mono text-[9px] text-[#737c89]">{data.ticket.account}</div>
           </div>
         </div>
@@ -383,11 +414,11 @@ function ReadyState({ data, approving, approve }: { data: RecoveryData; approvin
         className="mt-7 inline-flex h-12 w-full items-center justify-center gap-2 border border-[#151922] bg-[#151922] px-5 text-[11px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px disabled:cursor-wait disabled:opacity-65 sm:w-auto sm:min-w-[250px]"
       >
         {approving
-          ? "Opening Microsoft authorization"
+          ? `Opening ${meta.label} authorization`
           : data.authorization.mode === "entra_pkce"
             ? "Continue with Microsoft"
             : data.authorization.mode === "nango_connect"
-              ? "Reconnect Microsoft account"
+              ? `Reconnect ${meta.label} account`
               : data.authorization.mode === "unavailable"
                 ? "Authorization unavailable"
                 : "Authorize and resume"}

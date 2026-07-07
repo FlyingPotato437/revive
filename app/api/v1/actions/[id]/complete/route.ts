@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     /* body optional */
   }
   try {
-    const action = await completeAction(auth.workspace.id, id, resultRef);
+    const action = await completeAction(auth.workspace.id, id, resultRef, auth.projectId);
     return NextResponse.json({ id: action.id, state: action.state, version: action.version });
   } catch (error) {
     if (error instanceof TransitionError) {

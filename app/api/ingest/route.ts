@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { workspaceForApiKey } from "@/lib/workspaces";
+import { authenticateApiKey } from "@/lib/api-auth";
 import { getSession, putSession } from "@/lib/store";
 import type { Provider, RecoveryStatus, RunState, RunStatus, SessionState } from "@/lib/types";
 
@@ -60,12 +60,9 @@ function emptyRun(lane: "baseline" | "revive", runId: string): RunState {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = req.headers.get("authorization") || "";
-  const key = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  const workspace = await workspaceForApiKey(key);
-  if (!workspace) {
-    return NextResponse.json({ error: "invalid or revoked API key" }, { status: 401 });
-  }
+  const auth = await authenticateApiKey(req, "operator");
+  if (!auth.ok) return auth.response;
+  const workspace = auth.workspace;
 
   let body: IngestBody;
   try {
@@ -82,7 +79,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const sessionId = `ext_${workspace.id}_${runId}`.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const sessionId = `ext_${workspace.id}_${auth.projectId}_${runId}`.replace(/[^a-zA-Z0-9_-]/g, "_");
   const now = Date.now();
   const provider = (body.provider === "google" ? "google" : "microsoft") as Provider;
 
@@ -93,6 +90,7 @@ export async function POST(req: NextRequest) {
     session = {
       id: sessionId,
       workspaceId: workspace.id,
+      projectId: auth.projectId,
       failureStep: -1,
       deathCode: body.cause_code,
       createdAt: now,

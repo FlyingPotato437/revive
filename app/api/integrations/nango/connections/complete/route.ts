@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sessionFromCookies } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { saveExternalVaultConnection } from "@/lib/hosted";
-import { allowedNangoIntegrations, fetchNangoMicrosoftIdentity, MICROSOFT_GRAPH_RECOVERY_SCOPES } from "@/lib/integrations/nango";
+import { fetchNangoIdentity, nangoIntegrationAvailable, providerForIntegration } from "@/lib/integrations/providers";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 import { getOrganizationBilling, organizationIdForWorkspace, PLAN_LIMITS } from "@/lib/billing";
 import { listWorkspaceConnections } from "@/lib/hosted";
@@ -17,11 +17,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json() as { connectionId?: string; integrationId?: string };
     const connectionId = String(body.connectionId || "");
     const integrationId = String(body.integrationId || "");
-    if (!connectionId || !allowedNangoIntegrations().includes(integrationId)) {
-      return NextResponse.json({ error: "valid connectionId and allowlisted integrationId are required" }, { status: 400 });
-    }
     const workspace = await selectedWorkspace(session.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
     await requireWorkspaceRole(session.email, workspace, "operator");
+    if (!connectionId || !(await nangoIntegrationAvailable(workspace.id, integrationId))) {
+      return NextResponse.json({ error: "valid connectionId and workspace integrationId are required" }, { status: 400 });
+    }
     // Plan gate: connection count is the billed unit. Re-binding an existing
     // connection id never counts against the limit.
     const existing = await listWorkspaceConnections(workspace.id);
@@ -36,13 +36,18 @@ export async function POST(req: NextRequest) {
         );
       }
     }
-    const identity = await fetchNangoMicrosoftIdentity({ connectionId, integrationId });
+    const provider = await providerForIntegration(integrationId, workspace.id);
+    if (!provider) {
+      return NextResponse.json({ error: `no identity adapter for integration "${integrationId}"` }, { status: 400 });
+    }
+    const identity = await fetchNangoIdentity({ connectionId, integrationId, workspaceId: workspace.id });
     await saveExternalVaultConnection({
       id: connectionId,
       workspaceId: workspace.id,
-      provider: "microsoft",
+      provider: provider.key,
+      issuer: provider.issuer(identity),
       accountId: identity.accountId,
-      scopes: [...MICROSOFT_GRAPH_RECOVERY_SCOPES],
+      scopes: [...provider.recoveryScopes],
       vault: "nango",
       integrationId,
       providerSubject: identity.subject,
@@ -57,7 +62,7 @@ export async function POST(req: NextRequest) {
       event: "identity_bound",
       detail: { integrationId, tenant: identity.tenant },
     });
-    return NextResponse.json({ ok: true, connectionId, accountId: identity.accountId, tenant: identity.tenant });
+    return NextResponse.json({ ok: true, connectionId, accountId: identity.accountId, tenant: identity.tenant, provisional: Boolean(provider.provisional) });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "connection verification failed" }, { status: 502 });
   }

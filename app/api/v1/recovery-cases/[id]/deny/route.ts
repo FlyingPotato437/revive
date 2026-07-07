@@ -25,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       expectedVersion: Number(body.expectedVersion),
       actor: denier,
       note: (body.note ? `resume denied by ${denier}: ${String(body.note)}` : `resume denied by ${denier}`).slice(0, 300),
-    });
+    }, auth.projectId);
     await mirrorCaseToConsole(record);
     await audit({ workspaceId: auth.workspace.id, actor: denier, subjectKind: "case", subjectId: record.id, event: "resume_denied", detail: { version: record.version } });
     return NextResponse.json({ id: record.id, state: record.state, version: record.version, deniedBy: denier });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { audit } from "@/lib/audit";
 import { advanceLease, transition, TransitionError } from "@/lib/control-plane";
 import { loadConnectionBinding, saveExternalVaultConnection } from "@/lib/hosted";
-import { allowedNangoIntegrations, fetchNangoMicrosoftIdentity, MICROSOFT_GRAPH_RECOVERY_SCOPES } from "@/lib/integrations/nango";
+import { fetchNangoIdentity, nangoIntegrationAvailable, providerForIntegration } from "@/lib/integrations/providers";
 import { resolveRecoveryTarget } from "@/lib/recovery-target";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { enqueueRuntimeResume } from "@/lib/webhooks";
@@ -36,31 +36,39 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
     if (connectionId !== target.record.connectionId) {
       return NextResponse.json({ error: "the authorized Nango connection does not match this recovery case" }, { status: 409 });
     }
-    if (!allowedNangoIntegrations().includes(integrationId)) {
-      return NextResponse.json({ error: "the Nango integration is not allowlisted" }, { status: 400 });
+    const expected = await loadConnectionBinding(connectionId, target.record.workspaceId);
+    if (expected?.integrationId && integrationId !== expected.integrationId) {
+      return NextResponse.json({ error: "the authorized Nango integration does not match the integration bound to this connection" }, { status: 409 });
+    }
+    if (!(await nangoIntegrationAvailable(target.record.workspaceId, integrationId))) {
+      return NextResponse.json({ error: "the Nango integration is not registered for this workspace" }, { status: 400 });
     }
 
-    const identity = await fetchNangoMicrosoftIdentity({ integrationId, connectionId });
-    const expected = await loadConnectionBinding(connectionId, target.record.workspaceId);
+    const provider = await providerForIntegration(integrationId, target.record.workspaceId);
+    if (!provider) {
+      return NextResponse.json({ error: `no identity adapter for integration "${integrationId}"` }, { status: 400 });
+    }
+    const identity = await fetchNangoIdentity({ integrationId, connectionId, workspaceId: target.record.workspaceId });
     if (!expected?.subject || !expected.tenant) {
       if (process.env.NODE_ENV === "production" && process.env.REVIVE_ALLOW_FIRST_USE_BINDING !== "true") {
         throw new Error("the connection is missing its creation-time identity binding");
       }
     } else {
       if (expected.subject !== identity.subject) {
-        throw new IdentityMismatchError("the authorized Microsoft account does not match the account bound to this connection", expected.accountId);
+        throw new IdentityMismatchError(`the authorized ${provider.label} account does not match the account bound to this connection`, expected.accountId);
       }
       if (expected.tenant !== identity.tenant) {
-        throw new IdentityMismatchError("the authorized Microsoft tenant does not match the tenant bound to this connection", expected.accountId);
+        throw new IdentityMismatchError(`the authorized ${provider.label} tenant does not match the tenant bound to this connection`, expected.accountId);
       }
     }
 
     await saveExternalVaultConnection({
       id: connectionId,
       workspaceId: target.record.workspaceId,
-      provider: "microsoft",
+      provider: provider.key,
+      issuer: provider.issuer(identity),
       accountId: identity.accountId,
-      scopes: [...new Set([...(expected?.scopes || []), ...MICROSOFT_GRAPH_RECOVERY_SCOPES])],
+      scopes: [...new Set([...(expected?.scopes || []), ...provider.recoveryScopes])],
       vault: "nango",
       integrationId,
       providerSubject: identity.subject,
@@ -81,7 +89,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
       to: "identity_verified",
       expectedVersion: record.version,
       actor: "nango-connect",
-      note: `Microsoft subject ${identity.subject}`,
+      note: `${provider.label} subject ${identity.subject}`,
     });
     const generation = await advanceLease(record.workspaceId, record.connectionId);
     // Auto-reconciliation BEFORE resume: settle every unknown-outcome action of
@@ -89,6 +97,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
     // known verdicts — never a blind retry of something that already committed.
     const reconciliation = await autoReconcileRun({
       workspaceId: record.workspaceId,
+      projectId: record.projectId,
       runId: record.runId,
       connectionId: record.connectionId,
       integrationId,

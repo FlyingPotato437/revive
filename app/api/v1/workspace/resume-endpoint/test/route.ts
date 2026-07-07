@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 // signature verification before a real recovery depends on it. The receiver
 // should verify the signature and reply 2xx; it must not resume anything.
 export async function POST(req: NextRequest) {
-  const auth = await authenticateApiKey(req);
+  const auth = await authenticateApiKey(req, "admin");
   if (!auth.ok) return auth.response;
   const config = await getResumeEndpoint(auth.workspace.id);
   if (!config) {

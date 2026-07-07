@@ -49,6 +49,7 @@ export interface CaseEvent {
 export interface ControlCase {
   id: string;
   workspaceId: string;
+  projectId: string;
   runId: string;
   checkpointId?: string;
   connectionId: string;
@@ -74,6 +75,7 @@ export type ActionState = "prepared" | "started" | "completed" | "uncertain" | "
 export interface ControlAction {
   id: string;
   workspaceId: string;
+  projectId: string;
   runId: string;
   checkpointId?: string;
   connectionId: string;
@@ -134,6 +136,7 @@ function id(prefix: string): string {
 }
 
 type ActionInput = {
+  projectId?: string;
   runId: string;
   checkpointId?: string;
   connectionId: string;
@@ -143,6 +146,7 @@ type ActionInput = {
 };
 
 type OpenCaseInput = {
+  projectId?: string;
   runId: string;
   checkpointId?: string;
   connectionId: string;
@@ -165,6 +169,7 @@ type TransitionInput = {
 interface DbAction {
   id: string;
   workspace_id: string;
+  project_id: string;
   run_id: string;
   checkpoint_id: string | null;
   connection_id: string;
@@ -184,6 +189,7 @@ interface DbAction {
 interface DbCase {
   id: string;
   workspace_id: string;
+  project_id: string;
   run_id: string;
   checkpoint_id: string | null;
   connection_id: string;
@@ -210,6 +216,7 @@ function mapAction(row: DbAction): ControlAction {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
+    projectId: row.project_id,
     runId: row.run_id,
     checkpointId: row.checkpoint_id || undefined,
     connectionId: row.connection_id,
@@ -231,6 +238,7 @@ function mapCase(row: DbCase): ControlCase {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
+    projectId: row.project_id,
     runId: row.run_id,
     checkpointId: row.checkpoint_id || undefined,
     connectionId: row.connection_id,
@@ -250,10 +258,11 @@ function mapCase(row: DbCase): ControlCase {
   };
 }
 
-async function selectAction(sql: Sql, workspaceId: string, input: ActionInput): Promise<DbAction | null> {
+async function selectAction(sql: Sql, workspaceId: string, input: ActionInput, projectId: string): Promise<DbAction | null> {
   const rows = await sql<DbAction[]>`
     select * from revive_actions
     where workspace_id = ${workspaceId}
+      and project_id = ${projectId}
       and run_id = ${input.runId}
       and action_key = ${input.actionKey}
       and idempotency_key = ${input.idempotencyKey}
@@ -264,9 +273,10 @@ async function selectAction(sql: Sql, workspaceId: string, input: ActionInput): 
 
 export async function registerAction(workspaceId: string, input: ActionInput): Promise<ControlAction> {
   if (!hostedDatabaseEnabled()) {
+    const projectId = input.projectId || "project_default";
     const data = readLocal();
     const existing = data.actions.find(
-      (action) => action.workspaceId === workspaceId && action.runId === input.runId &&
+      (action) => action.workspaceId === workspaceId && (action.projectId || "project_default") === projectId && action.runId === input.runId &&
         action.actionKey === input.actionKey && action.idempotencyKey === input.idempotencyKey,
     );
     if (existing) {
@@ -281,7 +291,7 @@ export async function registerAction(workspaceId: string, input: ActionInput): P
       return existing;
     }
     const action: ControlAction = {
-      id: id("act"), workspaceId, runId: input.runId, checkpointId: input.checkpointId,
+      id: id("act"), workspaceId, projectId, runId: input.runId, checkpointId: input.checkpointId,
       connectionId: input.connectionId, actionKey: input.actionKey,
       idempotencyKey: input.idempotencyKey, state: "prepared", version: 1, attempts: 1,
       metadata: input.metadata, createdAt: Date.now(), updatedAt: Date.now(),
@@ -292,18 +302,23 @@ export async function registerAction(workspaceId: string, input: ActionInput): P
   }
 
   return withWorkspaceTransaction(workspaceId, async (sql) => {
-    let existing = await selectAction(sql, workspaceId, input);
+    if (!input.projectId) {
+      const projects = await sql<{ id: string }[]>`select id from revive_projects where workspace_id = ${workspaceId} order by created_at limit 1`;
+      input = { ...input, projectId: projects[0]?.id };
+    }
+    if (!input.projectId) throw new Error("projectId is required for action registration");
+    let existing = await selectAction(sql, workspaceId, input, input.projectId);
     if (!existing) {
       const inserted = await sql<DbAction[]>`
         insert into revive_actions
-          (id, workspace_id, run_id, checkpoint_id, connection_id, action_key, idempotency_key, state, version, attempts, metadata)
+          (id, workspace_id, project_id, run_id, checkpoint_id, connection_id, action_key, idempotency_key, state, version, attempts, metadata)
         values
-          (${id("act")}, ${workspaceId}, ${input.runId}, ${input.checkpointId || null}, ${input.connectionId}, ${input.actionKey}, ${input.idempotencyKey}, 'prepared', 1, 1, ${input.metadata ? sql.json(JSON.parse(JSON.stringify(input.metadata))) : null})
-        on conflict (workspace_id, run_id, action_key, idempotency_key) do nothing
+          (${id("act")}, ${workspaceId}, ${input.projectId}, ${input.runId}, ${input.checkpointId || null}, ${input.connectionId}, ${input.actionKey}, ${input.idempotencyKey}, 'prepared', 1, 1, ${input.metadata ? sql.json(JSON.parse(JSON.stringify(input.metadata))) : null})
+        on conflict (workspace_id, project_id, run_id, action_key, idempotency_key) do nothing
         returning *
       `;
       if (inserted[0]) return mapAction(inserted[0]);
-      existing = await selectAction(sql, workspaceId, input);
+      existing = await selectAction(sql, workspaceId, input, input.projectId);
     }
     if (!existing) throw new Error("action registration conflict could not be resolved");
     if (existing.connection_id !== input.connectionId) {
@@ -326,18 +341,19 @@ export async function registerAction(workspaceId: string, input: ActionInput): P
  * this mark, a replay of a never-executed action would falsely read as an
  * ambiguous commit.
  */
-export async function startAction(workspaceId: string, actionId: string): Promise<ControlAction> {
+export async function startAction(workspaceId: string, actionId: string, projectId?: string): Promise<ControlAction> {
   if (!hostedDatabaseEnabled()) {
     return mutateActionLocal(workspaceId, actionId, (action) => {
       if (action.state !== "prepared" && action.state !== "uncertain") {
         throw new TransitionError(`cannot start an action in state ${action.state}`);
       }
       action.state = "started";
-    });
+    }, projectId);
   }
   return withWorkspaceTransaction(workspaceId, async (sql) => {
     const current = await sql<DbAction[]>`
-      select * from revive_actions where id = ${actionId} and workspace_id = ${workspaceId} for update
+      select * from revive_actions where id = ${actionId} and workspace_id = ${workspaceId}
+        and (${projectId || null}::text is null or project_id = ${projectId || null}) for update
     `;
     if (!current[0]) throw new TransitionError("action not found", 404);
     if (current[0].state !== "prepared" && current[0].state !== "uncertain") {
@@ -353,17 +369,18 @@ export async function startAction(workspaceId: string, actionId: string): Promis
   });
 }
 
-export async function completeAction(workspaceId: string, actionId: string, resultRef?: string): Promise<ControlAction> {
+export async function completeAction(workspaceId: string, actionId: string, resultRef?: string, projectId?: string): Promise<ControlAction> {
   if (!hostedDatabaseEnabled()) {
     return mutateActionLocal(workspaceId, actionId, (action) => {
       if (action.state === "reconciled") throw new TransitionError("action already reconciled");
       action.state = "completed";
       if (resultRef) action.resultRef = resultRef.slice(0, 16_000);
-    });
+    }, projectId);
   }
   return withWorkspaceTransaction(workspaceId, async (sql) => {
     const current = await sql<DbAction[]>`
-      select * from revive_actions where id = ${actionId} and workspace_id = ${workspaceId} for update
+      select * from revive_actions where id = ${actionId} and workspace_id = ${workspaceId}
+        and (${projectId || null}::text is null or project_id = ${projectId || null}) for update
     `;
     if (!current[0]) throw new TransitionError("action not found", 404);
     if (current[0].state === "reconciled") throw new TransitionError("action already reconciled");
@@ -381,6 +398,7 @@ export async function reconcileAction(
   workspaceId: string,
   actionId: string,
   input: { remoteId?: string; note?: string },
+  projectId?: string,
 ): Promise<ControlAction> {
   if (!hostedDatabaseEnabled()) {
     return mutateActionLocal(workspaceId, actionId, (action) => {
@@ -388,11 +406,12 @@ export async function reconcileAction(
       action.state = "reconciled";
       if (input.remoteId) action.remoteId = String(input.remoteId).slice(0, 200);
       if (input.note) action.note = String(input.note).slice(0, 300);
-    });
+    }, projectId);
   }
   return withWorkspaceTransaction(workspaceId, async (sql) => {
     const current = await sql<DbAction[]>`
-      select * from revive_actions where id = ${actionId} and workspace_id = ${workspaceId} for update
+      select * from revive_actions where id = ${actionId} and workspace_id = ${workspaceId}
+        and (${projectId || null}::text is null or project_id = ${projectId || null}) for update
     `;
     if (!current[0]) throw new TransitionError("action not found", 404);
     if (current[0].state === "completed") throw new TransitionError("completed action cannot be reconciled");
@@ -411,9 +430,10 @@ function mutateActionLocal(
   workspaceId: string,
   actionId: string,
   mutation: (action: ControlAction) => void,
+  projectId?: string,
 ): ControlAction {
   const data = readLocal();
-  const action = data.actions.find((item) => item.id === actionId && item.workspaceId === workspaceId);
+  const action = data.actions.find((item) => item.id === actionId && item.workspaceId === workspaceId && (!projectId || (item.projectId || "project_default") === projectId));
   if (!action) throw new TransitionError("action not found", 404);
   mutation(action);
   action.version += 1;
@@ -424,7 +444,7 @@ function mutateActionLocal(
 
 /** Provider proved the side effect never committed: started|uncertain → prepared,
  *  so the runtime may safely execute it (once) on resume. */
-export async function resetActionSafe(workspaceId: string, actionId: string, note?: string): Promise<ControlAction> {
+export async function resetActionSafe(workspaceId: string, actionId: string, note?: string, projectId?: string): Promise<ControlAction> {
   if (!hostedDatabaseEnabled()) {
     return mutateActionLocal(workspaceId, actionId, (action) => {
       if (action.state !== "started" && action.state !== "uncertain") {
@@ -432,13 +452,15 @@ export async function resetActionSafe(workspaceId: string, actionId: string, not
       }
       action.state = "prepared";
       if (note) action.note = note.slice(0, 300);
-    });
+    }, projectId);
   }
   return withWorkspaceTransaction(workspaceId, async (sql) => {
     const rows = await sql<DbAction[]>`
       update revive_actions
       set state = 'prepared', note = ${note?.slice(0, 300) || null}, version = version + 1, updated_at = now()
-      where id = ${actionId} and workspace_id = ${workspaceId} and state in ('started','uncertain')
+      where id = ${actionId} and workspace_id = ${workspaceId}
+        and (${projectId || null}::text is null or project_id = ${projectId || null})
+        and state in ('started','uncertain')
       returning *
     `;
     if (!rows[0]) throw new TransitionError("only started/uncertain actions can be reset");
@@ -446,38 +468,42 @@ export async function resetActionSafe(workspaceId: string, actionId: string, not
   });
 }
 
-export async function listActionsForRun(workspaceId: string, runId: string): Promise<ControlAction[]> {
+export async function listActionsForRun(workspaceId: string, runId: string, projectId?: string): Promise<ControlAction[]> {
   if (!hostedDatabaseEnabled()) {
-    return readLocal().actions.filter((a) => a.workspaceId === workspaceId && a.runId === runId);
+    return readLocal().actions.filter((a) => a.workspaceId === workspaceId && a.runId === runId && (!projectId || (a.projectId || "project_default") === projectId));
   }
   return withWorkspaceTransaction(workspaceId, async (sql) => {
     const rows = await sql<DbAction[]>`
-      select * from revive_actions where workspace_id = ${workspaceId} and run_id = ${runId} limit 100
+      select * from revive_actions where workspace_id = ${workspaceId} and run_id = ${runId}
+        and (${projectId || null}::text is null or project_id = ${projectId || null}) limit 100
     `;
     return rows.map(mapAction);
   });
 }
 
-export async function getAction(workspaceId: string, actionId: string): Promise<ControlAction | null> {
+export async function getAction(workspaceId: string, actionId: string, projectId?: string): Promise<ControlAction | null> {
   if (!hostedDatabaseEnabled()) {
-    return readLocal().actions.find((action) => action.id === actionId && action.workspaceId === workspaceId) ?? null;
+    return readLocal().actions.find((action) => action.id === actionId && action.workspaceId === workspaceId && (!projectId || (action.projectId || "project_default") === projectId)) ?? null;
   }
   return withWorkspaceTransaction(workspaceId, async (sql) => {
     const rows = await sql<DbAction[]>`
       select * from revive_actions where id = ${actionId} and workspace_id = ${workspaceId}
+        and (${projectId || null}::text is null or project_id = ${projectId || null})
     `;
     return rows[0] ? mapAction(rows[0]) : null;
   });
 }
 
-export async function listActions(workspaceId: string): Promise<ControlAction[]> {
+export async function listActions(workspaceId: string, projectId?: string): Promise<ControlAction[]> {
   if (!hostedDatabaseEnabled()) {
-    return readLocal().actions.filter((action) => action.workspaceId === workspaceId)
+    return readLocal().actions.filter((action) => action.workspaceId === workspaceId && (!projectId || (action.projectId || "project_default") === projectId))
       .sort((a, b) => b.updatedAt - a.updatedAt);
   }
   return withWorkspaceTransaction(workspaceId, async (sql) => {
     const rows = await sql<DbAction[]>`
-      select * from revive_actions where workspace_id = ${workspaceId} order by updated_at desc limit 500
+      select * from revive_actions where workspace_id = ${workspaceId}
+        and (${projectId || null}::text is null or project_id = ${projectId || null})
+      order by updated_at desc limit 500
     `;
     return rows.map(mapAction);
   });
@@ -485,16 +511,17 @@ export async function listActions(workspaceId: string): Promise<ControlAction[]>
 
 export async function openCase(workspaceId: string, input: OpenCaseInput): Promise<ControlCase> {
   if (!hostedDatabaseEnabled()) {
+    const projectId = input.projectId || "project_default";
     const data = readLocal();
     const existing = data.cases.find(
-      (item) => item.workspaceId === workspaceId && item.runId === input.runId &&
+      (item) => item.workspaceId === workspaceId && (item.projectId || "project_default") === projectId && item.runId === input.runId &&
         item.actionKey === input.actionKey && !TERMINAL_STATES.has(item.state),
     );
     if (existing) return existing;
     const now = Date.now();
     const caseId = id("case");
     const record: ControlCase = {
-      id: caseId, workspaceId, runId: input.runId, checkpointId: input.checkpointId,
+      id: caseId, workspaceId, projectId, runId: input.runId, checkpointId: input.checkpointId,
       connectionId: input.connectionId, actionKey: input.actionKey,
       idempotencyKey: input.idempotencyKey, provider: input.provider,
       policy: input.policy || "interactive_reauth", reason: String(input.reason).slice(0, 400),
@@ -509,9 +536,15 @@ export async function openCase(workspaceId: string, input: OpenCaseInput): Promi
   }
 
   return withWorkspaceTransaction(workspaceId, async (sql) => {
+    if (!input.projectId) {
+      const projects = await sql<{ id: string }[]>`select id from revive_projects where workspace_id = ${workspaceId} order by created_at limit 1`;
+      input = { ...input, projectId: projects[0]?.id };
+    }
+    if (!input.projectId) throw new Error("projectId is required to open a recovery case");
     const existing = await sql<DbCase[]>`
       select * from revive_recovery_cases
-      where workspace_id = ${workspaceId} and run_id = ${input.runId} and action_key = ${input.actionKey}
+      where workspace_id = ${workspaceId} and project_id = ${input.projectId}
+        and run_id = ${input.runId} and action_key = ${input.actionKey}
         and state not in ('completed','rejected','expired','escalated','manual_review')
       for update
     `;
@@ -524,14 +557,14 @@ export async function openCase(workspaceId: string, input: OpenCaseInput): Promi
     const jsonEvents = JSON.parse(JSON.stringify(events));
     const inserted = await sql<DbCase[]>`
       insert into revive_recovery_cases
-        (id, workspace_id, run_id, checkpoint_id, connection_id, action_key, idempotency_key,
+        (id, workspace_id, project_id, run_id, checkpoint_id, connection_id, action_key, idempotency_key,
          provider, policy, reason, state, version, lease_generation, url, events)
       values
-        (${caseId}, ${workspaceId}, ${input.runId}, ${input.checkpointId || null}, ${input.connectionId},
+        (${caseId}, ${workspaceId}, ${input.projectId}, ${input.runId}, ${input.checkpointId || null}, ${input.connectionId},
          ${input.actionKey}, ${input.idempotencyKey}, ${input.provider || null},
          ${input.policy || "interactive_reauth"}, ${input.reason.slice(0, 400)}, 'detected', 1,
          ${input.leaseGeneration ?? null}, ${createRecoveryAccessUrl(caseId, workspaceId)}, ${sql.json(jsonEvents)})
-      on conflict (workspace_id, run_id, action_key)
+      on conflict (workspace_id, project_id, run_id, action_key)
         where state not in ('completed','rejected','expired','escalated','manual_review')
       do nothing
       returning *
@@ -539,7 +572,8 @@ export async function openCase(workspaceId: string, input: OpenCaseInput): Promi
     if (inserted[0]) return mapCase(inserted[0]);
     const raced = await sql<DbCase[]>`
       select * from revive_recovery_cases
-      where workspace_id = ${workspaceId} and run_id = ${input.runId} and action_key = ${input.actionKey}
+      where workspace_id = ${workspaceId} and project_id = ${input.projectId}
+        and run_id = ${input.runId} and action_key = ${input.actionKey}
         and state not in ('completed','rejected','expired','escalated','manual_review')
       for update
     `;
@@ -683,10 +717,10 @@ export async function rotateLease(workspaceId: string, connectionId: string, exp
   });
 }
 
-export async function transition(workspaceId: string, caseId: string, input: TransitionInput): Promise<ControlCase> {
+export async function transition(workspaceId: string, caseId: string, input: TransitionInput, projectId?: string): Promise<ControlCase> {
   if (!hostedDatabaseEnabled()) {
     const data = readLocal();
-    const record = data.cases.find((item) => item.id === caseId && item.workspaceId === workspaceId);
+    const record = data.cases.find((item) => item.id === caseId && item.workspaceId === workspaceId && (!projectId || (item.projectId || "project_default") === projectId));
     if (!record) throw new TransitionError("case not found", 404);
     assertTransition(record, input);
     const now = Date.now();
@@ -701,7 +735,8 @@ export async function transition(workspaceId: string, caseId: string, input: Tra
 
   return withWorkspaceTransaction(workspaceId, async (sql) => {
     const rows = await sql<DbCase[]>`
-      select * from revive_recovery_cases where id = ${caseId} and workspace_id = ${workspaceId} for update
+      select * from revive_recovery_cases where id = ${caseId} and workspace_id = ${workspaceId}
+        and (${projectId || null}::text is null or project_id = ${projectId || null}) for update
     `;
     if (!rows[0]) throw new TransitionError("case not found", 404);
     const record = mapCase(rows[0]);
@@ -725,21 +760,22 @@ export async function transition(workspaceId: string, caseId: string, input: Tra
   });
 }
 
-export async function getCase(workspaceId: string, caseId: string): Promise<ControlCase | null> {
+export async function getCase(workspaceId: string, caseId: string, projectId?: string): Promise<ControlCase | null> {
   if (!hostedDatabaseEnabled()) {
-    return readLocal().cases.find((item) => item.id === caseId && item.workspaceId === workspaceId) ?? null;
+    return readLocal().cases.find((item) => item.id === caseId && item.workspaceId === workspaceId && (!projectId || (item.projectId || "project_default") === projectId)) ?? null;
   }
   return withWorkspaceTransaction(workspaceId, async (sql) => {
     const rows = await sql<DbCase[]>`
-      select * from revive_recovery_cases where id = ${caseId} and workspace_id = ${workspaceId} limit 1
+      select * from revive_recovery_cases where id = ${caseId} and workspace_id = ${workspaceId}
+        and (${projectId || null}::text is null or project_id = ${projectId || null}) limit 1
     `;
     return rows[0] ? mapCase(rows[0]) : null;
   });
 }
 
-export async function listCases(workspaceId: string, filter?: { open?: boolean }): Promise<ControlCase[]> {
+export async function listCases(workspaceId: string, filter?: { open?: boolean; projectId?: string }): Promise<ControlCase[]> {
   if (!hostedDatabaseEnabled()) {
-    let cases = readLocal().cases.filter((item) => item.workspaceId === workspaceId);
+    let cases = readLocal().cases.filter((item) => item.workspaceId === workspaceId && (!filter?.projectId || (item.projectId || "project_default") === filter.projectId));
     if (filter?.open) cases = cases.filter((item) => !TERMINAL_STATES.has(item.state));
     return cases.sort((a, b) => b.updatedAt - a.updatedAt);
   }
@@ -748,11 +784,13 @@ export async function listCases(workspaceId: string, filter?: { open?: boolean }
       ? await sql<DbCase[]>`
           select * from revive_recovery_cases
           where workspace_id = ${workspaceId}
+            and (${filter.projectId || null}::text is null or project_id = ${filter.projectId || null})
             and state not in ('completed','rejected','expired','escalated','manual_review')
           order by updated_at desc limit 500
         `
       : await sql<DbCase[]>`
           select * from revive_recovery_cases where workspace_id = ${workspaceId}
+            and (${filter?.projectId || null}::text is null or project_id = ${filter?.projectId || null})
           order by updated_at desc limit 500
         `;
     return rows.map(mapCase);

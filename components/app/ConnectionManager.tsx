@@ -2,8 +2,9 @@
 
 import Nango from "@nangohq/frontend";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowsClockwise, LinkSimple, Plus } from "@phosphor-icons/react";
+import { ArrowsClockwise, LinkSimple, Plus, X } from "@phosphor-icons/react";
 import { StatusBadge } from "@/components/app/ConsolePrimitives";
+import { CustomConnectorManager } from "@/components/app/CustomConnectorManager";
 
 interface ConnectionSummary {
   id: string;
@@ -15,13 +16,19 @@ interface ConnectionSummary {
   status?: string;
   generation?: number;
   updatedAt?: number;
+  integrationId?: string;
 }
 
 type Phase = "idle" | "connecting" | "binding";
 
+interface IntegrationOption { id: string; provider: string; label: string; provisional?: boolean }
+
 export function ConnectionManager() {
   const [connections, setConnections] = useState<ConnectionSummary[] | null>(null);
+  const [integrations, setIntegrations] = useState<IntegrationOption[]>([]);
   const [phase, setPhase] = useState<Phase>("idle");
+  const [activeIntegration, setActiveIntegration] = useState<string | null>(null);
+  const [customOpen, setCustomOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -32,15 +39,25 @@ export function ConnectionManager() {
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    const load = () => void fetch("/api/integrations/nango/integrations")
+      .then((response) => response.json())
+      .then((payload) => setIntegrations(payload.integrations ?? []))
+      .catch(() => setIntegrations([]));
+    load();
+    window.addEventListener("revive:connectors-changed", load);
+    return () => window.removeEventListener("revive:connectors-changed", load);
+  }, []);
 
-  async function connect() {
+  async function connect(integrationId?: string) {
     setError(null);
     setPhase("connecting");
+    setActiveIntegration(integrationId ?? null);
     try {
       const sessionResponse = await fetch("/api/integrations/nango/connect-session", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify(integrationId ? { integrations: [integrationId] } : {}),
       });
       const session = await sessionResponse.json() as { token?: string; error?: string };
       if (!sessionResponse.ok || !session.token) throw new Error(session.error || "Could not start the connect session");
@@ -64,11 +81,13 @@ export function ConnectionManager() {
           connectUi.close();
           if (!bind.ok) setError(result.error || "Connection authorized but identity binding failed");
           setPhase("idle");
+          setActiveIntegration(null);
           await refresh();
         },
       });
     } catch (cause) {
       setPhase("idle");
+      setActiveIntegration(null);
       setError(cause instanceof Error ? cause.message : "Could not start the connect session");
     }
   }
@@ -80,16 +99,38 @@ export function ConnectionManager() {
           Connect the account your agents act as. Tokens stay in the credential vault (Nango); Revive stores the
           identity binding (subject + tenant) it verifies on every recovery.
         </p>
-        <button
-          onClick={connect}
-          disabled={phase !== "idle"}
-          className="inline-flex h-9 items-center gap-2 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px disabled:cursor-wait disabled:opacity-60"
-        >
-          {phase === "connecting" ? "Opening provider" : phase === "binding" ? "Binding identity" : (<><Plus size={13} weight="bold" /> Connect Microsoft account</>)}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {(integrations.length ? integrations : [{ id: "", provider: "microsoft", label: "Microsoft" }]).map((integration) => {
+            const busy = phase !== "idle" && (activeIntegration ?? "") === integration.id;
+            return (
+              <button
+                key={integration.id || integration.provider}
+                onClick={() => connect(integration.id || undefined)}
+                disabled={phase !== "idle"}
+                className="inline-flex h-9 items-center gap-2 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px disabled:cursor-wait disabled:opacity-60"
+              >
+                {busy
+                  ? (phase === "connecting" ? "Opening provider" : "Binding identity")
+                  : (<><Plus size={13} weight="bold" /> Connect {integration.label}{integration.provisional ? " · provisional" : ""}</>)}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setCustomOpen((value) => !value)}
+            className="inline-flex h-9 items-center gap-2 border border-[#c9cec7] bg-transparent px-4 text-[10.5px] font-semibold text-[#151922] transition hover:border-[#151922] active:translate-y-px"
+          >
+            {customOpen ? <X size={13} weight="bold" /> : <Plus size={13} weight="bold" />} Custom connector
+          </button>
+        </div>
       </div>
 
       {error && <div role="alert" className="mt-4 border-l-[3px] border-[#c2413a] bg-[#fcedeb] px-4 py-3 text-[11px] leading-5 text-[#8b3e38]">{error}</div>}
+
+      {customOpen && (
+        <div className="mt-5 border border-[#e2e3df] bg-[#fbfcf8] p-4 sm:p-5">
+          <CustomConnectorManager />
+        </div>
+      )}
 
       <div className="mt-5 border-t border-[#e2e3df]">
         {connections === null && <div className="py-6 text-[10.5px] text-[#8a93a0]">Loading connections…</div>}
@@ -105,6 +146,7 @@ export function ConnectionManager() {
                 <span className="text-[12px] font-semibold text-[#151922]">{connection.displayName || connection.accountId || connection.id}</span>
                 <StatusBadge tone={connection.status === "active" || !connection.status ? "ok" : "warn"}>{connection.status || "bound"}</StatusBadge>
                 {connection.vault && <StatusBadge tone="cobalt">{connection.vault} custody</StatusBadge>}
+                {integrations.find((item) => item.id === connection.integrationId)?.provisional && <StatusBadge tone="warn">provisional connector</StatusBadge>}
               </div>
               <div className="mt-1 truncate font-mono text-[9px] text-[#7b8491]">
                 {connection.provider} · {connection.id}{typeof connection.generation === "number" ? ` · generation ${connection.generation}` : ""}

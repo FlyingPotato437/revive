@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { enqueueRuntimeResume } from "@/lib/webhooks";
 import { autoReconcileRun } from "@/lib/auto-reconcile";
 import { allowedNangoIntegrations } from "@/lib/integrations/nango";
+import { loadConnectionBinding } from "@/lib/hosted";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const record = await transition(auth.workspace.id, id, {
       to, expectedVersion, actor: auth.keyPrefix,
       note: body.note ? String(body.note).slice(0, 300) : undefined,
-    });
+    }, auth.projectId);
     // identity_verified is the rotation moment: advance the lease generation so
     // every worker still holding the old lease is fenced out of new actions,
     // then queue the signed resume callback to the workspace's runtime endpoint.
@@ -44,14 +45,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     let reconciliation;
     if (record.state === "identity_verified") {
       rotatedGeneration = await advanceLease(auth.workspace.id, record.connectionId);
+      const binding = await loadConnectionBinding(record.connectionId, auth.workspace.id);
       // Settle unknown-outcome actions against the provider before the resume
       // callback fires, so the runtime never blind-retries a committed effect.
       reconciliation = await autoReconcileRun({
         workspaceId: auth.workspace.id,
         runId: record.runId,
         connectionId: record.connectionId,
-        integrationId: allowedNangoIntegrations()[0] || "microsoft-tenant-specific",
+        integrationId: binding?.integrationId || allowedNangoIntegrations()[0] || "microsoft-tenant-specific",
         actor: auth.keyPrefix,
+        projectId: auth.projectId,
       });
       resumeJobId = await enqueueRuntimeResume(record, rotatedGeneration);
     }

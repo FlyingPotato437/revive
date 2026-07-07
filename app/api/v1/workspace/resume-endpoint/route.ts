@@ -16,14 +16,14 @@ const MIN_SECRET_LENGTH = 16;
 const MAX_SECRET_LENGTH = 256;
 
 export async function GET(req: NextRequest) {
-  const auth = await authenticateApiKey(req);
+  const auth = await authenticateApiKey(req, "viewer");
   if (!auth.ok) return auth.response;
   const config = await getResumeEndpoint(auth.workspace.id);
   return NextResponse.json(config ? { configured: true, url: config.url } : { configured: false });
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await authenticateApiKey(req);
+  const auth = await authenticateApiKey(req, "admin");
   if (!auth.ok) return auth.response;
   let body: Record<string, unknown>;
   try {
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const auth = await authenticateApiKey(req);
+  const auth = await authenticateApiKey(req, "admin");
   if (!auth.ok) return auth.response;
   await clearResumeEndpoint(auth.workspace.id);
   await audit({

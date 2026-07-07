@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   let action;
   try {
     action = await registerAction(auth.workspace.id, {
-      runId, connectionId, actionKey, idempotencyKey, metadata,
+      projectId: auth.projectId, runId, connectionId, actionKey, idempotencyKey, metadata,
       checkpointId: body.checkpointId ? String(body.checkpointId).slice(0, 200) : undefined,
     });
   } catch (error) {
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
 // GET /v1/actions returns the workspace action ledger.
 export async function GET(req: NextRequest) {
-  const auth = await authenticateApiKey(req);
+  const auth = await authenticateApiKey(req, "viewer");
   if (!auth.ok) return auth.response;
-  return NextResponse.json({ actions: (await listActions(auth.workspace.id)).slice(0, 200) });
+  return NextResponse.json({ actions: (await listActions(auth.workspace.id, auth.projectId)).slice(0, 200) });
 }

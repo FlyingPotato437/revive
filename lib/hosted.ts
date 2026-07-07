@@ -106,16 +106,19 @@ export async function saveHostedApiKey(input: {
   hash: string;
   createdAt: number;
   expiresAt?: number;
+  projectId: string;
+  role: "viewer" | "operator" | "admin";
 }): Promise<void> {
   if (!hostedDatabaseEnabled()) return;
   await ensureHostedWorkspace(input.workspace);
   await withWorkspaceTransaction(input.workspace.id, async (sql) => {
     await sql`
-      insert into revive_api_keys (id, workspace_id, name, prefix, hash, created_at, expires_at)
-      values (${input.id}, ${input.workspace.id}, ${input.name}, ${input.prefix}, ${input.hash},
+      insert into revive_api_keys (id, workspace_id, project_id, role, name, prefix, hash, created_at, expires_at)
+      values (${input.id}, ${input.workspace.id}, ${input.projectId}, ${input.role}, ${input.name}, ${input.prefix}, ${input.hash},
               ${new Date(input.createdAt)}, ${input.expiresAt ? new Date(input.expiresAt) : null})
       on conflict (id) do update set
-        name = excluded.name, prefix = excluded.prefix, hash = excluded.hash, expires_at = excluded.expires_at
+        project_id = excluded.project_id, role = excluded.role, name = excluded.name,
+        prefix = excluded.prefix, hash = excluded.hash, expires_at = excluded.expires_at
     `;
   });
 }
@@ -127,7 +130,9 @@ export async function revokeHostedApiKey(workspaceId: string, keyId: string): Pr
   });
 }
 
-export async function authenticateHostedApiKey(rawKey: string): Promise<{ id: string; name: string; organization: string } | null> {
+export async function authenticateHostedApiKey(rawKey: string): Promise<{
+  id: string; name: string; organization: string; projectId: string; role: "viewer" | "operator" | "admin";
+} | null> {
   if (!hostedDatabaseEnabled()) return null;
   const encodedWorkspace = rawKey.slice("rv_live_".length).split(".", 1)[0];
   if (!encodedWorkspace || !rawKey.includes(".")) return null;
@@ -144,6 +149,8 @@ export async function authenticateHostedApiKey(rawKey: string): Promise<{ id: st
       workspace_id: string;
       workspace_name: string;
       organization_name: string;
+      project_id: string;
+      role: "viewer" | "operator" | "admin";
     }[]>`
       update revive_api_keys as keys
          set last_used_at = now()
@@ -154,10 +161,17 @@ export async function authenticateHostedApiKey(rawKey: string): Promise<{ id: st
          and (keys.expires_at is null or keys.expires_at > now())
          and workspaces.id = keys.workspace_id
          and organizations.id = workspaces.organization_id
-      returning keys.workspace_id, workspaces.name as workspace_name, organizations.name as organization_name
+      returning keys.workspace_id, workspaces.name as workspace_name, organizations.name as organization_name,
+        keys.project_id, keys.role
     `;
     if (!rows[0]) return null;
-    return { id: rows[0].workspace_id, name: rows[0].workspace_name, organization: rows[0].organization_name };
+    return {
+      id: rows[0].workspace_id,
+      name: rows[0].workspace_name,
+      organization: rows[0].organization_name,
+      projectId: rows[0].project_id,
+      role: rows[0].role,
+    };
   });
 }
 
@@ -215,6 +229,7 @@ export interface WorkspaceConnectionSummary {
   status?: string;
   generation?: number;
   updatedAt?: number;
+  integrationId?: string;
 }
 
 /** Console listing: connection identity + custody metadata, never token material. */
@@ -238,6 +253,7 @@ export async function listWorkspaceConnections(workspaceId: string): Promise<Wor
         status: row.status ?? undefined,
         generation: row.generation ?? undefined,
         updatedAt: row.updated_at?.getTime(),
+        integrationId: typeof row.metadata?.integrationId === "string" ? row.metadata.integrationId : undefined,
       }));
     });
   }
@@ -259,6 +275,9 @@ export async function listWorkspaceConnections(workspaceId: string): Promise<Wor
         ? String((item.metadata as Record<string, unknown>).displayName)
         : undefined,
       updatedAt: typeof item.updatedAt === "number" ? item.updatedAt : undefined,
+      integrationId: typeof (item.metadata as Record<string, unknown>)?.integrationId === "string"
+        ? String((item.metadata as Record<string, unknown>).integrationId)
+        : undefined,
     }));
 }
 
@@ -267,6 +286,8 @@ export async function saveExternalVaultConnection(input: {
   id: string;
   workspaceId?: string;
   provider: string;
+  /** OIDC-style issuer for the provider; defaults to the Microsoft issuer for back-compat. */
+  issuer?: string;
   accountId: string;
   scopes: string[];
   vault: "nango" | "auth0";
@@ -289,7 +310,7 @@ export async function saveExternalVaultConnection(input: {
     },
     metadata: {
       source: `${input.vault}_external_vault`,
-      issuer: `https://login.microsoftonline.com/${input.providerTenant}/v2.0`,
+      issuer: input.issuer || `https://login.microsoftonline.com/${input.providerTenant}/v2.0`,
       providerSubject: input.providerSubject,
       providerTenant: input.providerTenant,
       displayName: input.displayName,
@@ -307,6 +328,9 @@ export interface ConnectionIdentity {
 export interface ConnectionBinding extends ConnectionIdentity {
   accountId?: string;
   scopes: string[];
+  /** Nango integration the connection was created through (recovery reconnect must reuse it). */
+  integrationId?: string;
+  provider?: string;
 }
 
 /**
@@ -325,9 +349,9 @@ export async function loadConnectionBinding(connectionId: string, workspaceId?: 
   if (hostedDatabaseEnabled()) {
     if (!workspaceId) throw new Error("workspaceId is required to load a hosted connection");
     const rows = await withWorkspaceTransaction(workspaceId, async (sql) => sql<{
-      metadata: Record<string, unknown>; account_id: string | null; scopes: string[] | null;
+      metadata: Record<string, unknown>; account_id: string | null; scopes: string[] | null; provider: string | null;
     }[]>`
-      select metadata, account_id, scopes from revive_connections
+      select metadata, account_id, scopes, provider from revive_connections
       where id = ${connectionId} and workspace_id = ${workspaceId}
       limit 1
     `);
@@ -339,12 +363,14 @@ export async function loadConnectionBinding(connectionId: string, workspaceId?: 
       tenant: metadata.providerTenant as string | undefined,
       accountId: rows[0].account_id || undefined,
       scopes: rows[0].scopes || [],
+      integrationId: metadata.integrationId as string | undefined,
+      provider: rows[0].provider || undefined,
     };
   }
   const directory = process.env.REVIVE_STATE_DIR || path.join(process.cwd(), ".revive");
   try {
     const records = JSON.parse(fs.readFileSync(path.join(directory, "credential-connections.json"), "utf8")) as
-      { id: string; workspaceId?: string; accountId?: string; scopes?: string[]; metadata?: Record<string, unknown> }[];
+      { id: string; workspaceId?: string; provider?: string; accountId?: string; scopes?: string[]; metadata?: Record<string, unknown> }[];
     const record = records.find((item) => item.id === connectionId && (!workspaceId || item.workspaceId === workspaceId));
     if (!record) return null;
     return {
@@ -353,6 +379,8 @@ export async function loadConnectionBinding(connectionId: string, workspaceId?: 
       tenant: record.metadata?.providerTenant as string | undefined,
       accountId: record.accountId,
       scopes: record.scopes || [],
+      integrationId: record.metadata?.integrationId as string | undefined,
+      provider: record.provider,
     };
   } catch {
     return null;

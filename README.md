@@ -66,6 +66,47 @@ reconnect session reauthorizes the existing connection, Microsoft Graph `/me`
 verifies the provider subject, and the control plane advances the credential
 lease before a runtime can resume.
 
+### Workspace-defined Nango connectors
+
+Workspace operators can register a Nango integration that does not have a
+built-in Revive adapter from **Connections → Custom Nango connectors**, or with:
+
+```http
+POST /api/workspaces/custom-connectors
+Content-Type: application/json
+
+{
+  "integrationId": "linear",
+  "label": "Linear",
+  "identityProbe": {
+    "path": "/users/me",
+    "subjectField": "id",
+    "tenantField": "organization.id",
+    "accountField": "email"
+  }
+}
+```
+
+The integration must already exist in Nango. Revive executes the relative
+probe path through Nango's proxy and binds the returned subject and tenant when
+the connection is created. Recovery must return the same subject, tenant,
+connection ID, and integration ID. Custom definitions cannot shadow built-in
+adapters and are shown as **Provisional** because Revive cannot certify the
+provider's identity-field stability. Prototype-pollution path segments and
+absolute probe URLs are rejected.
+
+### Project-scoped API keys
+
+Every API key is bound to one workspace project and one role:
+
+- `viewer`: read actions, recovery cases, and runtime endpoint configuration.
+- `operator`: viewer access plus lifecycle ingest and control-plane mutations.
+- `admin`: operator access plus runtime resume-endpoint configuration and tests.
+
+Actions, recovery cases, transitions, and lifecycle ingest are all restricted
+to the key's project. Cross-project identifiers return `404`; insufficient
+roles return `403`. Workspace admins create and revoke keys in **API keys**.
+
 ## Run the sidecar tests
 
 ```bash

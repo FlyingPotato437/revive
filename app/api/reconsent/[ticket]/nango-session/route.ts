@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createNangoReconnectSession, allowedNangoIntegrations, MICROSOFT_GRAPH_USER_SCOPES } from "@/lib/integrations/nango";
+import { createNangoReconnectSession, allowedNangoIntegrations } from "@/lib/integrations/nango";
+import { connectSessionDefaults, nangoIntegrationAvailable } from "@/lib/integrations/providers";
+import { loadConnectionBinding } from "@/lib/hosted";
 import { resolveRecoveryTarget } from "@/lib/recovery-target";
 import { transition, TransitionError } from "@/lib/control-plane";
 import { audit } from "@/lib/audit";
@@ -29,14 +31,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
     if (record.state !== "awaiting_authorization") {
       return NextResponse.json({ error: `recovery case cannot authorize from ${record.state}` }, { status: 409 });
     }
-    const integrationId = allowedNangoIntegrations()[0];
+    // Reconnect through the SAME integration the connection was created with;
+    // the allowlist head is only a fallback for pre-registry connections.
+    const binding = await loadConnectionBinding(record.connectionId, record.workspaceId);
+    const integrationId = binding?.integrationId || allowedNangoIntegrations()[0];
     if (!integrationId) return NextResponse.json({ error: "no Nango integration is allowlisted" }, { status: 503 });
+    if (!(await nangoIntegrationAvailable(record.workspaceId, integrationId))) {
+      return NextResponse.json({ error: "the connection's Nango integration is no longer registered" }, { status: 409 });
+    }
     const result = await createNangoReconnectSession({
       connectionId: record.connectionId,
       integrationId,
-      integrationDefaults: integrationId === "microsoft-tenant-specific" && process.env.ENTRA_TENANT_ID
-        ? { [integrationId]: { connectionConfig: { tenant: process.env.ENTRA_TENANT_ID }, userScopes: MICROSOFT_GRAPH_USER_SCOPES } }
-        : undefined,
+      integrationDefaults: connectSessionDefaults([integrationId]),
     });
     await audit({
       workspaceId: record.workspaceId,
