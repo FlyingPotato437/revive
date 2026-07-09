@@ -35,12 +35,12 @@ export default function Home() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4967f2] opacity-60 motion-reduce:hidden" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#4967f2]" />
               </span>
-              <span className="font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[#151922]">Agent recovery control plane</span>
+              <span className="font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[#151922]">Agent action control plane</span>
             </div>
-            <h1 className="mt-6 text-[clamp(42px,5vw,64px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]"><span className="block">Access breaks.</span><span className="block">The run survives.</span></h1>
-            <p className="mt-6 max-w-[440px] text-[17px] leading-[1.6] text-[#5f6876]">Reconnect the right account and continue the same workflow without repeating completed work.</p>
+            <h1 className="mt-6 text-[clamp(42px,5vw,64px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]"><span className="block">Agents take actions.</span><span className="block">Revive makes them safe.</span></h1>
+            <p className="mt-6 max-w-[460px] text-[17px] leading-[1.6] text-[#5f6876]">Exactly-once execution, human approvals, and automatic recovery for every action your agents take. One line in front of any MCP server.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/app" className="inline-flex h-12 items-center rounded-[8px] bg-[#4967f2] px-5 text-[13px] font-semibold text-white transition hover:bg-[#3954d9] active:translate-y-px">See it recover</Link>
+              <Link href="/app" className="inline-flex h-12 items-center rounded-[8px] bg-[#4967f2] px-5 text-[13px] font-semibold text-white transition hover:bg-[#3954d9] active:translate-y-px">See it work</Link>
               <Link href="#product" className="inline-flex h-12 items-center rounded-[8px] border border-[#d9ddd6] bg-transparent px-5 text-[13px] font-semibold text-[#151922] transition hover:border-[#151922] hover:bg-white active:translate-y-px">How it works</Link>
             </div>
           </div>
@@ -49,13 +49,12 @@ export default function Home() {
       </div>
     </section>
 
-    <section aria-label="Recovery boundary" className="border-b border-[#e0e3dd] bg-[#eef0eb]">
-      <div className="mx-auto grid max-w-[1380px] divide-y divide-[#dcdfd8] sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:divide-y-0">
-        <BoundaryCell label="Credential system" title="Grant rejected" detail="Entra / Nango / Auth0" tone="fail" />
-        <BoundaryArrow />
-        <BoundaryCell label="Continuity layer" title="Run correlated" detail="lease / checkpoint / action" tone="active" />
-        <BoundaryArrow />
-        <BoundaryCell label="Durable runtime" title="Execution resumed" detail="LangGraph / Temporal" tone="ok" />
+    <section aria-label="What Revive guarantees" className="border-b border-[#e0e3dd] bg-[#eef0eb]">
+      <div className="mx-auto grid max-w-[1380px] divide-y divide-[#dcdfd8] sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+        <GuaranteeCell label="Exactly-once" title="Never runs twice" detail="duplicate calls return the stored result" tone="cobalt" />
+        <GuaranteeCell label="Approvals" title="Human in the loop" detail="high-risk actions pause for a yes" tone="warn" />
+        <GuaranteeCell label="Recovery" title="Resumes after failure" detail="reconnect the account, continue the run" tone="ok" />
+        <GuaranteeCell label="Audit" title="Every action logged" detail="verdict, approval, reconciliation" tone="ink" />
       </div>
     </section>
 
@@ -167,14 +166,10 @@ export default function Home() {
   </div>;
 }
 
-function BoundaryCell({ label, title, detail, tone }: { label: string; title: string; detail: string; tone: "fail" | "active" | "ok" }) {
-  const dot = tone === "fail" ? "#c2413a" : tone === "ok" ? "#148060" : "#4967f2";
-  const color = tone === "fail" ? "text-[#c2413a]" : tone === "ok" ? "text-[#148060]" : "text-[#2e49c8]";
-  return <div className="px-5 py-7 sm:px-7"><div className="flex items-center gap-2"><span className="h-[7px] w-[7px] rounded-full" style={{ background: dot }} /><span className={`font-mono text-[10px] tracking-[.08em] ${color}`}>{label.toUpperCase()}</span></div><div className="mt-2.5 text-[16px] font-semibold text-[#151922]">{title}</div><div className="mt-1 font-mono text-[10px] text-[#7b8491]">{detail}</div></div>;
-}
-
-function BoundaryArrow() {
-  return <div className="hidden items-center sm:flex" aria-hidden="true"><span className="h-px w-8 bg-[#c4cbd1]" /><span className="h-1.5 w-1.5 rotate-45 border-r border-t border-[#c4cbd1]" /></div>;
+function GuaranteeCell({ label, title, detail, tone }: { label: string; title: string; detail: string; tone: "cobalt" | "warn" | "ok" | "ink" }) {
+  const dot = tone === "cobalt" ? "#4967f2" : tone === "warn" ? "#9a5c15" : tone === "ok" ? "#148060" : "#151922";
+  const color = tone === "cobalt" ? "text-[#2e49c8]" : tone === "warn" ? "text-[#9a5c15]" : tone === "ok" ? "text-[#148060]" : "text-[#151922]";
+  return <div className="px-5 py-7 sm:px-7"><div className="flex items-center gap-2"><span className="h-[7px] w-[7px] rounded-full" style={{ background: dot }} /><span className={`font-mono text-[10px] tracking-[.08em] ${color}`}>{label.toUpperCase()}</span></div><div className="mt-2.5 text-[16px] font-semibold text-[#151922]">{title}</div><div className="mt-1 font-mono text-[10px] leading-4 text-[#7b8491]">{detail}</div></div>;
 }
 
 function SystemRow({ label, systems, detail, active = false }: { label: string; systems: string; detail: string; active?: boolean }) {

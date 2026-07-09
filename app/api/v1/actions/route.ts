@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiKey } from "@/lib/api-auth";
 import { actionApproval, assertLeaseGeneration, listActions, registerAction, setActionApproval, TransitionError } from "@/lib/control-plane";
-import { deriveActionClass } from "@/lib/policy";
+import { getApprovalPolicy, requiresApproval } from "@/lib/workspace-config";
 import { notifyApprovalRequested } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 
@@ -74,11 +74,22 @@ export async function POST(req: NextRequest) {
   // "prepared" means the side effect has never been attempted, so both a
   // fresh registration and a replay of a prepared action are safe to execute.
   const isFresh = action.state === "prepared";
-  // Approval gate (opt-in via approvalMode:"auto", used by the MCP gateway):
-  // a fresh registration of a high-risk action pauses on a human. The approval
-  // lives on the action itself; callers poll GET /v1/actions/:id until decided.
+  // Approval gate. The caller opts into the gate (approvalMode:"auto", how the
+  // MCP gateway registers every call); the WORKSPACE POLICY decides which
+  // actions within that gate actually need a human. A caller can also force one
+  // action with requireApproval:true. The approval lives on the action itself;
+  // callers poll GET /v1/actions/:id until it is decided.
   let approval = actionApproval(action);
-  if (!approval && isFresh && action.attempts === 1 && body.approvalMode === "auto" && deriveActionClass(actionKey) === "high_risk") {
+  const gateOptIn = body.approvalMode === "auto" || body.requireApproval === true;
+  // Gate on "prepared + no approval yet" rather than attempts===1: two racing
+  // registrations of the same key both see state=prepared with no approval, so
+  // both create+return the pending approval instead of one slipping through as
+  // safe_to_execute. A replay of an already-decided action keeps its approval
+  // (actionApproval !== null) and is not re-created.
+  const needsApproval = isFresh && !approval && gateOptIn && (
+    body.requireApproval === true || requiresApproval(await getApprovalPolicy(auth.workspace.id), actionKey)
+  );
+  if (needsApproval) {
     approval = {
       status: "pending",
       requestedBy: auth.keyPrefix,

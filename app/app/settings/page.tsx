@@ -1,5 +1,6 @@
 import { PageHeader, SectionHeading, StatusBadge } from "@/components/app/ConsolePrimitives";
 import { ResumeEndpointManager } from "@/components/app/ResumeEndpointManager";
+import { ApprovalPolicyEditor } from "@/components/app/ApprovalPolicyEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,15 @@ export default function WorkspaceSettingsPage() {
         <div className="p-5">
           <ResumeEndpointManager />
         </div>
+      </section>
+      <section className="instrument-panel mt-5 overflow-hidden">
+        <SectionHeading title="Approval policy" meta="you decide which actions pause" />
+        <div className="border-b border-[#e2e3df] px-5 py-3 text-[10.5px] leading-5 text-[#687180]">
+          High-risk agent actions can pause for a human before they run. Choose which actions require approval
+          for this workspace — pending ones land in <span className="font-mono text-[10px]">Approvals</span>. Changing
+          the policy needs the admin role.
+        </div>
+        <ApprovalPolicyEditor />
       </section>
       <div className="mt-5 border border-[#f0e2c0] bg-[#fdf7e7] p-4 text-[10.5px] leading-5 text-[#7a6224]">
         Callbacks are signed with the shared secret (webhook-id / webhook-timestamp / webhook-signature headers). Verify

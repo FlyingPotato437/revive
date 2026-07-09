@@ -1,7 +1,8 @@
 "use client";
 
-// Approvals inbox: pending high-risk agent actions wait here for a human.
-// Approve releases the action to run exactly once; deny blocks it for good.
+// Approvals inbox: agent actions that match the workspace approval policy wait
+// here for a human. Approve releases the action to run exactly once; deny
+// blocks it for good.
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -27,7 +28,7 @@ function ago(ts: number): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-export function ApprovalsPanel() {
+export function ApprovalsPanel({ limit, pendingOnly }: { limit?: number; pendingOnly?: boolean } = {}) {
   const [rows, setRows] = useState<ApprovalRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +38,10 @@ export function ApprovalsPanel() {
       const response = await fetch("/api/workspaces/approvals", { cache: "no-store" });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "failed to load approvals");
-      setRows(body.approvals);
+      let list: ApprovalRow[] = body.approvals;
+      if (pendingOnly) list = list.filter((row) => row.status === "pending");
+      if (limit) list = list.slice(0, limit);
+      setRows(list);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "failed to load approvals");
@@ -48,7 +52,7 @@ export function ApprovalsPanel() {
     void load();
     const timer = setInterval(() => void load(), 10_000);
     return () => clearInterval(timer);
-  }, [load]);
+  }, [load, limit, pendingOnly]);
 
   const decide = async (actionId: string, decision: "approve" | "deny") => {
     setBusy(actionId);
@@ -77,9 +81,9 @@ export function ApprovalsPanel() {
   if (!rows || rows.length === 0) {
     return (
       <p className="px-5 py-6 text-[11px] text-[#687180]">
-        No approvals yet. High-risk agent actions (payments, emails, deletes) registered with
-        <span className="font-mono text-[10px]"> approvalMode: &quot;auto&quot;</span> — including every call through the
-        MCP gateway — will pause here until someone approves them.
+        No approvals yet. Actions that match this workspace&apos;s approval policy pause here until someone
+        approves them &mdash; including every call through the MCP gateway. Set the policy in
+        <span className="font-mono text-[10px]"> Settings &rarr; Approval policy</span>.
       </p>
     );
   }
