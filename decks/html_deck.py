@@ -416,14 +416,31 @@ def founder(ini, name, title, school, blurb):
       <div class="mono" style="font-size:16px;color:var(--muted);margin-top:12px">{school}</div>
       <div style="font-size:19px;color:var(--muted);line-height:1.55;margin-top:22px">{blurb}</div></div>
     </div>"""
+def founder_photo(ini):
+    for ext in ("png","jpg","jpeg"):
+        p = os.path.join(PHOTO_DIR, ini.lower()+"."+ext)
+        if os.path.exists(p): return p
+    return None
+_ss = founder_photo("SS")
+_avatar = (f'<img src="file://{_ss}" style="width:280px;height:280px;border-radius:50%;object-fit:cover;border:5px solid var(--cobalt);box-shadow:0 30px 60px -20px rgba(18,21,29,.35)">'
+           if _ss else '<div style="width:280px;height:280px;border-radius:50%;background:var(--wash);border:5px solid var(--cobalt)"></div>')
 S.append(frame(f"""
 <div class="pad z">
   <div class="eyebrow">Team</div>
-  <h1 class="disp">Three technical founders. All ship code.</h1>
-  <div style="display:flex;gap:54px;margin-top:96px">
-    {founder("SS","Srikanth Samy","CO-FOUNDER & CEO","UC Berkeley","Built the entire system and proved it in production. Leads product and engineering.")}
-    {founder("RG","Revanth Guda","CO-FOUNDER & CTO","UCLA","Owns infrastructure and provider integrations, the connectors that make every platform recoverable.")}
-    {founder("AP","Aarush Parekh","CO-FOUNDER · ENG","UC Santa Cruz","Owns SDKs and developer experience, the one-line install that gets Revive into every agent stack.")}
+  <h1 class="disp">Built by the person who will sell it and scale it.</h1>
+  <div style="display:flex;gap:100px;margin-top:110px;align-items:flex-start">
+    <div style="flex:none;margin-top:70px">{_avatar}</div>
+    <div style="flex:1">
+      <div style="font-family:'Space Grotesk';font-weight:700;font-size:62px">Srikanth Samy</div>
+      <div class="mono" style="font-size:17px;letter-spacing:.32em;color:var(--cobalt-deep);font-weight:700;margin-top:20px">FOUNDER & CEO&nbsp;&nbsp;·&nbsp;&nbsp;UC BERKELEY</div>
+      <div style="font-size:24px;color:var(--muted);line-height:1.65;margin-top:34px;max-width:940px">
+        Passionate AI engineer with deep prior experience in AI research at Brown and Stanford, and
+        featured on NBC for earlier technical projects focused on the environment.</div>
+      <div style="margin-top:44px;display:flex;gap:20px;align-items:center">
+        <span class="mono" style="font-size:14px;letter-spacing:.3em;color:var(--faint);font-weight:700">NEXT HIRES</span>
+        <span style="font-size:20px;font-weight:600">founding engineer, then first sales hire once revenue starts.</span>
+      </div>
+    </div>
   </div>
 </div>""", 11))
 
@@ -482,7 +499,7 @@ S.append(frame(f"""
       <div style="font-size:22px;font-weight:600;margin-top:12px">integrations live, first enterprise</div></div>
     <div style="flex:1;border-top:4px solid var(--ink);padding-top:28px">
       <div style="font-family:'Space Grotesk';font-weight:700;font-size:62px;color:var(--cobalt-deep)">~$450k</div>
-      <div style="font-size:22px;font-weight:600;margin-top:12px">ARR, ready to raise the A</div></div>
+      <div style="font-size:22px;font-weight:600;margin-top:12px">ARR, ready to raise the Seed</div></div>
   </div>
 </div>
 <div class="kicker"><span class="k">The money buys</span>
@@ -491,17 +508,17 @@ S.append(frame(f"""
 
 # ---------- 14 CLOSE ----------
 S.append(frame(f"""
-<div style="position:absolute;right:-60px;bottom:-140px;font-family:'Space Grotesk';font-weight:700;font-size:640px;color:#181d29;line-height:1">R.</div>
+<div style="position:absolute;right:-50px;bottom:-260px;font-family:'Space Grotesk';font-weight:700;font-size:560px;color:#171c28;line-height:1;z-index:0">R.</div>
 <div class="pad z">
   <div class="eyebrow">Revive Labs</div>
-  <div style="font-family:'Space Grotesk';font-weight:700;font-size:98px;line-height:1.1;letter-spacing:-.03em;margin-top:130px">
+  <div style="font-family:'Space Grotesk';font-weight:700;font-size:92px;line-height:1.12;letter-spacing:-.03em;margin-top:120px">
     <span style="color:#fff">Agents are getting hands.</span><br>
     <span style="color:var(--lilac)">Someone has to own what<br>happens when the hands slip.</span>
   </div>
-  <div style="position:absolute;bottom:112px;left:120px;font-size:25px">
-    <b style="color:#fff">founders@revivelabs.app</b>
-    <span style="color:var(--slate)">&nbsp;&nbsp;·&nbsp;&nbsp;revivelabs.app&nbsp;&nbsp;·&nbsp;&nbsp;deck and data room on request</span>
-  </div>
+</div>
+<div style="position:absolute;bottom:104px;left:120px;font-size:25px;z-index:5">
+  <b style="color:#fff">srikanth@revivelabs.app</b>
+  <span style="color:var(--slate)">&nbsp;&nbsp;·&nbsp;&nbsp;revivelabs.app&nbsp;&nbsp;·&nbsp;&nbsp;deck and data room on request</span>
 </div>""", 14, dark=True, ghost=False, runner=False))
 
 # ---- write html, screenshot, assemble ----

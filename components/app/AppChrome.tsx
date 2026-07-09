@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ArrowSquareOut, Buildings, CaretDown, Check, Command, Flask,
-  FolderSimple, Gauge, Key, LinkSimple, ListBullets, MagnifyingGlass,
+  FolderSimple, Gauge, HandPalm, Key, LinkSimple, ListBullets, MagnifyingGlass,
   RocketLaunch, SlidersHorizontal, UserCircle, UsersThree, Wallet,
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -17,6 +17,7 @@ const OPERATIONS = [
   { href: "/app/quickstart", label: "Quickstart", icon: RocketLaunch },
   { href: "/app", label: "Playground", icon: Flask },
   { href: "/app/runs", label: "Recovery cases", icon: ListBullets },
+  { href: "/app/approvals", label: "Approvals", icon: HandPalm },
   { href: "/app/connections", label: "Connections", icon: LinkSimple },
   { href: "/app/providers", label: "Adapters", icon: ArrowSquareOut },
 ] as const;

@@ -467,64 +467,7 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --paper:#f4f5f1; --panel:#fbfcf8; --panel2:#eceee8;
-  --ink:#12151d; --ink2:#1a1f2b; --ink3:#232a3a;
-  --cobalt:#4967f2; --cobalt-deep:#2e49c8; --wash:#edf0ff;
-  --muted:#66707e; --faint:#98a0aa; --hair:#d5d9d0;
-  --red:#c2413a; --red-br:#e86a5f; --red-wash:#fcedeb;
-  --green:#148060; --green-br:#3fbf8f; --green-wash:#e9f4ef;
-  --lilac:#8ea0ff; --slate:#9aa6c8;
-}
-html,body{width:1920px;height:1080px;overflow:hidden}
-body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);
-  -webkit-font-smoothing:antialiased;position:relative}
-body.dot{background-image:radial-gradient(circle,#dfe3da 1.4px,transparent 1.4px);background-size:34px 34px;background-position:-7px -7px}
-body.dark{background:var(--ink);color:#fff}
-body.dark.dot{background-image:radial-gradient(circle,#232a3a 1.4px,transparent 1.4px)}
-.pad{position:absolute;inset:0;padding:110px 120px}
-.eyebrow{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:500;
-  letter-spacing:.42em;text-transform:uppercase;color:var(--cobalt-deep)}
-.dark .eyebrow{color:var(--lilac)}
-h1{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:-.03em;line-height:1.02}
-.disp{font-size:64px;margin-top:28px}
-.mono{font-family:'JetBrains Mono',monospace}
-.muted{color:var(--muted)} .faint{color:var(--faint)}
-.tick{position:absolute;width:26px;height:26px;border-color:#c2c7bd !important}
-.dark .tick{border-color:#2a3040 !important}
-.tick.tl{top:52px;left:56px;border-top:2.5px solid;border-left:2.5px solid}
-.tick.tr{top:52px;right:56px;border-top:2.5px solid;border-right:2.5px solid}
-.tick.bl{bottom:52px;left:56px;border-bottom:2.5px solid;border-left:2.5px solid}
-.tick.br{bottom:52px;right:56px;border-bottom:2.5px solid;border-right:2.5px solid}
-.pageno{position:absolute;bottom:56px;right:110px;font-family:'JetBrains Mono',monospace;
-  font-size:14px;letter-spacing:.3em;color:var(--faint)}
-.dark .pageno{color:#3a4256}
-.runner{position:absolute;bottom:56px;left:110px;font-family:'JetBrains Mono',monospace;
-  font-size:13px;letter-spacing:.34em;color:#b9beb2}
-.dark .runner{color:#2e3547}
-.ghost{position:absolute;top:64px;right:96px;font-family:'Space Grotesk',sans-serif;font-weight:700;
-  font-size:300px;line-height:1;color:#e7eae1;z-index:0;letter-spacing:-.04em}
-.dark .ghost{color:#191e2b}
-.z{position:relative;z-index:2}
-.card{background:var(--panel);border:1.5px solid var(--ink);box-shadow:14px 14px 0 #e0e3da}
-.dark .card{box-shadow:14px 14px 0 #0c0e14}
-.chip{display:inline-flex;align-items:center;gap:14px;font-family:'JetBrains Mono',monospace;
-  font-size:15px;letter-spacing:.18em}
-.kicker{position:absolute;left:120px;right:120px;bottom:118px;background:var(--ink);color:#fff;
-  padding:34px 44px;display:flex;align-items:center;gap:26px;box-shadow:14px 14px 0 #e0e3da}
-.kicker .k{font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:.34em;color:var(--lilac);white-space:nowrap}
-</style></head>
-<body class="dark dot"><div class="tick tl"></div><div class="tick tr"></div><div class="tick bl"></div><div class="tick br"></div><div class="pageno">14 / 14</div>
-<div style="position:absolute;right:-50px;bottom:-260px;font-family:'Space Grotesk';font-weight:700;font-size:560px;color:#171c28;line-height:1;z-index:0">R.</div>
-<div class="pad z">
-  <div class="eyebrow">Revive Labs</div>
-  <div style="font-family:'Space Grotesk';font-weight:700;font-size:92px;line-height:1.12;letter-spacing:-.03em;margin-top:120px">
-    <span style="color:#fff">Agents are getting hands.</span><br>
-    <span style="color:var(--lilac)">Someone has to own what<br>happens when the hands slip.</span>
-  </div>
-</div>
-<div style="position:absolute;bottom:104px;left:120px;font-size:25px;z-index:5">
-  <b style="color:#fff">srikanth@revivelabs.app</b>
-  <span style="color:var(--slate)">&nbsp;&nbsp;·&nbsp;&nbsp;revivelabs.app&nbsp;&nbsp;·&nbsp;&nbsp;deck and data room on request</span>
-</div></body></html>
+*{margin:0;padding:0} html,body{width:1900px;height:560px;background:transparent;overflow:hidden}
+.row{display:flex;align-items:center;gap:123px;height:100%;padding-left:8px}
+.word{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:-.04em;font-size:347px;line-height:1}
+</style></head><body><div class="row"><div class="word" style="color:#12151d">Revive<span style="color:#4967f2">.</span></div></div></body></html>

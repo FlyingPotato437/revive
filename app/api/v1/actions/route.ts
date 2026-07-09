@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiKey } from "@/lib/api-auth";
-import { assertLeaseGeneration, listActions, registerAction, TransitionError } from "@/lib/control-plane";
+import { actionApproval, assertLeaseGeneration, listActions, registerAction, setActionApproval, TransitionError } from "@/lib/control-plane";
+import { deriveActionClass } from "@/lib/policy";
+import { notifyApprovalRequested } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +74,23 @@ export async function POST(req: NextRequest) {
   // "prepared" means the side effect has never been attempted, so both a
   // fresh registration and a replay of a prepared action are safe to execute.
   const isFresh = action.state === "prepared";
+  // Approval gate (opt-in via approvalMode:"auto", used by the MCP gateway):
+  // a fresh registration of a high-risk action pauses on a human. The approval
+  // lives on the action itself; callers poll GET /v1/actions/:id until decided.
+  let approval = actionApproval(action);
+  if (!approval && isFresh && action.attempts === 1 && body.approvalMode === "auto" && deriveActionClass(actionKey) === "high_risk") {
+    approval = {
+      status: "pending",
+      requestedBy: auth.keyPrefix,
+      requestedAt: Date.now(),
+      summary: body.approvalSummary ? String(body.approvalSummary).slice(0, 300) : undefined,
+    };
+    action = await setActionApproval(auth.workspace.id, action.id, approval, auth.projectId);
+    void notifyApprovalRequested({
+      workspaceId: auth.workspace.id, actionId: action.id, actionKey, runId, summary: approval.summary,
+    });
+    await audit({ workspaceId: auth.workspace.id, actor: auth.keyPrefix, subjectKind: "action", subjectId: action.id, event: "approval_requested", detail: { runId, actionKey } });
+  }
   // Replay verdict is the direct answer to "should this exact external side
   // effect run again?": safe_to_execute (never attempted), already_committed
   // (result recorded; return it, do not re-run), reconcile_first (attempt
@@ -89,6 +108,7 @@ export async function POST(req: NextRequest) {
     replayVerdict,
     resultRef: action.resultRef,
     attempts: action.attempts,
+    ...(approval ? { approval: { status: approval.status, requestedAt: approval.requestedAt, decidedBy: approval.decidedBy, reason: approval.reason } } : {}),
   });
 }
 

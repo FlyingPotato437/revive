@@ -1,0 +1,42 @@
+category,company,website,who_to_reach,why_they_need_revive,outreach_channel
+AI SDR / outbound,11x,11x.ai,Hasan Sukkar (CEO),Agents send outbound email autonomously; a duplicate send burns their customer's domain reputation,LinkedIn / site contact
+AI SDR / outbound,Artisan,artisan.co,Jaspar Carmichael-Jack (CEO),Ava runs full outbound autonomously; mid-run failure = half-sent sequences,LinkedIn / site contact
+AI SDR / outbound,AiSDR,aisdr.com,founders via site,Autonomous email outreach at scale; retry-after-token-death is their nightmare,site contact form
+AI SDR / outbound,Salesforge (Agent Frank),salesforge.ai,Frank Sondors (CEO),Positions on deliverability control; duplicate sends destroy that promise,LinkedIn
+AI SDR / outbound,AnyBiz,anybiz.io,team via site,Multi-channel outreach agents (email/LinkedIn/phone); partial-failure states everywhere,site contact
+AI SDR / outbound,Landbase,landbase.com,Daniel Saks (CEO),Multiple agents orchestrating sales dev autonomously,LinkedIn
+AI SDR / outbound,Regie.ai,regie.ai,Matt Millen / Srinath Sridhar,Prospecting agents + multichannel orchestration,LinkedIn
+AI SDR / outbound,Coldreach,coldreach.ai,YC founders via site,Intent-based outreach agents,site contact / YC directory
+AI exec assistant,Lindy,lindy.ai,Flo Crivello (CEO),No-code agents touching email/calendar/CRM; every Lindy user hits dead OAuth grants,X / LinkedIn
+AI exec assistant,Howie,howie.ai,team via site,Scheduling agent acting in email threads; wrong/duplicate calendar actions are visible to customers,site contact
+AI exec assistant,Fyxer,fyxer.com,Richard Hollingsworth (CEO),Drafts and sends email on user's mailbox; identity binding matters,LinkedIn
+AI exec assistant,Sliq,getsliq.com,team via site,Full workflow coordination (email/calendar/CRM),site contact
+AI exec assistant,Simular (Sai),simular.ai,Ang Li (CEO),Executive workflows across email/calendar/docs,LinkedIn
+AI exec assistant,Otto,ottotheagent.com,team via site,Agentic assistant acting across tools,site contact
+AI exec assistant,Motion,usemotion.com,Harry Qi (CEO),Auto-scheduling actions on calendars,LinkedIn
+AI support agents,Decagon,decagon.ai,Jesse Zhang (CEO),Agents process refunds/account changes; exactly-once is existential at enterprise scale,LinkedIn
+AI support agents,Sierra,sierra.ai,Bret Taylor / Clay Bavor,Autonomous service agents taking real actions,LinkedIn (hard to land; brand halo target)
+AI support agents,Ada,ada.cx,Mike Murchison (CEO),Autonomous resolution incl. refunds and multi-step workflows,LinkedIn
+AI support agents,Fini,usefini.com,Deepak Singla (CEO),Sells automated refunds; double-refund = direct money loss,LinkedIn / YC network
+AI support agents,Lorikeet,lorikeetcx.ai,Steve Hind (CEO),Resolution-rate positioning; failed mid-action tickets hurt the metric,LinkedIn
+AI support agents,Twig,twig.so,team via site,High autonomous resolution rates in production,site contact
+AI support agents,eesel,eesel.ai,team via site,Support automation for startups,site contact
+YC agent infra,Jinba,via YC directory,YC W26 founders,Enterprise workflows through chat; every workflow mutates a system of record,YC directory / bookface if you know anyone
+YC agent infra,Cofia,via YC directory,YC W26 founders,Self-writing automations touching business systems,YC directory
+YC agent infra,Ressl AI,via YC directory,YC W26 founders,Agents configuring Salesforce; partial writes corrupt CRM state,YC directory
+YC agent infra,o11,via YC directory,YC W26 founders,Agent inside every enterprise app,YC directory
+YC agent infra,Pollinate,via YC directory,YC W26 founders,Supply-chain agents; real orders and real money,YC directory
+YC agent infra,Maven,via YC directory,YC W26 founders,Payments for voice agents; exactly-once charging is their whole product surface,YC directory
+CRM / revenue,Attio,attio.com,Nicolas Sharp (CEO),AI automations writing to customer CRM data,LinkedIn
+CRM / revenue,Day.ai,day.ai,Christopher O'Donnell (CEO),AI-native CRM built on email/calendar sync,LinkedIn / X
+Agent frameworks users,LangChain/LangGraph community,langchain.com forum + Discord,community devs,The distribution channel: teams hand-rolling recovery today,Discord + GitHub discussions (not email)
+Agent frameworks users,CrewAI community,crewai.com Discord,community devs,Multi-agent workflows hitting token death mid-crew,Discord
+Agent frameworks users,OpenAI Agents SDK devs,OpenAI dev forum,community devs,Same failure class; your adapter already exists,forum posts
+Vault partners,Nango,nango.dev,Robin Guldener (CEO),Their webhook says connection died; Revive is the next step. Partner not just customer,LinkedIn / already integrated - warm angle
+Vault partners,Composio,composio.dev,Soham Ganatra (CEO),Tool-auth for agents; adjacent - partner or watch,LinkedIn
+Vault partners,Arcade,arcade.dev,Alex Salazar (CEO),Agent auth platform; same seam from the other side,LinkedIn
+AI ops / finance,Basis,getbasis.ai,Matt Harpe (CEO),Accounting agents writing to ledgers; duplicate journal entries are audit failures,LinkedIn
+AI ops / finance,Ramp (agents team),ramp.com,agents PM via LinkedIn,Finance automation agents moving real money,LinkedIn
+AI ops / finance,Payman,paymanai.com,Tyllen Bicakcic,AI-to-human payments; exactly-once is the product,LinkedIn / X
+AI recruiting,Mercor,mercor.com,Brendan Foody (CEO),Agents emailing candidates at scale,LinkedIn
+AI recruiting,Juicebox,juicebox.ai,David Paffenholz (CEO),Outbound recruiting agents,LinkedIn

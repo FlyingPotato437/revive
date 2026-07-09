@@ -1,0 +1,13 @@
+{
+  "name": "revive-mcp-gateway",
+  "version": "0.1.0",
+  "description": "Wrap any MCP server with Revive: exactly-once tool calls, replay verdicts, human approvals, and a full action ledger. Zero dependencies.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": { "revive-mcp-gateway": "bin/gateway.mjs" },
+  "files": ["bin", "README.md"],
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node test/test.mjs" },
+  "keywords": ["mcp", "model-context-protocol", "agents", "idempotency", "exactly-once", "approvals", "revive"],
+  "homepage": "https://revivelabs.app"
+}

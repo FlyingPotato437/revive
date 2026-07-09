@@ -92,6 +92,47 @@ export async function notifyCaseOpened(record: ControlCase): Promise<void> {
   }
 }
 
+/** Approval card: a high-risk agent action is paused on a human decision.
+ *  Slack + fallback email with a link to the approvals inbox. Fire-and-forget
+ *  like every other notifier here. */
+export async function notifyApprovalRequested(input: {
+  workspaceId: string;
+  actionId: string;
+  actionKey: string;
+  runId: string;
+  summary?: string;
+}): Promise<void> {
+  const inboxUrl = publicUrl("/app/approvals");
+  const slackText = [
+    `:raised_hand: *Approval needed* — agent action \`${input.actionKey}\``,
+    `run \`${input.runId}\` · action \`${input.actionId}\``,
+    input.summary ? `summary: ${input.summary.slice(0, 200)}` : "",
+    inboxUrl ? `<${inboxUrl}|Review and approve in the console>` : "review in the Revive console → Approvals",
+  ].filter(Boolean).join("\n");
+  const to = process.env.REVIVE_NOTIFY_EMAIL;
+  const emailText = [
+    `An agent asked to run a high-risk action and is paused until someone approves it.`,
+    ``,
+    `Action: ${input.actionKey}`,
+    `Run: ${input.runId}`,
+    input.summary ? `Summary: ${input.summary.slice(0, 300)}` : ``,
+    ``,
+    inboxUrl ? `Approve or deny: ${inboxUrl}` : `Open the Revive console → Approvals.`,
+    ``,
+    `Approved actions run exactly once. Nothing runs until a decision is made.`,
+  ].filter(Boolean).join("\n");
+  const [slack, email] = await Promise.all([
+    postSlack(slackText),
+    to ? sendEmail({ to, subject: `Approval needed: ${input.actionKey}`, text: emailText }) : Promise.resolve(false),
+  ]);
+  if (slack || email) {
+    await audit({
+      workspaceId: input.workspaceId, actor: "notifier", subjectKind: "action", subjectId: input.actionId,
+      event: "approval_notified", detail: { slack, email },
+    }).catch(() => undefined);
+  }
+}
+
 /** Invite email + Slack ping when a teammate is added to a workspace. */
 export async function sendWorkspaceInvite(input: {
   email: string;

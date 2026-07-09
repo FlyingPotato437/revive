@@ -369,6 +369,51 @@ export async function startAction(workspaceId: string, actionId: string, project
   });
 }
 
+/** Human approval attached to a protected action (stored in metadata.approval
+ *  so it inherits the action's tenancy, RLS, and local-mode persistence). */
+export interface ApprovalRecord {
+  status: "pending" | "approved" | "denied";
+  requestedBy: string;
+  requestedAt: number;
+  summary?: string;
+  decidedBy?: string;
+  decidedAt?: number;
+  reason?: string;
+}
+
+export function actionApproval(action: ControlAction): ApprovalRecord | null {
+  const raw = action.metadata?.approval;
+  if (!raw || typeof raw !== "object") return null;
+  const approval = raw as ApprovalRecord;
+  return approval.status === "pending" || approval.status === "approved" || approval.status === "denied" ? approval : null;
+}
+
+/** Writes (or overwrites) the approval record on an action. */
+export async function setActionApproval(
+  workspaceId: string,
+  actionId: string,
+  approval: ApprovalRecord,
+  projectId?: string,
+): Promise<ControlAction> {
+  if (!hostedDatabaseEnabled()) {
+    return mutateActionLocal(workspaceId, actionId, (action) => {
+      action.metadata = { ...action.metadata, approval: { ...approval } };
+    }, projectId);
+  }
+  return withWorkspaceTransaction(workspaceId, async (sql) => {
+    const rows = await sql<DbAction[]>`
+      update revive_actions
+      set metadata = coalesce(metadata, '{}'::jsonb) || ${sql.json({ approval: JSON.parse(JSON.stringify(approval)) })},
+          version = version + 1, updated_at = now()
+      where id = ${actionId} and workspace_id = ${workspaceId}
+        and (${projectId || null}::text is null or project_id = ${projectId || null})
+      returning *
+    `;
+    if (!rows[0]) throw new TransitionError("action not found", 404);
+    return mapAction(rows[0]);
+  });
+}
+
 export async function completeAction(workspaceId: string, actionId: string, resultRef?: string, projectId?: string): Promise<ControlAction> {
   if (!hostedDatabaseEnabled()) {
     return mutateActionLocal(workspaceId, actionId, (action) => {

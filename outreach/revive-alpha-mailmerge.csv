@@ -1,0 +1,761 @@
+#,First Name,Last Name,Company,Category,Email,Email Confidence,Status,Angle,Subject,Body
+1,Flo,Crivello,Lindy,AI assistant,flo@lindy.ai,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Flo,
+
+Quick question about Lindy. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+2,Richard,Hollingsworth,Fyxer,AI email assistant,richard@fyxer.com,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Richard,
+
+Quick question about Fyxer. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+3,Jesse,Zhang,Decagon,AI support agent,jesse@decagon.ai,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Jesse,
+
+Quick question about Decagon. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+4,Deepak,Singla,Fini,AI support agent,deepak@usefini.com,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Deepak,
+
+Quick question about Fini. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+5,Tyllen,Bicakcic,Payman,AI agent payments,tyllen@paymanai.com,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Tyllen,
+
+Quick question about Payman. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+6,Soham,Ganatra,Composio,Integration platform,soham@composio.dev,Verified,Drafted in Outlook,B-Partner,"The step after ""connection needs reauth""","Hi Soham,
+
+Composio handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+7,Alex,Salazar,Arcade,Agent auth,alex@arcade.dev,Verified,Drafted in Outlook,B-Partner,"The step after ""connection needs reauth""","Hi Alex,
+
+Arcade handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+8,Brendan,Foody,Mercor,AI recruiting,brendan@mercor.com,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Brendan,
+
+Quick question about Mercor. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+9,Steve,Hind,Lorikeet,AI support agent,steve@lorikeetcx.ai,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Steve,
+
+Quick question about Lorikeet. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+10,Ang,Li,Simular,AI computer-use agent,ang@simular.ai,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Ang,
+
+Quick question about Simular. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+11,Harry,Qi,Motion,AI productivity,harry@usemotion.com,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Harry,
+
+Quick question about Motion. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+12,Srinath,Sridhar,Regie.ai,AI SDR,srinath@regie.ai,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Srinath,
+
+Quick question about Regie.ai. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+13,Daniel,Saks,Landbase,AI GTM agent,danielsaks@landbase.com,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Daniel,
+
+Quick question about Landbase. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+14,Hasan,Sukkar,11x,AI SDR,hasan@11x.ai,Verified,Drafted in Outlook,A-Customer,When a token expires mid-run,"Hi Hasan,
+
+Quick question about 11x. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+15,Bastien,Beurier,Nango,Integration platform,bastien@nango.dev,Verified,Drafted in Outlook,B-Partner,"The step after ""connection needs reauth""","Hi Bastien,
+
+Nango handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+16,Frank,Sondors,Salesforge,AI SDR,f@primeforge.ai,Verified,Ready to send,A-Customer,When a token expires mid-run,"Hi Frank,
+
+Quick question about Salesforge. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+17,Brandon,Boehme,Maven,AI coaching,founders@trymaven.com,Verified,Ready to send,A-Customer,When a token expires mid-run,"Hi Brandon,
+
+Quick question about Maven. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+18,Sam,(Co-Founder),Artisan,AI SDR,sam@artisan.co,Verified,Ready to send,A-Customer,When a token expires mid-run,"Hi Sam,
+
+Quick question about Artisan. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+19,Yuriy,Zaremba,AiSDR,AI SDR,yuriy@aisdr.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Yuriy,
+
+Quick question about AiSDR. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+20,Ishan,Mukherjee,Rox,AI sales agent,ishan@rox.com,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Ishan,
+
+Quick question about Rox. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+21,Joao,Batalha,Amplemarket,AI sales platform,joao@amplemarket.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Joao,
+
+Quick question about Amplemarket. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+22,Kareem,Amin,Clay,GTM data / agents,kareem@clay.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Kareem,
+
+Quick question about Clay. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+23,Austin,Hughes,Unify,AI GTM agent,austin@unifygtm.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Austin,
+
+Quick question about Unify. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+24,Guillaume,Moubeche,lemlist,Outbound automation,guillaume@lemlist.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Guillaume,
+
+Quick question about lemlist. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+25,Raul,Kaevand,Instantly,Outbound automation,raul@instantly.ai,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Raul,
+
+Quick question about Instantly. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+26,Vaibhav,Namburi,Smartlead,Outbound automation,vaibhav@smartlead.ai,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Vaibhav,
+
+Quick question about Smartlead. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+27,Rush,Ganmukhi,Persana AI,AI sales agent,rush@persana.ai,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Rush,
+
+Quick question about Persana AI. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+28,Bret,Taylor,Sierra,AI support agent,bret@sierra.ai,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Bret,
+
+Quick question about Sierra. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+29,Jonathan,Corbin,Maven AGI,AI support agent,jonathan@mavenagi.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Jonathan,
+
+Quick question about Maven AGI. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+30,Nikola,Mrksic,PolyAI,Voice AI support,nikola@poly.ai,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Nikola,
+
+Quick question about PolyAI. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+31,Malte,Kosub,Parloa,Voice AI support,malte@parloa.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Malte,
+
+Quick question about Parloa. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+32,Mike,Murchison,Ada,AI support agent,mike@ada.cx,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Mike,
+
+Quick question about Ada. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+33,Dmitri,Masin,Gradient Labs,AI support agent,dmitri@gradient-labs.ai,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Dmitri,
+
+Quick question about Gradient Labs. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+34,Ping,Wu,Cresta,AI support agent,ping@cresta.com,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Ping,
+
+Quick question about Cresta. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+35,Dan,Shipper,Cora (Every),AI email agent,dan@every.to,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Dan,
+
+Quick question about Cora (Every). When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+36,Peer,Richelsen,Cal.com,Scheduling infra,peer@cal.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Peer,
+
+Quick question about Cal.com. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+37,Paul,Klein,Browserbase,Browser infra,paul@browserbase.com,Verified,Ready to send,A-Customer,When a token expires mid-run,"Hi Paul,
+
+Quick question about Browserbase. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+38,Eric,Ciarla,Firecrawl,Web data / agents,eric@firecrawl.dev,Verified,Ready to send,A-Customer,When a token expires mid-run,"Hi Eric,
+
+Quick question about Firecrawl. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+39,Suchintan,Singh,Skyvern,Browser RPA agent,suchintan@skyvern.com,Verified,Ready to send,A-Customer,When a token expires mid-run,"Hi Suchintan,
+
+Quick question about Skyvern. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+40,Asim,Shrestha,Reworkd,Browser agent,asim@reworkd.ai,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Asim,
+
+Quick question about Reworkd. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+41,Artem,Harutyunyan,Bardeen,RPA automation,artem@bardeen.ai,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Artem,
+
+Quick question about Bardeen. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+42,Div,Garg,MultiOn,Browser agent,div@multion.ai,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Div,
+
+Quick question about MultiOn. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+43,Magnus,Muller,Browser Use,Browser agent framework,magnus@browser-use.com,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Magnus,
+
+Quick question about Browser Use. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+44,Sudheer,Bandaru,TinyFish,Enterprise web agents,sudheer@tinyfish.ai,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Sudheer,
+
+Quick question about TinyFish. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+45,Jordan,Dearsley,Vapi,Voice AI infra,jordan.dearsley@vapi.ai,Verified,Ready to send,A-Customer,When a token expires mid-run,"Hi Jordan,
+
+Quick question about Vapi. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+46,Isaiah,Granet,Bland,Voice AI infra,,Not in Apollo,No email found,A-Customer,When a token expires mid-run,"Hi Isaiah,
+
+Quick question about Bland. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+47,Scott,Wu,Cognition,AI coding agent,scott@cognition.ai,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Scott,
+
+Quick question about Cognition. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+48,Matan,Grinberg,Factory,AI coding agent,matan@factory.ai,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Matan,
+
+Quick question about Factory. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+49,Jason,Warner,Poolside,AI coding agent,jason@poolside.ai,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Jason,
+
+Quick question about Poolside. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+50,Eric,Steinberger,Magic,AI coding agent,eric@magic.dev,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Eric,
+
+Quick question about Magic. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+51,Ty,Dunn,Continue.dev,AI coding agent,ty@continue.dev,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Ty,
+
+Quick question about Continue.dev. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+52,Winston,Weinberg,Harvey,Legal AI,winston@harvey.ai,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Winston,
+
+Quick question about Harvey. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+53,Shiv,Rao,Abridge,Healthcare AI,shiv@abridge.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Shiv,
+
+Quick question about Abridge. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+54,Munjal,Shah,Hippocratic AI,Healthcare AI,munjal@hippocraticai.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Munjal,
+
+Quick question about Hippocratic AI. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+55,Mike,Ng,Ambience,Healthcare AI,mike@ambiencehealthcare.com,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Mike,
+
+Quick question about Ambience. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+56,Rami,Karabibar,EvenUp,Legal AI,rami@evenuplaw.com,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Rami,
+
+Quick question about EvenUp. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+57,Nicolas,Sharp,Attio,AI CRM,nicolas@attio.com,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Nicolas,
+
+Quick question about Attio. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+58,David,Paffenholz,Juicebox,AI recruiting,david@juicebox.ai,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi David,
+
+Quick question about Juicebox. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+59,Christopher,O'Donnell,Day.ai,AI CRM,christopher@day.ai,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Christopher,
+
+Quick question about Day.ai. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+60,Stanislas,Polu,Dust,AI agents platform,stan@dust.tt,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Stanislas,
+
+Quick question about Dust. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+61,Grant,Lee,Gamma,AI presentations,grant@gamma.app,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Grant,
+
+Quick question about Gamma. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+62,Arvind,Jain,Glean,Enterprise search agents,arvind@glean.com,Likely,Verify before send,A-Customer,When a token expires mid-run,"Hi Arvind,
+
+Quick question about Glean. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+63,Daniel,Vassilev,Relevance AI,AI agents platform,daniel@relevanceai.com,Guess,Verify before send,A-Customer,When a token expires mid-run,"Hi Daniel,
+
+Quick question about Relevance AI. When one of your agents is partway through a run and the user's Google or Microsoft token expires, what happens today? In most setups the run fails quietly, and reconnecting doesn't repair the run that was already in flight. You end up restarting from scratch, and if something like a send or a write had already partly happened, there's a real risk of it running twice.
+
+I've been building Revive to solve exactly that. It detects the token failure, saves the exact step the run was on, sends the user a one-time reauthorization link, and resumes the same run once access is restored. It also reconciles side effects so nothing fires twice.
+
+I'm looking for a handful of alpha users to test it properly. I'm not selling anything. I'll handle the setup myself, and all I'm hoping for is honest feedback. Would you have 20 minutes this week?
+
+Thanks,
+Srikanth"
+64,Gil,Feig,Merge,Unified API,gilfeig@merge.dev,Verified,Ready to send,B-Partner,"The step after ""connection needs reauth""","Hi Gil,
+
+Merge handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+65,Brandon,Foo,Paragon,Embedded integrations,brandon@useparagon.com,Verified,Ready to send,B-Partner,"The step after ""connection needs reauth""","Hi Brandon,
+
+Paragon handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+66,Roy,Pereira,Unified.to,Unified API,roy@unified.to,Guess,Verify before send,B-Partner,"The step after ""connection needs reauth""","Hi Roy,
+
+Unified.to handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+67,Michael,Grinich,WorkOS,Auth / SSO,michael@workos.com,Likely,Verify before send,B-Partner,"The step after ""connection needs reauth""","Hi Michael,
+
+WorkOS handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+68,Reed,McGinley-Stempel,Stytch,Auth,reed@stytch.com,Likely,Verify before send,B-Partner,"The step after ""connection needs reauth""","Hi Reed,
+
+Stytch handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+69,Maxim,Fateev,Temporal,Durable execution,maxim@temporal.io,Likely,Verify before send,B-Partner,"The step after ""connection needs reauth""","Hi Maxim,
+
+Temporal handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+70,Eric,Allam,Trigger.dev,Durable execution,eric@trigger.dev,Verified,Ready to send,B-Partner,"The step after ""connection needs reauth""","Hi Eric,
+
+Trigger.dev handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+71,Tony,Holdstock-Brown,Inngest,Durable execution,tony@inngest.com,Likely,Verify before send,B-Partner,"The step after ""connection needs reauth""","Hi Tony,
+
+Inngest handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+72,Harrison,Chase,LangChain,Agent framework,harrison@langchain.dev,Likely,Verify before send,B-Partner,"The step after ""connection needs reauth""","Hi Harrison,
+
+LangChain handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+73,Joao,Moura,CrewAI,Agent framework,joao@crewai.com,Likely,Verify before send,B-Partner,"The step after ""connection needs reauth""","Hi Joao,
+
+CrewAI handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+74,Jerry,Liu,LlamaIndex,Agent framework,jerry@llamaindex.ai,Likely,Verify before send,B-Partner,"The step after ""connection needs reauth""","Hi Jerry,
+
+LlamaIndex handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+75,Sam,Bhagwat,Mastra,Agent framework,sam@mastra.ai,Guess,Verify before send,B-Partner,"The step after ""connection needs reauth""","Hi Sam,
+
+Mastra handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
+76,Stephan,Ewen,Restate,Durable execution,stephan@restate.dev,Guess,Verify before send,B-Partner,"The step after ""connection needs reauth""","Hi Stephan,
+
+Restate handles connector auth and token lifecycle really well. The hard part for most teams is when a token dies mid-run: the practical answer is usually to flag the connection, pause, and ask the user to reconnect.
+
+Revive picks up from there. It takes that dead-connection signal, finds the run that depended on it, and splices the new token back in so the run resumes instead of starting over, across whatever framework the customer is on.
+
+I think of it as a complement rather than a competitor. Your users stay with you and get run-level resume on top. Would you be open to a short call to see whether there is a partnership worth exploring?
+
+Thanks,
+Srikanth"
