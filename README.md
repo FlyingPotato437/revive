@@ -7,6 +7,27 @@ parks that run durably, sends a short-lived reauthorization request, rotates an
 opaque credential lease, and resumes the failed action with a stable
 idempotency key.
 
+## Action contracts and approval guardrails
+
+Revive can also record a small, typed description of an action before it is
+executed. An action contract carries policy facts only, not raw tool arguments:
+
+- outbound message and recipient count;
+- money movement;
+- destructive change; and
+- production change.
+
+The MCP gateway derives these facts automatically for common tool calls. The
+TypeScript SDK exposes `riskContext` (and `inferActionRisk` for adapters). A
+workspace can route every outbound send, or only sends above a recipient
+threshold, into approvals. The action-contract field stores facts such as
+`recipientCount: 42`; the MCP gateway does not send recipient addresses,
+message bodies, or provider tokens in that field.
+
+Configure and test the policy in **Workspace settings → Approval policy**, or
+read [the funded peer-founder map](docs/peer-founder-map.md) for the category
+boundary Revive is building toward.
+
 This repository contains a product console and a Python sidecar. The default
 console remains an offline Microsoft-shaped sandbox. When Entra and storage
 variables are configured, recovery uses a real Authorization Code + PKCE

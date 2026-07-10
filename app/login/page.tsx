@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth/AuthForm";
 
 function safeNext(value?: string): string {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : "/app";
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/app/overview";
 }
 
 export default async function LoginPage({

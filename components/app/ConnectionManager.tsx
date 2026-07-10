@@ -105,10 +105,7 @@ export function ConnectionManager() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-[52ch] text-[10.5px] leading-5 text-[#687180]">
-          Connect the account your agents act as. Tokens stay in the credential vault (Nango); Revive stores the
-          identity binding (subject + tenant) it verifies on every recovery.
-        </p>
+        <p className="text-[10.5px] leading-5 text-[#687180]">Connect an account used by an agent.</p>
         <div className="flex flex-wrap gap-2">
           {(integrations.length ? integrations : [{ id: "", provider: "microsoft", label: "Microsoft" }]).map((integration) => {
             const busy = phase !== "idle" && (activeIntegration ?? "") === integration.id;
@@ -146,7 +143,7 @@ export function ConnectionManager() {
         {connections === null && <div className="py-6 text-[10.5px] text-[#8a93a0]">Loading connections…</div>}
         {connections?.length === 0 && (
           <div className="flex items-center gap-3 py-6 text-[10.5px] text-[#8a93a0]">
-            <LinkSimple size={15} /> No connections yet. Recovery needs at least one bound account.
+            <LinkSimple size={15} /> No connections yet. Add one when your agent needs credential recovery.
           </div>
         )}
         {connections?.map((connection) => (
@@ -158,10 +155,11 @@ export function ConnectionManager() {
                 {connection.vault && <StatusBadge tone="cobalt">{connection.vault} custody</StatusBadge>}
                 {integrations.find((item) => item.id === connection.integrationId)?.provisional && <StatusBadge tone="warn">provisional connector</StatusBadge>}
               </div>
-              <div className="mt-1 truncate font-mono text-[9px] text-[#7b8491]">
-                {connection.provider} · {connection.id}{typeof connection.generation === "number" ? ` · generation ${connection.generation}` : ""}
-              </div>
-              <div className="mt-1 font-mono text-[8.5px] text-[#9aa1aa]">{connection.scopes.join(" ")}</div>
+              <div className="mt-1 truncate font-mono text-[9px] text-[#7b8491]">{connection.provider}</div>
+              <details className="mt-2">
+                <summary className="cursor-pointer font-mono text-[8.5px] text-[#7b8491]">Connection details</summary>
+                <div className="mt-1.5 break-all font-mono text-[8.5px] leading-4 text-[#9aa1aa]">{connection.id}{typeof connection.generation === "number" ? ` · generation ${connection.generation}` : ""}{connection.scopes.length ? ` · ${connection.scopes.join(" ")}` : ""}</div>
+              </details>
             </div>
             {connection.updatedAt && (
               <div className="flex items-center gap-1.5 font-mono text-[9px] text-[#8a93a0]">

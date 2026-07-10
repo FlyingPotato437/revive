@@ -9,17 +9,17 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { WelcomeTour } from "@/components/app/WelcomeTour";
 
 type WorkspaceOption = { id: string; name: string; organization: string };
 
 const OPERATIONS = [
-  { href: "/app/overview", label: "Overview", icon: Gauge },
   { href: "/app/quickstart", label: "Quickstart", icon: RocketLaunch },
-  { href: "/app", label: "Playground", icon: Flask },
-  { href: "/app/runs", label: "Recovery cases", icon: ListBullets },
+  { href: "/app/overview", label: "Overview", icon: Gauge },
   { href: "/app/approvals", label: "Approvals", icon: HandPalm },
+  { href: "/app/runs", label: "Recovery cases", icon: ListBullets },
+  { href: "/app", label: "Demo lab", icon: Flask },
   { href: "/app/connections", label: "Connections", icon: LinkSimple },
-  { href: "/app/providers", label: "Adapters", icon: ArrowSquareOut },
 ] as const;
 
 const ACCOUNT = [
@@ -51,7 +51,7 @@ export function AppChrome({
   const [switching, setSwitching] = useState(false);
   const reduceMotion = useReducedMotion();
   const initials = email.slice(0, 2).toUpperCase();
-  const title = pathname.startsWith("/app/runs/") ? "Recovery case" : TITLES[pathname] || "Control plane";
+  const title = pathname.startsWith("/app/runs/") ? "Recovery case" : pathname.startsWith("/app/actions") ? "Action ledger" : TITLES[pathname] || "Control plane";
 
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
@@ -128,7 +128,7 @@ export function AppChrome({
             <span className="min-w-0 flex-1 truncate text-[10.5px] text-[#596273]">{email}</span>
             <span className="font-mono text-[10px] text-[#8a929d]">•••</span>
           </button>
-          {userMenu && <div className="absolute bottom-12 left-0 right-0 border border-[#151922] bg-[#fbfcf8] p-1 shadow-[7px_7px_0_#d9ddd6]"><Link href="/" className="flex items-center justify-between px-3 py-2 text-[10px] text-[#596273] hover:bg-[#eef0eb]">Marketing site <ArrowSquareOut size={12} /></Link><button onClick={logout} className="block w-full px-3 py-2 text-left text-[10px] text-[#c2413a] hover:bg-[#fcedeb]">Sign out</button></div>}
+          {userMenu && <div className="absolute bottom-12 left-0 right-0 border border-[#151922] bg-[#fbfcf8] p-1 shadow-[7px_7px_0_#d9ddd6]"><button onClick={() => { setUserMenu(false); window.dispatchEvent(new Event("revive:open-onboarding")); }} className="block w-full px-3 py-2 text-left text-[10px] text-[#596273] hover:bg-[#eef0eb]">Replay walkthrough</button><Link href="/" className="flex items-center justify-between px-3 py-2 text-[10px] text-[#596273] hover:bg-[#eef0eb]">Marketing site <ArrowSquareOut size={12} /></Link><button onClick={logout} className="block w-full px-3 py-2 text-left text-[10px] text-[#c2413a] hover:bg-[#fcedeb]">Sign out</button></div>}
         </div>
       </div>
     </aside>
@@ -150,6 +150,7 @@ export function AppChrome({
     </div>
 
     <AnimatePresence>{commands && <motion.div initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex items-start justify-center bg-[#151922]/30 px-4 pt-[14vh] backdrop-blur-[2px]" onMouseDown={() => setCommands(false)}><motion.div initial={reduceMotion ? false : { opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Command palette" className="w-full max-w-[520px] border border-[#151922] bg-[#fbfcf8] shadow-[12px_12px_0_#d9ddd6]"><div className="flex items-center gap-3 border-b border-[#151922] px-4 py-3"><MagnifyingGlass size={15} /><input autoFocus value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder="Jump to a page" className="h-full flex-1 bg-transparent text-[12px] outline-none placeholder:text-[#939ba6]" /><kbd className="font-mono text-[9px] text-[#818a96]">ESC</kbd></div><div className="max-h-[60vh] overflow-y-auto p-2">{NAV.filter((item) => item.label.toLowerCase().includes(commandQuery.trim().toLowerCase())).map((item) => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => { setCommands(false); setCommandQuery(""); }} className="flex items-center gap-3 border border-transparent px-3 py-2.5 text-[11px] text-[#4f5866] hover:border-[#c8cdd2] hover:bg-[#eef0eb] hover:text-[#151922]"><Icon size={15} />{item.label}<span className="ml-auto font-mono text-[8px] text-[#9ba2ab]">↵</span></Link>; })}</div></motion.div></motion.div>}</AnimatePresence>
+    <WelcomeTour email={email} workspaceId={currentWorkspace.id} />
   </div>;
 }
 

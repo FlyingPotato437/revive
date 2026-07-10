@@ -6,6 +6,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+type RiskContext = { operation?: string; recipientCount?: number; destructive?: boolean; monetary?: boolean; production?: boolean };
+
 interface ApprovalRow {
   actionId: string;
   actionKey: string;
@@ -18,6 +20,7 @@ interface ApprovalRow {
   decidedBy?: string;
   decidedAt?: number;
   reason?: string;
+  riskContext?: RiskContext;
 }
 
 function ago(ts: number): string {
@@ -112,6 +115,7 @@ export function ApprovalsPanel({ limit, pendingOnly }: { limit?: number; pending
               {row.decidedBy ? ` · ${row.status} by ${row.decidedBy}${row.decidedAt ? ` ${ago(row.decidedAt)}` : ""}` : ""}
             </p>
             {row.summary && <p className="mt-1 text-[10.5px] text-[#687180]">{row.summary}</p>}
+            {row.riskContext && <RiskFacts context={row.riskContext} />}
           </div>
           {row.status === "pending" && (
             <div className="flex gap-2">
@@ -135,4 +139,14 @@ export function ApprovalsPanel({ limit, pendingOnly }: { limit?: number; pending
       ))}
     </div>
   );
+}
+
+function RiskFacts({ context }: { context: RiskContext }) {
+  const facts: string[] = [];
+  if (context.operation === "outbound_message") facts.push(context.recipientCount ? `${context.recipientCount} recipients` : "outbound message");
+  if (context.monetary || context.operation === "money_movement") facts.push("money movement");
+  if (context.destructive || context.operation === "destructive_change") facts.push("destructive");
+  if (context.production || context.operation === "production_change") facts.push("production");
+  if (!facts.length) return null;
+  return <div className="mt-2 flex flex-wrap gap-1.5">{facts.map((fact) => <span key={fact} className="border border-[#ccd4ec] bg-[#f0f2ff] px-1.5 py-0.5 font-mono text-[8px] text-[#4054b0]">{fact}</span>)}</div>;
 }

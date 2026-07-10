@@ -1,139 +1,101 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import {
-  ago, CaseStateBadge, GuaranteeStrip, MetricMeter, PageHeader, SectionHeading, VerdictBadge,
-} from "@/components/app/ConsolePrimitives";
-import { ApprovalsPanel } from "@/components/app/ApprovalsPanel";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
+import { ago, CaseStateBadge, PageHeader, SummaryStrip, VerdictBadge } from "@/components/app/ConsolePrimitives";
+import { AttentionQueue } from "@/components/app/AttentionQueue";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 import { listActions, listCases } from "@/lib/control-plane";
 import { getProtectionStats } from "@/lib/protection-stats";
-import { getMonthlyUsage } from "@/lib/usage";
-import { getOrganizationBilling, organizationIdForWorkspace, PLAN_LIMITS } from "@/lib/billing";
-import { listWorkspaceConnections } from "@/lib/hosted";
+import { listDeadJobs, listWorkspaceConnections } from "@/lib/hosted";
+import { getApprovalPolicy } from "@/lib/workspace-config";
+import { getResumeEndpoint } from "@/lib/workspace-secrets";
+import { buildAttentionQueue, buildReadiness } from "@/lib/attention";
 
 export const dynamic = "force-dynamic";
 
-const OPEN_CASE = (state: string) => !["completed", "rejected", "expired", "escalated", "manual_review"].includes(state);
+const TERMINAL_CASES = new Set(["completed", "rejected", "expired", "escalated", "manual_review"]);
 
 export default async function OverviewPage() {
   const jar = await cookies();
   const auth = verifySession(jar.get(SESSION_COOKIE)?.value)!;
   const workspace = await selectedWorkspace(auth.email, jar.get(WORKSPACE_COOKIE)?.value);
-
-  const [stats, actions, cases, connections] = await Promise.all([
+  const [stats, actions, cases, connections, policy, resumeEndpoint, deadJobs] = await Promise.all([
     getProtectionStats(workspace.id).catch(() => null),
     listActions(workspace.id).catch(() => []),
     listCases(workspace.id).catch(() => []),
     listWorkspaceConnections(workspace.id).catch(() => []),
+    getApprovalPolicy(workspace.id).catch(() => null),
+    getResumeEndpoint(workspace.id).catch(() => null),
+    listDeadJobs(workspace.id).catch(() => []),
   ]);
-  // Billing depends on resolving the org id first; guard that resolution on its
-  // own so a billing hiccup degrades to "no plan" instead of 500ing the page.
-  const orgId = await organizationIdForWorkspace(workspace.id).catch(() => null);
-  const billing = orgId ? await getOrganizationBilling(workspace.id, orgId).catch(() => null) : null;
-  const usage = billing ? await getMonthlyUsage(workspace.id).catch(() => null) : null;
 
-  const openCases = cases.filter((c) => OPEN_CASE(c.state)).length;
-  const recentActions = [...actions].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 8);
-  const recentCases = [...cases].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5);
-  const lastWrite = Math.max(0, ...actions.map((a) => a.updatedAt), ...cases.map((c) => c.updatedAt));
+  const safePolicy = policy ?? { mode: "high_risk" as const, requirePatterns: [], allowPatterns: [], guardrails: { outboundMessages: "bulk" as const, bulkRecipientThreshold: 25, monetaryActions: true, destructiveActions: true, productionChanges: true } };
+  const attention = buildAttentionQueue({ actions, cases, deadJobs });
+  const readiness = buildReadiness({
+    activeApiKeys: workspace.apiKeys.filter((key) => !key.revokedAt && (!key.expiresAt || key.expiresAt > Date.now())).length,
+    actions,
+    connections,
+    policy: safePolicy,
+    resumeEndpointConfigured: Boolean(resumeEndpoint),
+  });
   const s = stats ?? { actionsProtected: 0, duplicatesBlocked: 0, approvalsPending: 0, approvalsDecided: 0, recoveries: 0, month: "" };
-  const caseLimit = billing ? PLAN_LIMITS[billing.plan].casesPerMonth : null;
+  const openCases = cases.filter((item) => !TERMINAL_CASES.has(item.state)).length;
+  const activity = [
+    ...actions.map((action) => ({
+      id: `action:${action.id}`,
+      kind: "action" as const,
+      title: action.actionKey,
+      detail: action.state,
+      href: `/app/actions/${action.id}`,
+      at: action.updatedAt,
+    })),
+    ...cases.map((recovery) => ({
+      id: `case:${recovery.id}`,
+      kind: "case" as const,
+      title: recovery.actionKey,
+      detail: recovery.state,
+      href: `/app/runs/${recovery.id}`,
+      at: recovery.updatedAt,
+    })),
+  ].sort((a, b) => b.at - a.at).slice(0, 6);
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-[1180px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
       <PageHeader
         eyebrow="Operations"
-        title="Overview"
-        description={`Live protection ledger for ${workspace.name}${s.month ? ` · ${s.month}` : ""}. Every number is derived from the persisted action and recovery ledgers, not sample data.`}
-        actions={<Link href="/app/quickstart" className="inline-flex h-9 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2a2f3a]">Wrap a server</Link>}
+        title="Agent operations"
+        description="See what needs a human, what ran, and whether the workspace is ready."
+        actions={<Link href="/app/quickstart" className="inline-flex h-9 items-center gap-2 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2a2f3a] active:translate-y-px">Protect an action <ArrowRight size={12} /></Link>}
       />
 
-      {/* 1 — four-guarantee masthead */}
       <div className="mt-5">
-        <GuaranteeStrip
-          items={[
-            { label: "Exactly-once", value: String(s.duplicatesBlocked), detail: `${s.actionsProtected} actions protected`, href: "/app/runs", accent: "cobalt", live: s.duplicatesBlocked > 0 },
-            { label: "Approvals", value: s.approvalsPending > 0 ? `${s.approvalsPending} pending` : "0", detail: `${s.approvalsDecided} decided`, href: "/app/approvals", accent: "warn", live: s.approvalsPending > 0 },
-            { label: "Recovery", value: String(s.recoveries), detail: `${openCases} open`, href: "/app/runs", accent: "ok", live: s.recoveries > 0 },
-            { label: "Audit", value: String(actions.length + cases.length), detail: lastWrite ? `last write ${ago(lastWrite)}` : "no writes yet", href: "/app/runs", accent: "ink", live: false },
-          ]}
-        />
+        <SummaryStrip items={[
+          { label: "Protected this month", value: String(s.actionsProtected), detail: "recorded actions", tone: s.actionsProtected ? "cobalt" : undefined },
+          { label: "Needs attention", value: String(attention.length), detail: attention.length ? "human work or retry" : "nothing open", tone: attention.length ? "warn" : "ok" },
+          { label: "Duplicates avoided", value: String(s.duplicatesBlocked), detail: "stored outcome returned", tone: s.duplicatesBlocked ? "ok" : undefined },
+        ]} />
       </div>
 
-      {/* 2 — the daily-actionable surface */}
-      <section className={`instrument-panel mt-5 overflow-hidden ${s.approvalsPending > 0 ? "border-l-[4px] border-l-[#9a5c15]" : ""}`}>
-        <SectionHeading title="Waiting on you" meta={`${s.approvalsPending} pending`} />
-        <ApprovalsPanel limit={5} pendingOnly />
-      </section>
-
-      {/* 3 — operational grid: action ledger (8) + recovery cases (4) */}
-      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-12">
-        <section className="instrument-panel overflow-hidden lg:col-span-8">
-          <SectionHeading title="Action ledger" meta={`${s.actionsProtected} this month`} action={<Link href="/app/runs" className="font-mono text-[9px] text-[#4967f2] hover:underline">View ledger →</Link>} />
-          {recentActions.length ? recentActions.map((action) => (
-            <Link key={action.id} href={`/app/runs/${action.runId}`} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-[#e1e5ea] px-5 py-3 last:border-0 hover:bg-[#f5f6f2]">
-              <div className="min-w-0">
-                <div className="truncate font-mono text-[11px] font-semibold text-[#151922]">{action.actionKey}</div>
-                <div className="mt-0.5 truncate font-mono text-[8.5px] text-[#8a929d]">run {action.runId}{action.attempts > 1 ? <span className="text-[#18724e]"> · ×{action.attempts}</span> : null}</div>
-              </div>
-              <VerdictBadge state={action.state} />
-              <span className="font-mono text-[8.5px] text-[#8a929d]">{ago(action.updatedAt)}</span>
-            </Link>
-          )) : <Empty title="No protected actions yet" hint="Wrap a server or call protect_action to record the first ledger entry." />}
-        </section>
-
-        <section className="instrument-panel overflow-hidden lg:col-span-4">
-          <SectionHeading title="Recovery cases" meta={`${openCases} open`} action={<Link href="/app/runs" className="font-mono text-[9px] text-[#4967f2] hover:underline">View all →</Link>} />
-          {recentCases.length ? recentCases.map((c) => (
-            <Link key={c.id} href={`/app/runs/${c.runId}`} className="grid gap-2 border-b border-[#e1e5ea] px-5 py-3 last:border-0 hover:bg-[#f5f6f2]">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="truncate text-[11px] font-semibold text-[#151922]">{c.reason.split(":")[0].slice(0, 44) || c.id}</div>
-                  <div className="mt-0.5 truncate font-mono text-[8px] text-[#8a929d]">{c.actionKey}</div>
-                </div>
-                <CaseStateBadge state={c.state} />
-              </div>
-              <span className="font-mono text-[8.5px] text-[#8a929d]">{ago(c.updatedAt)}</span>
-            </Link>
-          )) : <Empty title="No recovery cases" hint="A case opens automatically when an agent run fails on a dead credential." />}
-        </section>
+      <div className="mt-5">
+        <AttentionQueue initialItems={attention} readiness={readiness} />
       </div>
 
-      {/* 4 — install / health rail */}
-      <section className={`instrument-panel mt-5 overflow-hidden ${actions.length === 0 ? "border-l-[4px] border-l-[#4967f2]" : ""}`}>
-        <SectionHeading title="Wrap any MCP server" meta="one config line" />
-        <div className="border-b border-[#e1e2de] px-5 py-4">
-          <pre className="overflow-x-auto border border-[#151922] bg-[#fbfcf8] px-4 py-3 font-mono text-[10.5px] leading-5 text-[#151922]">{`"args": ["revive-mcp-gateway", "--", "npx", "-y", "@your/mcp-server"],
-"env": { "REVIVE_API_KEY": "rv_live_••••" }`}</pre>
-          <p className="mt-2 font-mono text-[8.5px] text-[#828b97]">Every tool call gets exactly-once, approvals, and recovery. Also available as pip / npm SDK and REST.</p>
+      <section className="instrument-panel mt-5 overflow-hidden" aria-labelledby="activity-title">
+        <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[#e1e2de] px-4 sm:px-5">
+          <div><h2 id="activity-title" className="text-[12px] font-semibold text-[#25282d]">Recent activity</h2><p className="mt-0.5 text-[10px] text-[#687180]">Latest ledger and recovery changes.</p></div>
+          <Link href="/app/actions" className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#2e49c8] hover:underline">View ledger <ArrowRight size={11} /></Link>
         </div>
-        <div className="grid sm:grid-cols-2">
-          <div className="border-b border-[#e1e2de] px-5 py-4 sm:border-b-0 sm:border-r">
-            <div className="flex items-center justify-between">
-              <div className="font-mono text-[8px] uppercase tracking-[.1em] text-[#7b8491]">Connections</div>
-              <Link href="/app/connections" className="font-mono text-[9px] text-[#4967f2] hover:underline">{connections.length ? "Manage →" : "Connect →"}</Link>
-            </div>
-            <div className={`mt-1.5 text-[19px] font-semibold tracking-[-.035em] ${connections.length ? "text-[#151922]" : "text-[#af4039]"}`}>{connections.length}</div>
-          </div>
-          <div className="px-5 py-4">
-            <div className="flex items-center justify-between">
-              <div className="font-mono text-[8px] uppercase tracking-[.1em] text-[#7b8491]">Plan {billing ? `· ${billing.plan}` : ""}</div>
-              <Link href="/app/usage" className="font-mono text-[9px] text-[#4967f2] hover:underline">Usage →</Link>
-            </div>
-            <div className="mt-2"><MetricMeter used={usage?.recoveryCases ?? 0} limit={caseLimit} /></div>
-          </div>
-        </div>
+        {activity.length ? activity.map((item) => (
+          <Link key={item.id} href={item.href} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-[#e8ebe7] px-4 py-3.5 last:border-b-0 hover:bg-[#f7f8f5] sm:px-5">
+            <div className="min-w-0"><span className="truncate text-[11px] font-semibold text-[#151922]">{item.title}</span><span className="ml-2 hidden font-mono text-[8.5px] text-[#8a929d] sm:inline">{item.kind === "action" ? "action" : "recovery"}</span></div>
+            {item.kind === "action" ? <VerdictBadge state={item.detail} /> : <CaseStateBadge state={item.detail} />}
+            <span className="font-mono text-[8.5px] text-[#8a929d]">{ago(item.at)}</span>
+          </Link>
+        )) : <div className="px-5 py-8 text-[11px] text-[#687180]">No actions have reached the ledger yet. Protect one action to begin the operational record.</div>}
       </section>
-    </div>
-  );
-}
 
-function Empty({ title, hint }: { title: string; hint: string }) {
-  return (
-    <div className="px-5 py-12">
-      <div className="text-[12px] font-semibold text-[#151922]">{title}</div>
-      <p className="mt-2 text-[10.5px] text-[#687180]">{hint}</p>
+      {openCases > 0 && <p className="mt-4 text-[10px] text-[#687180]">{openCases} recovery case{openCases === 1 ? "" : "s"} remain open. <Link href="/app/runs" className="font-semibold text-[#2e49c8] hover:underline">Review recoveries</Link></p>}
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { useState } from "react";
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/app";
+  const next = params.get("next") || "/app/overview";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

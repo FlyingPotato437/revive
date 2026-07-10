@@ -95,6 +95,44 @@ function stable(value) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// ---------- action contracts ----------
+// Infer a tiny, non-sensitive policy context from conventional MCP tool names
+// and argument shapes. Raw arguments remain in the downstream server only.
+// The context sent to Revive is deliberately limited to booleans and a count.
+function valuesAtRecipientKeys(value, depth = 0) {
+  if (depth > 3 || value === null || value === undefined) return 0;
+  if (typeof value === "string") return value.split(",").map((part) => part.trim()).filter(Boolean).length || 1;
+  if (Array.isArray(value)) return value.reduce((total, item) => total + valuesAtRecipientKeys(item, depth + 1), 0);
+  if (typeof value !== "object") return 0;
+  const record = value;
+  // Microsoft Graph recipient shape: { emailAddress: { address: "..." } }.
+  // Count the recipient object, never retain its address.
+  if (Object.keys(record).some((key) => /^(address|email|emailaddress|id)$/i.test(key))) return 1;
+  return Object.entries(record).reduce((total, [key, nested]) => {
+    if (/^(to|cc|bcc|recipient|recipients|emailaddresses|users|invitees)$/i.test(key)) {
+      return total + valuesAtRecipientKeys(nested, depth + 1);
+    }
+    return total;
+  }, 0);
+}
+
+function deriveRiskContext(toolName, args) {
+  const name = String(toolName || "").toLowerCase();
+  const argumentText = stable(args || {}).toLowerCase();
+  const outbound = /(send|email|mail|message|invite|notify|post|publish)/.test(name);
+  const monetary = /(payment|charge|refund|transfer|invoice|payout|purchase)/.test(name);
+  const destructive = /(delete|remove|archive|revoke|cancel|terminate|purge|wipe)/.test(name);
+  const production = /(deploy|release|publish)/.test(name) && /(?:production|prod)/.test(`${name} ${argumentText}`);
+  const recipientCount = outbound ? Math.min(100000, valuesAtRecipientKeys(args)) : 0;
+  const operation = monetary ? "money_movement" : destructive ? "destructive_change" : production ? "production_change" : outbound ? "outbound_message" : "unknown";
+  const context = { operation };
+  if (recipientCount) context.recipientCount = recipientCount;
+  if (monetary) context.monetary = true;
+  if (destructive) context.destructive = true;
+  if (production) context.production = true;
+  return context;
+}
+
 // ---------- child process ----------
 const child = spawn(childCmd, childArgs, { stdio: ["pipe", "pipe", "inherit"] });
 child.on("exit", (code) => process.exit(code ?? 0));
@@ -185,6 +223,7 @@ async function interceptToolCall(message) {
   const args = message.params?.arguments ?? {};
   const actionKey = `${serverName}.${toolName}`;
   const idempotencyKey = createHash("sha256").update(`${RUN_ID}|${actionKey}|${stable(args)}`).digest("hex");
+  const riskContext = deriveRiskContext(toolName, args);
 
   const registration = await api("/v1/actions", {
     body: {
@@ -192,7 +231,8 @@ async function interceptToolCall(message) {
       connectionId: CONNECTION_ID,
       actionKey,
       idempotencyKey,
-      ...(APPROVALS === "auto" ? { approvalMode: "auto", approvalSummary: `${toolName}(${stable(args).slice(0, 200)})` } : {}),
+      riskContext,
+      ...(APPROVALS === "auto" ? { approvalMode: "auto" } : {}),
     },
   });
 

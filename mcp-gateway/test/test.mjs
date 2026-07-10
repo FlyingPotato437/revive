@@ -14,6 +14,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const actions = new Map(); // idempotencyKey → record
 let actionSeq = 0;
 let approvalPolls = 0;
+let riskContextForApprovedCall = null;
 
 const apiServer = createServer(async (req, res) => {
   const body = await new Promise((resolve) => {
@@ -39,6 +40,7 @@ const apiServer = createServer(async (req, res) => {
       if (body.approvalMode === "auto" && /email|delete/.test(body.actionKey)) {
         record.approval = { status: body.actionKey.includes("delete") ? "denied" : "pending", requestedAt: 1, decidedBy: body.actionKey.includes("delete") ? "ops@test" : undefined };
       }
+      if (body.actionKey.includes("send_email")) riskContextForApprovedCall = body.riskContext;
       actions.set(body.idempotencyKey, record);
       return send(200, { id: record.id, state: "new", replayVerdict: "safe_to_execute", attempts: 1, approval: record.approval });
     }
@@ -140,9 +142,10 @@ try {
   assert.equal(duplicate.result.isError, undefined);
 
   // 4. high-risk tool pauses for approval, then executes after approval
-  const approved = await request("tools/call", { name: "send_email", arguments: { to: "x@y.z" } });
+  const approved = await request("tools/call", { name: "send_email", arguments: { to: [{ emailAddress: { address: "x@y.z" } }, { emailAddress: { address: "ops@y.z" } }] } });
   assert.match(text(approved), /^echo#2:send_email:/, `approved call did not execute: ${text(approved)}`);
   assert.ok(approvalPolls >= 1, "approval was never polled");
+  assert.deepEqual(riskContextForApprovedCall, { operation: "outbound_message", recipientCount: 2 });
 
   // 5. denied tool never reaches the server
   const denied = await request("tools/call", { name: "delete_everything", arguments: {} });

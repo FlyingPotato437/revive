@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiKey } from "@/lib/api-auth";
 import { actionApproval, assertLeaseGeneration, listActions, registerAction, setActionApproval, TransitionError } from "@/lib/control-plane";
-import { getApprovalPolicy, requiresApproval } from "@/lib/workspace-config";
+import { evaluateApproval, getApprovalPolicy } from "@/lib/workspace-config";
 import { notifyApprovalRequested } from "@/lib/notify";
 import { audit } from "@/lib/audit";
+import { approvalSummary, normalizeRiskContext } from "@/lib/action-contracts";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,11 @@ export async function POST(req: NextRequest) {
     if (typeof raw.windowMinutes === "number") hints.windowMinutes = raw.windowMinutes;
     if (Object.keys(hints).length) metadata = { reconcileHints: hints };
   }
+  // Tool calls may share compact action facts, never raw arguments. This keeps
+  // policy decisions useful (for example a 50-recipient send) without turning
+  // the control plane into a store for message bodies or customer data.
+  const riskContext = normalizeRiskContext(body.riskContext);
+  if (riskContext) metadata = { ...metadata, riskContext };
   let action;
   try {
     action = await registerAction(auth.workspace.id, {
@@ -86,21 +92,24 @@ export async function POST(req: NextRequest) {
   // both create+return the pending approval instead of one slipping through as
   // safe_to_execute. A replay of an already-decided action keeps its approval
   // (actionApproval !== null) and is not re-created.
-  const needsApproval = isFresh && !approval && gateOptIn && (
-    body.requireApproval === true || requiresApproval(await getApprovalPolicy(auth.workspace.id), actionKey)
-  );
+  const policyDecision = gateOptIn
+    ? evaluateApproval(await getApprovalPolicy(auth.workspace.id), actionKey, riskContext)
+    : { required: false, source: "off" as const, reason: "Approval gate was not requested by this client" };
+  const needsApproval = isFresh && !approval && gateOptIn && (body.requireApproval === true || policyDecision.required);
   if (needsApproval) {
     approval = {
       status: "pending",
       requestedBy: auth.keyPrefix,
       requestedAt: Date.now(),
-      summary: body.approvalSummary ? String(body.approvalSummary).slice(0, 300) : undefined,
+      // Never persist a caller-provided tool argument summary. The console only
+      // gets the action key and compact, allowlisted risk facts.
+      summary: approvalSummary(actionKey, riskContext),
     };
     action = await setActionApproval(auth.workspace.id, action.id, approval, auth.projectId);
     void notifyApprovalRequested({
       workspaceId: auth.workspace.id, actionId: action.id, actionKey, runId, summary: approval.summary,
     });
-    await audit({ workspaceId: auth.workspace.id, actor: auth.keyPrefix, subjectKind: "action", subjectId: action.id, event: "approval_requested", detail: { runId, actionKey } });
+    await audit({ workspaceId: auth.workspace.id, actor: auth.keyPrefix, subjectKind: "action", subjectId: action.id, event: "approval_requested", detail: { runId, actionKey, policySource: policyDecision.source, policyReason: policyDecision.reason } });
   }
   // Replay verdict is the direct answer to "should this exact external side
   // effect run again?": safe_to_execute (never attempted), already_committed

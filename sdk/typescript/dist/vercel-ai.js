@@ -14,6 +14,7 @@
 //     protected: ["sendEmail", "createTicket"],
 //   }, rawTools);
 //   await streamText({ model, tools, … });
+import { inferActionRisk } from "./index";
 export function protectTools(client, options, tools) {
     const guarded = new Set(options.protected ?? Object.keys(tools));
     const out = {};
@@ -31,7 +32,8 @@ export function protectTools(client, options, tools) {
                     checkpointId: options.checkpointId,
                     connectionId: options.connectionId,
                     actionKey: name,
-                    metadata: { input: safeJson(input) },
+                    metadata: { adapter: "vercel-ai" },
+                    riskContext: inferActionRisk(name, input),
                     credential: options.credential
                         ?? (() => ({ connectionId: options.connectionId, provider: "external", generation: 1, credential: "managed" })),
                     execute: async () => execute(input, callOptions),
@@ -50,13 +52,5 @@ export function protectTools(client, options, tools) {
         };
     }
     return out;
-}
-function safeJson(value) {
-    try {
-        return JSON.stringify(value)?.slice(0, 2000) ?? "";
-    }
-    catch {
-        return "";
-    }
 }
 //# sourceMappingURL=vercel-ai.js.map

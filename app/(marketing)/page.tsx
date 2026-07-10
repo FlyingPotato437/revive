@@ -2,6 +2,7 @@ import Link from "next/link";
 import { HeroVisual } from "@/components/marketing/HeroVisual";
 import { Reveal, Stagger, StaggerItem } from "@/components/marketing/Motion";
 import { IntegrationPanel } from "@/components/marketing/IntegrationPanel";
+import { SavingsMath } from "@/components/marketing/SavingsMath";
 
 const recoveryStages = [
   { title: "Know why it stopped", body: "Revive separates retryable failures from grants that need a person to reconnect, before another tool call runs.", system: "Identity" },
@@ -11,10 +12,10 @@ const recoveryStages = [
 ];
 
 const invariants = [
-  ["Same logical run", "Recovery advances the existing execution instead of spawning a replacement job."],
-  ["Generation fencing", "Workers holding the rejected credential generation cannot race the resumed run."],
-  ["Process-independent checkpoint", "The original worker can disappear while recovery remains actionable."],
-  ["Replay evidence", "Every mutating action keeps its idempotency key and reconciliation state."],
+  ["Same job, continued", "The interrupted run picks up where it stopped. No replacement job, no starting over."],
+  ["Old copies locked out", "A crashed worker still holding the dead login can't wake up and repeat the work."],
+  ["Survives restarts", "The saved progress lives outside the worker, so recovery works even if the machine is gone."],
+  ["Receipts for everything", "Every action keeps a record of whether it ran, so a retry can check before acting."],
 ];
 
 const faqs = [
@@ -60,9 +61,9 @@ export default function Home() {
 
     <section id="product" className="mx-auto grid max-w-[1380px] gap-16 px-5 py-24 sm:px-8 lg:grid-cols-[.75fr_1.25fr] lg:py-36">
       <Reveal className="lg:sticky lg:top-28 lg:self-start">
-        <p className="text-[11px] font-semibold text-[#4967f2]">What actually broke</p>
-        <h2 className="mt-5 max-w-[520px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">A credential failure is not a workflow failure.</h2>
-        <p className="mt-6 max-w-[430px] text-[14px] leading-6 text-[#697281]">Retry cannot repair a revoked grant. Revive parks the run, routes the account owner, and preserves every committed action.</p>
+        <p className="text-[11px] font-semibold text-[#4967f2]">What actually happens</p>
+        <h2 className="mt-5 max-w-[520px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">When a login dies mid-task, the work shouldn&apos;t die with it.</h2>
+        <p className="mt-6 max-w-[430px] text-[14px] leading-6 text-[#697281]">Retrying blind can send the same email twice or charge the same card again. Revive pauses the job safely, brings the right person back, and finishes it — once.</p>
       </Reveal>
       <Stagger className="stage-stack">
         {recoveryStages.map((stage) => <StaggerItem key={stage.title}>
@@ -72,6 +73,30 @@ export default function Home() {
           </article>
         </StaggerItem>)}
       </Stagger>
+    </section>
+
+    <section id="value" className="border-y border-[#e0e3dd] bg-[#eef0eb]">
+      <div className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
+        <Reveal>
+          <p className="text-[11px] font-semibold text-[#4967f2]">What this is worth</p>
+          <h2 className="mt-5 max-w-[760px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">Every failed action is money on the table. Count yours.</h2>
+          <p className="mt-5 max-w-[560px] text-[14px] leading-6 text-[#687180]">Move the sliders to your scale. The math is computed live from your inputs — we don&apos;t invent customer numbers.</p>
+        </Reveal>
+        <Reveal delay={.06} className="mt-12"><SavingsMath /></Reveal>
+        <Reveal delay={.1} className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["5 min", "to install: one line in front of the tools your agent already uses"],
+            ["0", "code changes — remove the line and Revive is gone"],
+            ["1×", "every action runs exactly once, even when everything retries"],
+            ["100%", "of actions logged: who did what, what was approved, what was blocked"],
+          ].map(([n, body]) => (
+            <div key={n} className="border border-[#d9ddd6] bg-[#fbfcf8] p-5">
+              <div className="font-mono text-[26px] font-semibold tracking-[-.03em] text-[#2e49c8]">{n}</div>
+              <p className="mt-2 text-[11.5px] leading-5 text-[#687180]">{body}</p>
+            </div>
+          ))}
+        </Reveal>
+      </div>
     </section>
 
     <section id="architecture" className="border-y border-[#e0e3dd] bg-[#eef0eb]">

@@ -15,7 +15,7 @@
 //   }, rawTools);
 //   await streamText({ model, tools, … });
 
-import { ReviveClient, type ProtectActionResult } from "./index";
+import { inferActionRisk, ReviveClient, type ProtectActionResult } from "./index";
 
 interface ToolLike {
   execute?: (input: unknown, options?: unknown) => PromiseLike<unknown> | unknown;
@@ -59,7 +59,8 @@ export function protectTools<T extends Record<string, ToolLike>>(
           checkpointId: options.checkpointId,
           connectionId: options.connectionId,
           actionKey: name,
-          metadata: { input: safeJson(input) },
+          metadata: { adapter: "vercel-ai" },
+          riskContext: inferActionRisk(name, input),
           credential: options.credential
             ?? (() => ({ connectionId: options.connectionId, provider: "external", generation: 1, credential: "managed" })),
           execute: async () => execute(input, callOptions),
@@ -78,12 +79,4 @@ export function protectTools<T extends Record<string, ToolLike>>(
     };
   }
   return out as T;
-}
-
-function safeJson(value: unknown): string {
-  try {
-    return JSON.stringify(value)?.slice(0, 2000) ?? "";
-  } catch {
-    return "";
-  }
 }

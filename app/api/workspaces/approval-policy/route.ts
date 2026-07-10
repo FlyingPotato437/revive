@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sessionFromCookies } from "@/lib/auth";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 import { requireWorkspaceRole } from "@/lib/rbac";
-import { getApprovalPolicy, setApprovalPolicy, type ApprovalMode } from "@/lib/workspace-config";
+import { getApprovalPolicy, setApprovalPolicy, type ApprovalMode, type ApprovalGuardrails } from "@/lib/workspace-config";
 import { audit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
     mode,
     requirePatterns: asList(body.requirePatterns),
     allowPatterns: asList(body.allowPatterns),
+    guardrails: (body.guardrails && typeof body.guardrails === "object" ? body.guardrails : {}) as ApprovalGuardrails,
   });
   await audit({ workspaceId, actor: actor!, subjectKind: "workspace", subjectId: workspaceId, event: "approval_policy_updated", detail: { mode: policy.mode, requireCount: policy.requirePatterns.length, allowCount: policy.allowPatterns.length } });
   return NextResponse.json({ policy });

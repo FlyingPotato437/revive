@@ -89,6 +89,8 @@ export default function RecoveryLab() {
         </div>
       </section>
 
+      <ProcessStepper revive={revive} awaiting={awaiting} done={state.done} running={running} />
+
       <section className="instrument-panel evidence-plate mt-5 overflow-hidden rounded-[8px]"><div className="flex h-12 items-center justify-between border-b border-[#e3e4e0] px-5"><div><span className="text-[11px] font-semibold text-[#26292e]">Recovery continuity spine</span><span className="ml-2 font-mono text-[8.5px] text-[#96999e]">identity → run → action</span></div><StatusBadge tone={revive?.status === "completed" ? "ok" : awaiting ? "warn" : revive ? "cobalt" : "neutral"}>{revive?.status?.replaceAll("_", " ") ?? "not started"}</StatusBadge></div><RecoveryTrace run={revive} /></section>
 
       <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -114,6 +116,57 @@ export default function RecoveryLab() {
         <span className="font-mono">No provider credentials are stored by this demo</span>
       </div>
     </div>
+  );
+}
+
+// Always-visible answer to "what is happening right now?": four plain phases
+// plus one live narration sentence driven by the protected run's status.
+function ProcessStepper({ revive, awaiting, done, running }: { revive: { status: string; currentStep?: number; steps?: unknown[] } | null; awaiting: boolean; done: boolean; running: boolean }) {
+  const status = revive?.status ?? "idle";
+  // Active phase index into `phases`; -1 = not started, 4 = all done.
+  const phase = !revive || status === "idle" ? -1
+    : awaiting ? 2
+    : status === "refreshing" || status === "stalled" ? 1
+    : status === "resuming" ? 3
+    : status === "completed" ? 4
+    : running ? 0 : 0;
+  const phases = ["Agent works", "Credential dies", "Human reconnects", "Run resumes"];
+  const narration = phase === -1
+    ? "Press Start: we break a login mid-run on purpose, then show how the run survives."
+    : phase === 0
+      ? `The agent is doing its normal work (step ${(revive?.currentStep ?? 0) + 1} of ${revive?.steps?.length ?? 8}). The failure is coming.`
+      : phase === 1
+        ? "The login just died mid-task. The unprotected lane starts retrying blind; Revive parks its run safely."
+        : phase === 2
+          ? "Revive is asking the account owner to reconnect. Click 'Authorize and resume' in the right lane to act as them."
+          : phase === 3
+            ? "Same run continuing from its checkpoint. Anything that already completed is not repeated."
+            : done
+              ? "Done. The unprotected lane died and abandoned its work; the protected lane finished — nothing ran twice."
+              : "Recovered: the protected run resumed exactly where it stopped.";
+  return (
+    <section className="instrument-panel evidence-plate mt-5 rounded-[8px] px-4 py-3.5 sm:px-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <ol className="flex flex-wrap items-center gap-1.5">
+          {phases.map((label, index) => {
+            const stepNumber = index + 1;
+            const stateOfStep = phase > index ? "done" : phase === index ? "active" : "todo";
+            return (
+              <li key={label} className="flex items-center gap-1.5">
+                <span className={`flex h-6 items-center gap-1.5 border px-2 font-mono text-[9px] tracking-[.04em] ${
+                  stateOfStep === "done" ? "border-[#cbe3d7] bg-[#edf8f2] text-[#18724e]"
+                  : stateOfStep === "active" ? "border-[#4967f2] bg-[#edf0ff] text-[#2e49c8]"
+                  : "border-[#dfe0dc] bg-[#f7f8f4] text-[#8a929d]"}`}>
+                  <span className="font-semibold">{stateOfStep === "done" ? "✓" : stepNumber}</span> {label}
+                </span>
+                {index < phases.length - 1 && <span className="h-px w-3 bg-[#d5d9d0]" />}
+              </li>
+            );
+          })}
+        </ol>
+        <p className="text-[11.5px] leading-5 text-[#596273] lg:max-w-[46%] lg:text-right" aria-live="polite">{narration}</p>
+      </div>
+    </section>
   );
 }
 

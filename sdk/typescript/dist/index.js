@@ -22,6 +22,7 @@ export class ReviveClient {
             idempotencyKey,
             metadata: input.metadata,
             reconcileHints: input.reconcileHints,
+            riskContext: input.riskContext,
         });
         // Ledger verdict gate: never execute an action the control plane already
         // knows the outcome of. Only "new" may run the side effect.
@@ -267,6 +268,23 @@ export function createIdempotencyKey(runId, actionKey, checkpointId = "checkpoin
     const digest = createHash("sha256").update(`${runId}:${checkpointId}:${actionKey}`).digest("base64url");
     return `revive_${digest.slice(0, 43)}`;
 }
+/** Derive only policy facts from a local tool call. The caller keeps the input. */
+export function inferActionRisk(actionKey, input) {
+    const key = actionKey.toLowerCase();
+    const outbound = /(send|email|mail|message|invite|notify|post|publish)/.test(key);
+    const monetary = /(payment|charge|refund|transfer|invoice|payout|purchase)/.test(key);
+    const destructive = /(delete|remove|archive|revoke|cancel|terminate|purge|wipe)/.test(key);
+    const production = /(deploy|release|publish)/.test(key) && /(?:production|prod)/.test(safeString(input));
+    const recipientCount = outbound ? countRecipients(input) : 0;
+    const operation = monetary ? "money_movement" : destructive ? "destructive_change" : production ? "production_change" : outbound ? "outbound_message" : "unknown";
+    return {
+        operation,
+        ...(recipientCount ? { recipientCount } : {}),
+        ...(monetary ? { monetary: true } : {}),
+        ...(destructive ? { destructive: true } : {}),
+        ...(production ? { production: true } : {}),
+    };
+}
 export function defaultCredentialFailureClassifier(error) {
     if (!isRecord(error))
         return null;
@@ -310,5 +328,30 @@ function hash(value) {
         state = Math.imul(state, 16777619);
     }
     return (state >>> 0).toString(36).padStart(7, "0");
+}
+function safeString(value) {
+    try {
+        return JSON.stringify(value || {}).toLowerCase();
+    }
+    catch {
+        return "";
+    }
+}
+function countRecipients(value, depth = 0) {
+    if (depth > 3 || value === null || value === undefined)
+        return 0;
+    if (typeof value === "string")
+        return value.split(",").map((part) => part.trim()).filter(Boolean).length || 1;
+    if (Array.isArray(value))
+        return value.reduce((total, item) => total + countRecipients(item, depth + 1), 0);
+    if (!isRecord(value))
+        return 0;
+    if (Object.keys(value).some((key) => /^(address|email|emailaddress|id)$/i.test(key)))
+        return 1;
+    return Math.min(100_000, Object.entries(value).reduce((total, [key, nested]) => {
+        if (/^(to|cc|bcc|recipient|recipients|emailAddresses|users|invitees)$/i.test(key))
+            return total + countRecipients(nested, depth + 1);
+        return total;
+    }, 0));
 }
 //# sourceMappingURL=index.js.map

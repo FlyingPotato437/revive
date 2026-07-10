@@ -23,7 +23,7 @@ export function LaneColumn({ run, eyebrow, title, accent, children }: { run: Run
   const deathIndex = steps.findIndex((step) => step.status === "failed" || step.status === "checkpointed");
 
   return (
-    <motion.section layout className={`instrument-panel relative overflow-hidden rounded-[8px] ${accent === "revive" ? "before:absolute before:bottom-0 before:left-0 before:top-0 before:z-20 before:w-[2px] before:bg-cobalt" : ""} ${accent === "revive" && run?.status === "completed" ? "!border-ok/35" : ""}`}>
+    <motion.section className={`instrument-panel relative overflow-hidden rounded-[8px] ${accent === "revive" ? "before:absolute before:bottom-0 before:left-0 before:top-0 before:z-20 before:w-[2px] before:bg-cobalt" : ""} ${accent === "revive" && run?.status === "completed" ? "!border-ok/35" : ""}`}>
       <header className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4">
         <div>
           <div className={`text-[9px] font-semibold uppercase tracking-[0.11em] ${accent === "revive" ? "text-cobalt" : "text-ink-faint"}`}>{eyebrow}</div>

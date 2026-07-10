@@ -42,6 +42,15 @@ export interface ReconcileHints {
     rfc822MessageId?: string;
     windowMinutes?: number;
 }
+/** Privacy-preserving facts used by workspace action policies. Never place raw
+ * tool input, message content, recipient addresses, or money amounts here. */
+export interface ActionRiskContext {
+    operation?: "outbound_message" | "money_movement" | "destructive_change" | "production_change" | "unknown";
+    recipientCount?: number;
+    destructive?: boolean;
+    monetary?: boolean;
+    production?: boolean;
+}
 export interface ReconcileResult<TResult = unknown> {
     committed: boolean;
     value?: TResult;
@@ -70,6 +79,8 @@ export interface ProtectActionInput<TCredential, TResult> {
     actionKey: string;
     idempotencyKey?: string;
     metadata?: Record<string, unknown>;
+    /** Compact policy facts. Revive stores these facts, not raw action input. */
+    riskContext?: ActionRiskContext;
     /** Provider probe fields so recovery can auto-reconcile before resume. */
     reconcileHints?: ReconcileHints;
     signal?: AbortSignal;
@@ -102,6 +113,7 @@ export interface ReviveTransport {
         idempotencyKey: string;
         metadata?: Record<string, unknown>;
         reconcileHints?: ReconcileHints;
+        riskContext?: ActionRiskContext;
     }): Promise<ActionRegistration>;
     markStarted(input: {
         actionId: string;
@@ -174,5 +186,7 @@ export declare class MemoryReviveTransport implements ReviveTransport {
     openRecoveryCase(input: Parameters<ReviveTransport["openRecoveryCase"]>[0]): Promise<RecoveryCase>;
 }
 export declare function createIdempotencyKey(runId: string, actionKey: string, checkpointId?: string): string;
+/** Derive only policy facts from a local tool call. The caller keeps the input. */
+export declare function inferActionRisk(actionKey: string, input?: unknown): ActionRiskContext;
 export declare function defaultCredentialFailureClassifier(error: unknown): CredentialFailure | null;
 //# sourceMappingURL=index.d.ts.map

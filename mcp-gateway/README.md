@@ -20,6 +20,14 @@ before it runs:
 Everything else — `initialize`, `tools/list`, notifications, server→client
 requests — passes through untouched.
 
+### Typed action contracts
+
+The gateway also sends a deliberately small risk context for common tool calls:
+outbound-message recipient count, money movement, destructive change, and a
+production target. It does **not** send message bodies, recipient addresses, or
+raw tool arguments to Revive. Workspace admins can use these facts to require
+approval for every outbound send or only sends above a chosen recipient count.
+
 ## Setup
 
 Claude Desktop (`claude_desktop_config.json`) or any MCP host:

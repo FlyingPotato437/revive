@@ -23,6 +23,8 @@ const result = await revive.protectAction({
   checkpointId: workflow.checkpointId,
   connectionId: "conn_microsoft_ops",
   actionKey: "send_followup_email",
+  // Policy facts only. Do not send message text or recipient addresses.
+  riskContext: { operation: "outbound_message", recipientCount: 1 },
   credential: () => vault.lease("conn_microsoft_ops"),
   execute: ({ credential, idempotencyKey }) =>
     graph.sendMail(message, { credential, idempotencyKey }),
@@ -41,6 +43,14 @@ The client registers the action, gates execution on the ledger verdict
 (`safe_to_execute` / `already_committed` / `reconcile_first`), records the
 attempt, and opens a recovery case when the credential is rejected. Idempotency
 keys are derived from `runId + checkpointId + actionKey` when not supplied.
+
+## Action contracts
+
+`riskContext` lets a workspace evaluate policies against a compact action
+contract. Supported facts are outbound-message recipient count, money movement,
+destructive change, and a production target. The Vercel AI adapter derives
+these locally and sends only the resulting facts to Revive, not the tool input.
+Use `inferActionRisk(actionKey, input)` when writing another adapter.
 
 ## Vercel AI SDK
 

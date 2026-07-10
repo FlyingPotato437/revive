@@ -1,24 +1,6 @@
-import { PageHeader, StatusBadge } from "@/components/app/ConsolePrimitives";
+import { redirect } from "next/navigation";
 
+/** Legacy bookmark. Integration choices now live in the active Quickstart. */
 export default function AdaptersPage() {
-  const connections = [
-    { name: "Microsoft Entra", group: "Credential systems", role: "Identity provider", detail: "Authorization Code + PKCE with Graph profile binding", configured: Boolean(process.env.ENTRA_CLIENT_ID && process.env.ENTRA_REDIRECT_URI), logo: "/logos/microsoft.png", mark: "M", color: "#0b76ce" },
-    { name: "Nango", group: "Credential systems", role: "Credential vault", detail: "Scoped connect sessions and authenticated proxy", configured: Boolean(process.env.NANGO_SECRET_KEY), logo: "/logos/NangoHQ.png", mark: "N", color: "#25282e" },
-    { name: "LangGraph", group: "Durable runtimes", role: "Runtime adapter", detail: "Native interrupt and checkpoint handoff", configured: null, logo: "/logos/langchain-ai.png", mark: "L", color: "#24745b" },
-    { name: "Temporal", group: "Durable runtimes", role: "Runtime adapter", detail: "Signal workflows with opaque lease references", configured: null, logo: "/logos/temporalio.png", mark: "T", color: "#625be7" },
-    { name: "Signed webhooks", group: "Delivery", role: "Event delivery", detail: "HMAC signatures and Postgres-backed retry jobs", configured: Boolean(process.env.DATABASE_URL && process.env.REVIVE_WEBHOOK_URL && process.env.REVIVE_WEBHOOK_SECRET), logo: null, mark: "W", color: "#775c3e" },
-  ];
-  return <div className="mx-auto max-w-[1400px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
-    <PageHeader eyebrow="Integration surface" title="Adapters" description="Credential systems own tokens. Durable runtimes own execution. Revive owns the recovery evidence between them. Manage the accounts your agents act as under Connections." actions={<StatusBadge tone="cobalt">5 implementation paths</StatusBadge>} />
-
-    <div className="mt-5 grid gap-5 xl:grid-cols-[1.25fr_.75fr]">
-      <section className="instrument-panel overflow-hidden rounded-[8px]">
-        {['Credential systems', 'Durable runtimes', 'Delivery'].map((group) => <div key={group} className="border-b border-[#e2e3df] last:border-0"><div className="bg-[#eef0eb] px-4 py-2 font-mono text-[8px] tracking-[.12em] text-[#737c89]">{group.toUpperCase()}</div>{connections.filter((item) => item.group === group).map((item) => <div key={item.name} className="group grid gap-3 border-t border-[#e9eae5] px-4 py-4 transition hover:bg-[#fafaf6] sm:grid-cols-[1.1fr_1.35fr_.7fr_auto] sm:items-center"><div className="flex min-w-0 items-center gap-3">{item.logo ? <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-[#e2e3df] bg-white"><img src={item.logo} alt={`${item.name} logo`} className="h-6 w-6 object-contain" /></span> : <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[10px] font-semibold text-white" style={{ background: item.color }}>{item.mark}</span>}<div className="min-w-0"><div className="truncate text-[11px] font-semibold text-[#2a2d32]">{item.name}</div><div className="mt-0.5 text-[8px] uppercase tracking-[.09em] text-[#95989d]">{item.role}</div></div></div><p className="text-[9.5px] leading-4 text-[#686d74]">{item.detail}</p><span className="font-mono text-[8.5px] text-[#92959a]">{item.configured === null ? "source adapter" : item.configured ? "environment ready" : "env missing"}</span><StatusBadge tone={item.configured === true ? "ok" : item.configured === null ? "cobalt" : "neutral"}>{item.configured === true ? "configured" : item.configured === null ? "adapter preview" : "not configured"}</StatusBadge></div>)}</div>)}
-      </section>
-
-      <aside className="recorder-panel overflow-hidden border border-[#151922] text-[#151922]"><div className="border-b border-[#151922] px-5 py-4"><div className="font-mono text-[8px] tracking-[.11em] text-[#2e49c8]">SYSTEM BOUNDARY</div><h2 className="mt-2 text-[16px] font-semibold tracking-[-.025em]">One recovery contract</h2></div><div className="p-5"><Boundary title="Credential system" body="Detects a broken grant and issues replacement credentials." /><Boundary title="Revive continuity layer" body="Correlates connection, run, checkpoint, policy and action key." active /><Boundary title="Durable runtime" body="Persists workflow state and resumes the existing execution." /><div className="mt-5 border-t border-[#bcc4cf] pt-4 font-mono text-[8.5px] leading-5 text-[#687180]">RAW TOKEN: excluded<br/>WORKFLOW HISTORY: opaque lease + generation<br/>REPLAY MODE: reconcile before repeat</div></div></aside>
-    </div>
-  </div>;
+  redirect("/app/quickstart");
 }
-
-function Boundary({ title, body, active = false }: { title: string; body: string; active?: boolean }) { return <div className={`relative mb-2 border-l-[3px] px-4 py-3 ${active ? "border-[#4967f2] bg-[#fbfcf8]" : "border-[#b7bec8]"}`}><div className={`text-[10.5px] font-semibold ${active ? "text-[#2e49c8]" : "text-[#3f4753]"}`}>{title}</div><p className="mt-1 text-[9px] leading-4 text-[#687180]">{body}</p></div>; }

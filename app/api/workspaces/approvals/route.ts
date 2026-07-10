@@ -3,6 +3,7 @@ import { sessionFromCookies } from "@/lib/auth";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 import { requireWorkspaceRole } from "@/lib/rbac";
 import { actionApproval, listActions } from "@/lib/control-plane";
+import { normalizeRiskContext } from "@/lib/action-contracts";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
             attempts: action.attempts,
             status: approval.status,
             summary: approval.summary,
+            riskContext: normalizeRiskContext(action.metadata?.riskContext),
             requestedBy: approval.requestedBy,
             requestedAt: approval.requestedAt,
             decidedBy: approval.decidedBy,

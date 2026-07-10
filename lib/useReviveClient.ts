@@ -36,6 +36,7 @@ export function useReviveClient() {
   const [state, setState] = useState<ClientState>(EMPTY);
   const esRef = useRef<EventSource | null>(null);
   const logSeq = useRef(0);
+  const lastSnapshot = useRef<string | null>(null);
 
   const teardown = useCallback(() => {
     esRef.current?.close();
@@ -98,6 +99,7 @@ export function useReviveClient() {
     async (failureStep: number, deathCode: string) => {
       teardown();
       logSeq.current = 0;
+      lastSnapshot.current = null;
       setState({ ...EMPTY, starting: true });
       const res = await fetch("/api/sessions", {
         method: "POST",
@@ -119,6 +121,7 @@ export function useReviveClient() {
   const reset = useCallback(() => {
     teardown();
     logSeq.current = 0;
+    lastSnapshot.current = null;
     try {
       sessionStorage.removeItem("revive_sid");
     } catch {
@@ -153,6 +156,11 @@ export function useReviveClient() {
       const body = await response.json() as { session?: SessionState };
       if (!body.session) return;
       const terminal = (s: string) => s === "completed" || s === "dead";
+      // Skip the state write when nothing changed: the 3s fallback poll would
+      // otherwise re-render (and re-animate) the whole lab with identical data.
+      const fingerprint = JSON.stringify(body.session);
+      if (fingerprint === lastSnapshot.current) return;
+      lastSnapshot.current = fingerprint;
       setState((prev) => ({
         ...prev,
         session: body.session!,

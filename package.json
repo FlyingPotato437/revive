@@ -21,7 +21,8 @@
     "test:reconciliation": "node --env-file-if-exists=.env.local --import tsx scripts/test-reconciliation.mts",
     "test:billing": "node --env-file-if-exists=.env.local --import tsx scripts/test-billing.mts",
     "test:auth-boundaries": "node --import tsx scripts/test-auth-boundaries.mts",
-    "test:hosted-boundaries": "node --env-file-if-exists=.env.local --import tsx scripts/test-hosted-boundaries.mts"
+    "test:hosted-boundaries": "node --env-file-if-exists=.env.local --import tsx scripts/test-hosted-boundaries.mts",
+    "test:action-policy": "node --import tsx scripts/test-action-policy.mts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.5.12",

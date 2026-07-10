@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { SignIn } from "@clerk/nextjs";
 
 function safeNext(value?: string): string {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : "/app";
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/app/overview";
 }
 
 export default async function SsoPage({

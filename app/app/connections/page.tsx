@@ -7,22 +7,21 @@ export default function ConnectionsPage() {
   return (
     <div className="mx-auto max-w-[980px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
       <PageHeader
-        eyebrow="Credential systems"
+        eyebrow="Recovery"
         title="Connections"
-        description="Accounts your agents act as. Token custody stays with the credential vault; Revive records the creation-time identity binding and verifies it on every recovery."
-        actions={<StatusBadge tone="neutral">nango custody</StatusBadge>}
+        description="Connect the accounts your agents act as when they need credential recovery."
+        actions={<StatusBadge tone="neutral">vault managed</StatusBadge>}
       />
       <section className="instrument-panel mt-5 overflow-hidden">
-        <SectionHeading title="Workspace connections" meta="identity bindings" />
+        <SectionHeading title="Workspace connections" meta="verified on recovery" />
         <div className="p-5">
           <ConnectionManager />
         </div>
       </section>
-      <div className="mt-5 border border-[#f0e2c0] bg-[#fdf7e7] p-4 text-[10.5px] leading-5 text-[#7a6224]">
-        Microsoft 365, Gmail, GitHub and Slack are offered out of the box (each must exist in the Nango project);
-        NANGO_ALLOWED_INTEGRATIONS extends the catalog, and operators can register provisional custom connectors
-        via the Custom connector button. Microsoft Entra remains the certified recovery path today.
-      </div>
+      <details className="mt-5 border border-[#e2e3df] bg-[#f7f8f5] px-4 py-3 text-[#596273]">
+        <summary className="cursor-pointer text-[10px] font-semibold">Supported providers and token custody</summary>
+        <p className="mt-2 text-[10px] leading-5">Microsoft 365, Gmail, GitHub, and Slack can be connected when configured in your vault. Revive stores an identity binding, not a raw provider token. Custom connectors are marked provisional; Microsoft Entra is the certified recovery path.</p>
+      </details>
     </div>
   );
 }

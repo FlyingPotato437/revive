@@ -58,6 +58,16 @@ export interface ReconcileHints {
   windowMinutes?: number;
 }
 
+/** Privacy-preserving facts used by workspace action policies. Never place raw
+ * tool input, message content, recipient addresses, or money amounts here. */
+export interface ActionRiskContext {
+  operation?: "outbound_message" | "money_movement" | "destructive_change" | "production_change" | "unknown";
+  recipientCount?: number;
+  destructive?: boolean;
+  monetary?: boolean;
+  production?: boolean;
+}
+
 export interface ReconcileResult<TResult = unknown> {
   committed: boolean;
   value?: TResult;
@@ -89,6 +99,8 @@ export interface ProtectActionInput<TCredential, TResult> {
   actionKey: string;
   idempotencyKey?: string;
   metadata?: Record<string, unknown>;
+  /** Compact policy facts. Revive stores these facts, not raw action input. */
+  riskContext?: ActionRiskContext;
   /** Provider probe fields so recovery can auto-reconcile before resume. */
   reconcileHints?: ReconcileHints;
   signal?: AbortSignal;
@@ -125,6 +137,7 @@ export interface ReviveTransport {
     idempotencyKey: string;
     metadata?: Record<string, unknown>;
     reconcileHints?: ReconcileHints;
+    riskContext?: ActionRiskContext;
   }): Promise<ActionRegistration>;
   markStarted(input: { actionId: string; idempotencyKey: string }): Promise<void>;
   completeAction(input: {
@@ -186,6 +199,7 @@ export class ReviveClient {
       idempotencyKey,
       metadata: input.metadata,
       reconcileHints: input.reconcileHints,
+      riskContext: input.riskContext,
     });
 
     // Ledger verdict gate: never execute an action the control plane already
@@ -460,6 +474,24 @@ export function createIdempotencyKey(runId: string, actionKey: string, checkpoin
   return `revive_${digest.slice(0, 43)}`;
 }
 
+/** Derive only policy facts from a local tool call. The caller keeps the input. */
+export function inferActionRisk(actionKey: string, input?: unknown): ActionRiskContext {
+  const key = actionKey.toLowerCase();
+  const outbound = /(send|email|mail|message|invite|notify|post|publish)/.test(key);
+  const monetary = /(payment|charge|refund|transfer|invoice|payout|purchase)/.test(key);
+  const destructive = /(delete|remove|archive|revoke|cancel|terminate|purge|wipe)/.test(key);
+  const production = /(deploy|release|publish)/.test(key) && /(?:production|prod)/.test(safeString(input));
+  const recipientCount = outbound ? countRecipients(input) : 0;
+  const operation = monetary ? "money_movement" : destructive ? "destructive_change" : production ? "production_change" : outbound ? "outbound_message" : "unknown";
+  return {
+    operation,
+    ...(recipientCount ? { recipientCount } : {}),
+    ...(monetary ? { monetary: true } : {}),
+    ...(destructive ? { destructive: true } : {}),
+    ...(production ? { production: true } : {}),
+  };
+}
+
 export function defaultCredentialFailureClassifier(error: unknown): CredentialFailure | null {
   if (!isRecord(error)) return null;
   const status = typeof error.status === "number" ? error.status : undefined;
@@ -510,4 +542,24 @@ function hash(value: string): string {
     state = Math.imul(state, 16777619);
   }
   return (state >>> 0).toString(36).padStart(7, "0");
+}
+
+function safeString(value: unknown): string {
+  try {
+    return JSON.stringify(value || {}).toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function countRecipients(value: unknown, depth = 0): number {
+  if (depth > 3 || value === null || value === undefined) return 0;
+  if (typeof value === "string") return value.split(",").map((part) => part.trim()).filter(Boolean).length || 1;
+  if (Array.isArray(value)) return value.reduce((total, item) => total + countRecipients(item, depth + 1), 0);
+  if (!isRecord(value)) return 0;
+  if (Object.keys(value).some((key) => /^(address|email|emailaddress|id)$/i.test(key))) return 1;
+  return Math.min(100_000, Object.entries(value).reduce((total, [key, nested]) => {
+    if (/^(to|cc|bcc|recipient|recipients|emailAddresses|users|invitees)$/i.test(key)) return total + countRecipients(nested, depth + 1);
+    return total;
+  }, 0));
 }

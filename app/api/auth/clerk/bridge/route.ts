@@ -5,8 +5,8 @@ import { createSession, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth"
 export const dynamic = "force-dynamic";
 
 function safeDestination(request: NextRequest): string {
-  const requested = request.nextUrl.searchParams.get("next") || "/app";
-  return requested.startsWith("/") && !requested.startsWith("//") ? requested : "/app";
+  const requested = request.nextUrl.searchParams.get("next") || "/app/overview";
+  return requested.startsWith("/") && !requested.startsWith("//") ? requested : "/app/overview";
 }
 
 export async function GET(request: NextRequest) {
