@@ -107,7 +107,7 @@ export async function runWrite({ runId, send }) {
 const NEXT_STEPS = [
   { href: "/app/api-keys", label: "Create an API key", detail: "Give the integration a workspace-scoped credential." },
   { href: "/app/settings", label: "Review the policy", detail: "Start with high-risk writes waiting for a person." },
-  { href: "/app/actions", label: "Watch the ledger", detail: "Your first protected action is the setup proof." },
+  { href: "/app/runs", label: "Watch the ledger", detail: "Your first protected action is the setup proof." },
 ];
 
 export function QuickstartFlow() {

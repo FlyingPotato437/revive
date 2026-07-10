@@ -92,7 +92,7 @@ export default function Reauthorize({ params }: { params: Promise<{ ticket: stri
       .then((value: RecoveryData & { recovered?: boolean }) => {
         setData(value);
         // A single-use ticket that was already approved is a success, not an
-        // error — the run already recovered.
+        // error: the run already recovered.
         setPhase(value.recovered ? "done" : "ready");
       })
       .catch((error: unknown) => {

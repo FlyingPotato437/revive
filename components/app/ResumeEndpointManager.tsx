@@ -128,13 +128,13 @@ export function ResumeEndpointManager() {
             value={secret}
             onChange={(event) => setSecret(event.target.value)}
             disabled={busy}
-            placeholder={configured ? "•••••••••••• stored — enter a new secret to replace" : "16–256 characters, used to sign callbacks"}
+            placeholder={configured ? "•••••••••••• stored. Enter a new secret to replace" : "16–256 characters, used to sign callbacks"}
             spellCheck={false}
             autoComplete="off"
             className="h-10 border border-[#d5d8d2] bg-white px-3 font-mono text-[11px] text-[#151922] outline-none transition focus:border-[#4967f2] disabled:opacity-60"
           />
           <span className="font-mono text-[8.5px] text-[#9aa1aa]">
-            Write-only. Read never returns it — {configured ? "leave blank to keep, or type a new value to rotate." : "store it now; you can rotate but not view it later."}
+            Write-only. Read never returns it. {configured ? "leave blank to keep, or type a new value to rotate." : "store it now; you can rotate but not view it later."}
           </span>
         </label>
       </div>
@@ -169,7 +169,7 @@ export function ResumeEndpointManager() {
         >
           <div className="flex items-center gap-2 font-semibold">
             {test.ok ? <CheckCircle size={15} /> : <WarningCircle size={15} />}
-            {test.ok ? `Test delivered — endpoint replied ${test.status}` : `Test failed${test.status ? ` — HTTP ${test.status}` : ""}`}
+            {test.ok ? `Test delivered. Endpoint replied ${test.status}` : `Test failed${test.status ? `: HTTP ${test.status}` : ""}`}
           </div>
           <div className="mt-1 font-mono text-[9px] text-[#7b8491]">
             {test.ok ? `signed recovery.resume_test · ${test.eventId}` : test.error}

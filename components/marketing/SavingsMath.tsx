@@ -1,6 +1,6 @@
 "use client";
 
-// "Your numbers, our math" — an honest exposure calculator. Every output is
+// "Your numbers, our math": an honest exposure calculator. Every output is
 // computed live from the three sliders; nothing is a claimed customer result.
 
 import { useState } from "react";
@@ -35,7 +35,7 @@ export function SavingsMath() {
           display={`${failurePct}%`}
           min={0.1} max={3} step={0.1}
           onChange={setFailurePct}
-          hint="timeouts, dead logins, crashed runs — most teams see 0.3–1%"
+          hint="timeouts, dead logins, crashed runs. Most teams see 0.3 to 1%"
         />
         <Slider
           label="Cost when one goes wrong"
@@ -63,7 +63,7 @@ export function SavingsMath() {
           </div>
         </div>
         <p className="border-t border-[#2a3040] pt-4 text-[10.5px] leading-5 text-[#7b87a6]">
-          Computed from your inputs above, nothing else. Revive makes each of those moments safe — the action runs
+          Computed from your inputs above, nothing else. Revive makes each of those moments safe. The action runs
           exactly once or pauses for a person. Plans start at $20/month.
         </p>
       </div>

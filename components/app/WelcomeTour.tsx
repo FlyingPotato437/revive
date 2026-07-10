@@ -6,24 +6,24 @@ import { ArrowLeft, ArrowRight, Check, X } from "@phosphor-icons/react";
 
 const STEPS = [
   {
-    title: "Your agent operations desk",
-    body: "Overview is the daily inbox. It only shows work that needs a human, recent changes, and the next real setup step.",
-    labels: ["Attention holds approvals, uncertain actions, recoveries, and failed deliveries.", "Recent activity is the durable record, not a chat transcript."],
+    title: "Your agents, made safe",
+    body: "Revive sits in front of every action your agents take. Nothing runs twice. Risky things wait for you. Failed runs recover.",
+    labels: ["Overview shows what needs a human right now.", "Every number comes from real records, not samples."],
   },
   {
-    title: "Decide sensitive actions",
-    body: "Approvals is where a person releases or denies high-risk writes. Approved actions execute once. Denied actions never reach the provider.",
-    labels: ["Use Settings to choose which actions pause.", "Keep routine actions automatic and make the risky ones explicit."],
+    title: "You approve the risky stuff",
+    body: "Payments, emails, deletes: they pause in Approvals until someone says yes. Approved runs once. Denied never runs.",
+    labels: ["Pick what pauses in Settings. Your call, not ours.", "Get pinged in Slack when something is waiting."],
   },
   {
-    title: "Recover without guessing",
-    body: "Recovery cases show an interrupted run from credential failure through identity verification and resume.",
-    labels: ["Resolve uncertain actions before retrying them.", "Use the action ledger to inspect the provider outcome and replay verdict."],
+    title: "Dead runs come back",
+    body: "A login dies mid-task and the run parks instead of crashing. The right person reconnects. The run finishes. Nothing repeats.",
+    labels: ["Recovery cases show every step of the save.", "The ledger proves what ran and what was blocked."],
   },
   {
-    title: "Protect the first action",
-    body: "Choose the MCP gateway for the quickest installation, or use the SDK when your runtime needs direct control.",
-    labels: ["Connect an account when you need credential recovery.", "A real protected action completes workspace setup."],
+    title: "Set up in five minutes",
+    body: "Paste one line in front of your MCP server. Or drop the SDK into your runtime. Your first protected action proves it works.",
+    labels: ["Quickstart has copy-paste configs for every path.", "Remove the line and Revive is gone. No lock-in."],
   },
 ] as const;
 

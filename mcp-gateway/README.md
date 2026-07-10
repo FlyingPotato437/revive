@@ -14,11 +14,11 @@ before it runs:
 | --- | --- |
 | `safe_to_execute` | Forwarded to the server; result recorded. |
 | `already_committed` | The stored result is returned. **The tool never runs twice.** |
-| `reconcile_first` | A previous attempt's outcome is unknown — blocked by default. |
+| `reconcile_first` | A previous attempt's outcome is unknown. Blocked by default. |
 | approval pending | High-risk tools (payments, email, deletes) pause until a human approves in the Revive console. |
 
-Everything else — `initialize`, `tools/list`, notifications, server→client
-requests — passes through untouched.
+Everything else (`initialize`, `tools/list`, notifications, server→client
+requests) passes through untouched.
 
 ### Typed action contracts
 
@@ -51,7 +51,7 @@ already use. Remove the wrapper to remove Revive.
 
 | Flag | Env | Default | |
 | --- | --- | --- | --- |
-| `--api-key` | `REVIVE_API_KEY` | — | required |
+| `--api-key` | `REVIVE_API_KEY` | none | required |
 | `--api-url` | `REVIVE_API_URL` | `https://revivelabs.app/api` | |
 | `--connection-id` | `REVIVE_CONNECTION_ID` | `mcp` | |
 | `--run-id` | `REVIVE_RUN_ID` | `mcp-session` | stable id ⇒ duplicates caught across restarts |

@@ -129,7 +129,7 @@ export function HeroVisual() {
         </div>
 
         <figcaption className="sr-only">
-          One run fails on a rejected credential, parks at its checkpoint, and the same run resumes after the account owner reconnects — with no committed action replayed.
+          One run fails on a rejected credential, parks at its checkpoint, and the same run resumes after the account owner reconnects. No committed action is replayed.
         </figcaption>
       </figure>
     </div>

@@ -142,7 +142,7 @@ function ProcessStepper({ revive, awaiting, done, running }: { revive: { status:
           : phase === 3
             ? "Same run continuing from its checkpoint. Anything that already completed is not repeated."
             : done
-              ? "Done. The unprotected lane died and abandoned its work; the protected lane finished — nothing ran twice."
+              ? "Done. The unprotected lane died and abandoned its work; the protected lane finished. Nothing ran twice."
               : "Recovered: the protected run resumed exactly where it stopped.";
   return (
     <section className="instrument-panel evidence-plate mt-5 rounded-[8px] px-4 py-3.5 sm:px-5">
