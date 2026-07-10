@@ -9,7 +9,6 @@ import { ScrollProgress } from "./Motion";
 const LINKS = [
   { href: "/#product", label: "Product" },
   { href: "/#security", label: "Security" },
-  { href: "/compare", label: "Why Revive" },
   { href: "/benchmarks", label: "Evidence" },
   { href: "/pricing", label: "Pricing" },
 ];

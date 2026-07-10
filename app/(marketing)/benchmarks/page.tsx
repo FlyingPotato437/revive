@@ -137,10 +137,12 @@ export default function BenchmarkWhitepaperPage() {
           <EvidenceReveal>
             <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-[#4967f2]">REVIVEBENCH TECHNICAL REPORT</p>
             <h1 className="mt-6 max-w-[820px] text-[clamp(42px,6.2vw,78px)] font-semibold leading-[0.94] tracking-[-0.065em]">
-              Recovery correctness at the failure boundary.
+              Proof, not promises.
             </h1>
             <p className="mt-7 max-w-[650px] text-[15px] leading-7 text-[#5f6876]">
-              A reproducible local study of five invariants between credentials and durable execution.
+              Every guarantee on the homepage has an executable test behind it. This report covers the recovery and
+              exactly-once invariants: a reproducible local suite, a live certification against real Microsoft Graph,
+              and a golden-path run on production infrastructure.
             </p>
           </EvidenceReveal>
 
@@ -155,7 +157,7 @@ export default function BenchmarkWhitepaperPage() {
               <dt className="font-mono text-[#8a929d]">Generated</dt><dd>{formatDate(report.generatedAt)}</dd>
               <dt className="font-mono text-[#8a929d]">Commit</dt><dd className="font-mono">{report.sourceCommit ?? "unavailable"}</dd>
               <dt className="font-mono text-[#8a929d]">Source</dt><dd>{report.sourceTreeDirty ? "Uncommitted changes present" : "Clean tree"}</dd>
-              <dt className="font-mono text-[#8a929d]">Scope</dt><dd>Local suite plus one live certification</dd>
+              <dt className="font-mono text-[#8a929d]">Scope</dt><dd>Local suite · live Graph certification · production golden path</dd>
             </dl>
           </EvidenceReveal>
         </div>

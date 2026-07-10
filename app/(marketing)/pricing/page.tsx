@@ -5,14 +5,15 @@ import { Reveal, Stagger, StaggerItem } from "@/components/marketing/Motion";
 const plans = [
   {
     name: "Dev",
-    price: "$10",
+    price: "$20",
     cadence: "per workspace / month",
-    description: "For one builder protecting the first real workflow outside the sandbox.",
+    description: "For one builder putting the first real agent behind the safety layer.",
     features: [
-      "3 credential connections",
-      "Revive TypeScript SDK",
-      "Recovery case timeline",
-      "LangGraph and Temporal adapters",
+      "1,000 protected recovery cases / month",
+      "3 account connections",
+      "MCP gateway + Python & TypeScript SDKs",
+      "Exactly-once ledger and replay verdicts",
+      "Approvals inbox",
     ],
     cta: "Start Dev",
     href: "/signup?next=%2Fapp%2Fusage",
@@ -20,14 +21,16 @@ const plans = [
   },
   {
     name: "Team",
-    price: "$49",
+    price: "$99",
     cadence: "per workspace / month",
-    description: "For a team operating credential recovery across production agent runs.",
+    description: "For a team running agents that touch email, money, and customer data every day.",
     features: [
-      "25 credential connections",
-      "Signed runtime callbacks",
-      "Microsoft Graph reconciliation",
-      "Workspace roles and audit records",
+      "10,000 protected recovery cases / month",
+      "25 account connections",
+      "Approval policy control (you pick what pauses)",
+      "Slack and email approval alerts",
+      "Provider reconciliation + signed runtime callbacks",
+      "Workspace roles and full audit records",
     ],
     cta: "Start Team",
     href: "/signup?next=%2Fapp%2Fusage",
@@ -39,7 +42,8 @@ const plans = [
     cadence: "annual contract",
     description: "For controlled deployments with custom infrastructure, providers, and operating requirements.",
     features: [
-      "Custom connection limits",
+      "Unlimited cases and connections",
+      "SSO and custom approval policies",
       "Deployment architecture review",
       "Custom provider and runtime work",
       "Security and retention configuration",
@@ -55,8 +59,8 @@ export default function Pricing() {
     <div className="mx-auto max-w-[1260px] px-5 py-20 sm:px-7 lg:py-28">
       <Reveal className="border-b border-[#151922] pb-12">
         <div className="font-mono text-[9px] tracking-[.14em] text-[#2e49c8]">WORKSPACE PRICING</div>
-        <h1 className="mt-6 max-w-[820px] text-[clamp(42px,6.4vw,78px)] font-semibold leading-[.92] tracking-[-.065em] text-[#151922]">Start small. Scale safely.</h1>
-        <p className="mt-6 max-w-[580px] text-[13px] leading-6 text-[#66707e]">The sandbox stays free. Paid plans begin when Revive protects a connected workflow.</p>
+        <h1 className="mt-6 max-w-[820px] text-[clamp(42px,6.4vw,78px)] font-semibold leading-[.92] tracking-[-.065em] text-[#151922]">Priced on what it protects.</h1>
+        <p className="mt-6 max-w-[580px] text-[13px] leading-6 text-[#66707e]">One duplicate charge or double-sent email costs more than a month of any plan. The sandbox stays free; paid plans begin when Revive protects real agent actions.</p>
       </Reveal>
 
       <Stagger className="mt-12 grid items-stretch gap-3 lg:grid-cols-[.82fr_1.05fr_.92fr] lg:gap-0">

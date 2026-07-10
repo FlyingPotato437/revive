@@ -46,10 +46,10 @@ export function BillingControls({ plan, connectionLimit }: { plan: string; conne
       <div className="flex flex-wrap gap-2">
         {plan === "free" && <>
           <button onClick={() => checkout("dev")} disabled={busy !== null} className="inline-flex h-10 items-center gap-2 border border-[#151922] bg-[#fbfcf8] px-4 text-[10.5px] font-semibold text-[#151922] transition hover:bg-[#eef0eb] active:translate-y-px disabled:cursor-wait disabled:opacity-60">
-            {busy === "dev" ? "Opening Stripe" : "Dev $10"}
+            {busy === "dev" ? "Opening Stripe" : "Dev $20"}
           </button>
           <button onClick={() => checkout("team")} disabled={busy !== null} className="inline-flex h-10 items-center gap-2 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px disabled:cursor-wait disabled:opacity-60">
-            {busy === "team" ? "Opening Stripe" : "Team $49"}
+            {busy === "team" ? "Opening Stripe" : "Team $99"}
             {busy === null && <ArrowRight size={13} weight="bold" />}
           </button>
         </>}
