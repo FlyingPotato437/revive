@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/#security", label: "Security" },
   { href: "/benchmarks", label: "Evidence" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/team", label: "Team" },
 ];
 
 export function Nav() {

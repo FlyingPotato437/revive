@@ -4,6 +4,7 @@ const links = [
   { label: "Product", href: "/#product" },
   { label: "Why Revive", href: "/compare" },
   { label: "Evidence", href: "/benchmarks" },
+  { label: "Team", href: "/team" },
   { label: "Recovery lab", href: "/app" },
   { label: "Terms", href: "/terms" },
   { label: "Privacy", href: "/privacy" },
