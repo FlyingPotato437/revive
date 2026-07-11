@@ -6,16 +6,16 @@ export default function QuickstartPage() {
   return <div className="mx-auto max-w-[1180px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
     <PageHeader
       eyebrow="Setup"
-      title="Five minutes to a protected agent"
-      description="One config line. After that every action your agent takes runs exactly once, waits for approval when it should, and recovers when it fails."
+      title="Protect your first action"
+      description="One line. Actions run once, risky ones wait, failed runs recover."
       actions={<Link href="/app/api-keys" className="inline-flex h-9 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2a2f3a]">Get an API key</Link>}
     />
 
     <div className="mt-5 grid gap-px border border-[#151922] bg-[#e1e2de] sm:grid-cols-3">
       {[
-        ["1", "Grab a key", "Create a workspace API key. Ten seconds."],
-        ["2", "Paste one line", "Wrap your MCP server below, or drop the SDK into your runtime."],
-        ["3", "Watch it work", "Run your agent. The first protected action lands in the ledger."],
+        ["1", "Grab a key", "Ten seconds, one click."],
+        ["2", "Paste one line", "Wrap your MCP server or drop in the SDK."],
+        ["3", "Watch it work", "First protected action lands in the ledger."],
       ].map(([n, title, body]) => (
         <div key={n} className="bg-[#fbfcf8] px-5 py-4">
           <div className="flex items-center gap-2.5">
@@ -28,7 +28,16 @@ export default function QuickstartPage() {
     </div>
 
     <div className="mt-5"><QuickstartFlow /></div>
-    <details className="mt-5 border border-[#e2e3df] bg-[#f7f8f5] px-4 py-3 text-[#596273]"><summary className="cursor-pointer text-[10px] font-semibold">Runtime adapters</summary><div className="mt-3 grid gap-3 text-[10px] leading-5 sm:grid-cols-2"><RuntimeLink name="LangGraph" href="https://github.com/FlyingPotato437/revive/tree/main/sidecar/revive/adapters/langgraph.py" body="Uses the runtime interrupt and its checkpointer." /><RuntimeLink name="Temporal" href="https://github.com/FlyingPotato437/revive/tree/main/sidecar/revive/adapters/temporal.py" body="Signals the existing workflow with the lease generation." /></div></details>
+    <details className="group mt-5 border border-[#e2e3df] bg-[#f7f8f5] text-[#596273]">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3">
+        <span className="text-[10.5px] font-semibold text-[#151922]">Runtime adapters</span>
+        <span className="font-mono text-[9px] text-[#8a929d] transition group-open:rotate-45">+</span>
+      </summary>
+      <div className="grid gap-4 border-t border-[#e2e3df] px-5 py-4 text-[10px] leading-5 sm:grid-cols-2">
+        <RuntimeLink name="LangGraph" href="https://github.com/FlyingPotato437/revive/tree/main/sidecar/revive/adapters/langgraph.py" body="Uses the runtime interrupt and its checkpointer." />
+        <RuntimeLink name="Temporal" href="https://github.com/FlyingPotato437/revive/tree/main/sidecar/revive/adapters/temporal.py" body="Signals the existing workflow with the lease generation." />
+      </div>
+    </details>
   </div>;
 }
 

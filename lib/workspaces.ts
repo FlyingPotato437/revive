@@ -71,15 +71,20 @@ function id(prefix: string): string {
 }
 
 function defaultWorkspace(email: string): WorkspaceRecord {
-  const domain = email.split("@")[1]?.split(".")[0] || "local";
-  const workspaceId = `ws_${slug(domain)}_local`;
+  // Per-USER, never per-domain. A domain-derived id would put every
+  // @gmail.com signup in the same workspace (and, hosted, the same
+  // organization membership). The random id makes the workspace private;
+  // the full email seeds the organization so its hashed org id is unique
+  // per user too. Teams share by inviting members, not by email domain.
+  const localPart = email.split("@")[0] || "workspace";
+  const unique = crypto.randomUUID().replaceAll("-", "").slice(0, 12);
   return {
-    id: workspaceId,
-    name: `${domain}-local`,
-    organization: domain,
+    id: `ws_${unique}`,
+    name: `${slug(localPart)}-workspace`,
+    organization: email,
     ownerEmail: email,
     createdAt: Date.now(),
-    projects: [{ id: `prj_${slug(domain)}_sandbox`, name: "Recovery sandbox", createdAt: Date.now() }],
+    projects: [{ id: `prj_${unique}_sandbox`, name: "Recovery sandbox", createdAt: Date.now() }],
     apiKeys: [],
   };
 }

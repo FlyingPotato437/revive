@@ -162,9 +162,12 @@ export function QuickstartFlow() {
       </div>
 
       <div className="border-t border-[#151922] bg-[#fbfcf8]">
-        <div className="px-5 pt-4 sm:px-6"><h3 className="text-[11px] font-semibold text-[#151922]">After you install</h3><p className="mt-1 text-[10px] text-[#687180]">Move from one safe write to one verified business outcome.</p></div>
-        <div className="grid gap-px bg-[#e1e2de] p-5 sm:grid-cols-3 sm:p-6">
-          {NEXT_STEPS.map((step) => <Link key={step.href} href={step.href} className="group flex min-h-[92px] flex-col justify-between bg-white p-3.5 transition hover:bg-[#f7f8f5]"><span><span className="text-[10.5px] font-semibold text-[#151922]">{step.label}</span><span className="mt-1 block text-[9.5px] leading-4 text-[#687180]">{step.detail}</span></span><ArrowRight size={12} className="mt-3 text-[#4967f2] transition group-hover:translate-x-0.5" /></Link>)}
+        <div className="flex items-baseline justify-between gap-3 border-b border-[#e1e2de] px-5 py-3 sm:px-6">
+          <h3 className="text-[11px] font-semibold text-[#151922]">After you install</h3>
+          <p className="font-mono text-[8.5px] text-[#8a929d]">three steps to proof</p>
+        </div>
+        <div className="grid sm:grid-cols-3">
+          {NEXT_STEPS.map((step, index) => <Link key={step.href} href={step.href} className={`group flex min-h-[88px] flex-col justify-between border-b border-[#e1e2de] px-5 py-4 transition last:border-b-0 hover:bg-[#f7f8f5] sm:border-b-0 sm:px-6 ${index ? "sm:border-l sm:border-l-[#e1e2de]" : ""}`}><span><span className="text-[10.5px] font-semibold text-[#151922]">{step.label}</span><span className="mt-1 block text-[9.5px] leading-4 text-[#687180]">{step.detail}</span></span><ArrowRight size={12} className="mt-3 text-[#4967f2] transition group-hover:translate-x-0.5" /></Link>)}
         </div>
       </div>
     </section>

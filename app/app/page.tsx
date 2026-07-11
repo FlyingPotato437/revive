@@ -54,7 +54,7 @@ export default function RecoveryLab() {
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
-      <PageHeader eyebrow="Playground · local sandbox" title="Drill a credential failure before production does" description="Break a sandbox grant on purpose and verify the complete recovery path. Classification, checkpointing, one-time reauthorization, and fenced resume are recorded as a recovery case." actions={<><StatusBadge tone="ok"><span className="h-1.5 w-1.5 rounded-full bg-current" />local sandbox store</StatusBadge><span className="font-mono text-[9px] text-[#95989d]">policy v0.2</span></>} />
+      <PageHeader eyebrow="Playground · local sandbox" title="Break a login. Watch the run survive." description="Sandbox drill: the credential dies mid-run, Revive recovers the run, nothing repeats." actions={<><StatusBadge tone="ok"><span className="h-1.5 w-1.5 rounded-full bg-current" />local sandbox store</StatusBadge><span className="font-mono text-[9px] text-[#95989d]">policy v0.2</span></>} />
 
       <div className="mt-5"><SummaryStrip items={[
         { label: "Recovery case", value: caseStatus.replaceAll("_", " "), detail: revive?.recoveryCase?.id ?? "No open case", tone: awaiting ? "warn" : revive?.recoveryCase?.status === "recovered" ? "ok" : undefined },
