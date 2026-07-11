@@ -32,6 +32,63 @@ export interface ActionRegistration {
     /** Stored result reference for completed/reconciled actions. */
     resultRef?: string;
 }
+export type OutcomeTransactionState = "planned" | "awaiting_approval" | "executing" | "verifying" | "verified" | "recovering" | "compensated" | "needs_human" | "cancelled";
+export type OutcomeStepState = "planned" | "executing" | "succeeded" | "verifying" | "verified" | "unknown" | "failed" | "compensating" | "compensated" | "skipped";
+export interface OutcomeTransactionStep {
+    id: string;
+    key: string;
+    actionKey: string;
+    connectionId: string;
+    state: OutcomeStepState;
+    version: number;
+    actionId?: string;
+    remoteId?: string;
+    expectedOutcome?: {
+        key: string;
+        label: string;
+        provider?: string;
+        expectedState?: string;
+    };
+}
+export interface OutcomeTransaction {
+    id: string;
+    runId: string;
+    contractKey: string;
+    idempotencyKey: string;
+    title: string;
+    state: OutcomeTransactionState;
+    version: number;
+    steps: OutcomeTransactionStep[];
+    traceContext?: {
+        provider?: string;
+        traceId?: string;
+        spanId?: string;
+        traceUrl?: string;
+    };
+}
+export interface CreateOutcomeTransactionInput {
+    runId: string;
+    contractKey: string;
+    idempotencyKey: string;
+    title?: string;
+    requireApproval?: boolean;
+    inputRef?: string;
+    traceContext?: OutcomeTransaction["traceContext"];
+    steps: Array<{
+        key: string;
+        actionKey: string;
+        connectionId: string;
+        actionId?: string;
+        reversible?: boolean;
+        compensationActionKey?: string;
+        expectedOutcome?: {
+            key: string;
+            label: string;
+            provider?: string;
+            expectedState?: string;
+        };
+    }>;
+}
 /** Provider probe fields attached at registration so recovery can auto-answer
  *  "did this side effect already happen?" before the run resumes. */
 export interface ReconcileHints {
@@ -142,6 +199,23 @@ export interface ReviveTransport {
         leaseGeneration?: number;
         metadata?: Record<string, unknown>;
     }): Promise<RecoveryCase>;
+    registerTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction>;
+    transitionTransactionStep(input: {
+        transactionId: string;
+        stepKey: string;
+        to: OutcomeStepState;
+        expectedVersion: number;
+        actionId?: string;
+        remoteId?: string;
+        evidence?: Record<string, unknown>;
+        note?: string;
+        resultSummary?: string;
+    }): Promise<OutcomeTransaction>;
+    decideTransaction(input: {
+        transactionId: string;
+        decision: "approve" | "deny";
+        reason?: string;
+    }): Promise<OutcomeTransaction>;
 }
 export interface ReviveClientOptions {
     transport?: ReviveTransport;
@@ -154,6 +228,26 @@ export declare class ReviveClient {
     private transport;
     constructor(options?: ReviveClientOptions);
     protectAction<TCredential, TResult>(input: ProtectActionInput<TCredential, TResult>): Promise<ProtectActionResult<TResult>>;
+    /** Register one task-scoped operation spanning multiple protected actions. */
+    createTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction>;
+    /** Advance a transaction step only after the runtime has concrete execution
+     * or provider-verification evidence for that state change. */
+    transitionTransactionStep(input: {
+        transactionId: string;
+        stepKey: string;
+        to: OutcomeStepState;
+        expectedVersion: number;
+        actionId?: string;
+        remoteId?: string;
+        evidence?: Record<string, unknown>;
+        note?: string;
+        resultSummary?: string;
+    }): Promise<OutcomeTransaction>;
+    decideTransaction(input: {
+        transactionId: string;
+        decision: "approve" | "deny";
+        reason?: string;
+    }): Promise<OutcomeTransaction>;
     private park;
 }
 export declare class AmbiguousCommitError extends Error {
@@ -174,16 +268,23 @@ export declare class HttpReviveTransport implements ReviveTransport {
     completeAction(input: Parameters<ReviveTransport["completeAction"]>[0]): Promise<void>;
     markReconciled(input: Parameters<ReviveTransport["markReconciled"]>[0]): Promise<void>;
     openRecoveryCase(input: Parameters<ReviveTransport["openRecoveryCase"]>[0]): Promise<RecoveryCase>;
+    registerTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction>;
+    transitionTransactionStep(input: Parameters<ReviveTransport["transitionTransactionStep"]>[0]): Promise<OutcomeTransaction>;
+    decideTransaction(input: Parameters<ReviveTransport["decideTransaction"]>[0]): Promise<OutcomeTransaction>;
     private request;
 }
 export declare class MemoryReviveTransport implements ReviveTransport {
     readonly actions: Map<string, ActionRegistration & Record<string, unknown>>;
     readonly recoveryCases: Map<string, RecoveryCase>;
+    readonly transactions: Map<string, OutcomeTransaction>;
     registerAction(input: Parameters<ReviveTransport["registerAction"]>[0]): Promise<ActionRegistration>;
     markStarted(input: Parameters<ReviveTransport["markStarted"]>[0]): Promise<void>;
     completeAction(input: Parameters<ReviveTransport["completeAction"]>[0]): Promise<void>;
     markReconciled(input: Parameters<ReviveTransport["markReconciled"]>[0]): Promise<void>;
     openRecoveryCase(input: Parameters<ReviveTransport["openRecoveryCase"]>[0]): Promise<RecoveryCase>;
+    registerTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction>;
+    transitionTransactionStep(input: Parameters<ReviveTransport["transitionTransactionStep"]>[0]): Promise<OutcomeTransaction>;
+    decideTransaction(input: Parameters<ReviveTransport["decideTransaction"]>[0]): Promise<OutcomeTransaction>;
 }
 export declare function createIdempotencyKey(runId: string, actionKey: string, checkpointId?: string): string;
 /** Derive only policy facts from a local tool call. The caller keeps the input. */

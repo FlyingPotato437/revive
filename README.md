@@ -1,13 +1,38 @@
 # Revive
 
-**Credential recovery control plane for durable workflows.**
+**The transaction and outcome-integrity layer for AI agents.**
 
-Revive correlates an invalid credential grant to the affected logical run,
-parks that run durably, sends a short-lived reauthorization request, rotates an
-opaque credential lease, and resumes the failed action with a stable
-idempotency key.
+Revive turns multi-system agent work into one verified business outcome. Each
+external action registers before execution, replays resolve against the stored
+result, uncertain commits reconcile against provider state, and the task stays
+open until every required outcome is verified, compensated, or safely assigned
+to a human.
 
-## Action contracts and approval guardrails
+## Outcome contracts and transactions
+
+An Outcome Contract defines what must be true before a task can be called done.
+Transactions group 1-50 protected actions under that contract and derive one
+task-scoped state: `planned`, `awaiting_approval`, `executing`, `verifying`,
+`verified`, `recovering`, `compensated`, `needs_human`, or `cancelled`.
+
+```text
+agent plan → protected actions → provider evidence → verified outcome
+                                      ↘ compensation / human exception
+```
+
+The public API exposes:
+
+- `POST /v1/outcome-contracts` to version a task-level contract;
+- `POST /v1/transactions` to bind a run, plan, trace, and idempotency key;
+- `POST /v1/transactions/:id/steps/:stepKey` to record execution and
+  independent verification transitions; and
+- `POST /v1/transactions/:id/approval` for transaction-scoped approval.
+
+LangSmith, Braintrust, or OpenTelemetry trace identifiers can be attached to a
+transaction. Revive does not replace reasoning observability: it stores the
+execution evidence that says whether the external work actually settled.
+
+## Action risk contracts and approval guardrails
 
 Revive can also record a small, typed description of an action before it is
 executed. An action contract carries policy facts only, not raw tool arguments:

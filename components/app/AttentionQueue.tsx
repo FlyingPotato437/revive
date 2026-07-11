@@ -17,11 +17,14 @@ export function AttentionQueue({ initialItems, readiness, showAll = false }: { i
   }, [initialItems]);
 
   const decide = async (item: AttentionItem, decision: "approve" | "deny") => {
-    if (!item.actionId) return;
+    if (!item.actionId && !item.transactionId) return;
     setBusy(item.id);
     setError(null);
     try {
-      const response = await fetch(`/api/workspaces/approvals/${item.actionId}`, {
+      const endpoint = item.transactionId
+        ? `/api/workspaces/transactions/${item.transactionId}/approval`
+        : `/api/workspaces/approvals/${item.actionId}`;
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ decision }),
@@ -79,7 +82,7 @@ export function AttentionQueue({ initialItems, readiness, showAll = false }: { i
                 <p className="mt-1 pl-[22px] text-[10px] leading-4 text-[#687180]">{item.detail}</p>
               </div>
               <div className="flex shrink-0 gap-2">
-                {item.kind === "approval" ? <>
+                {item.kind === "approval" || item.kind === "transaction_approval" ? <>
                   <button onClick={() => void decide(item, "approve")} disabled={busy === item.id} className="h-8 border border-[#18724e] bg-[#edf8f2] px-3 text-[9px] font-semibold text-[#18724e] transition hover:bg-[#dff0e7] disabled:opacity-50">{busy === item.id ? "Saving" : "Approve"}</button>
                   <button onClick={() => void decide(item, "deny")} disabled={busy === item.id} className="h-8 border border-[#edceca] bg-white px-3 text-[9px] font-semibold text-[#af4039] transition hover:bg-[#fff0ee] disabled:opacity-50">Deny</button>
                 </> : item.kind === "delivery" ? <button onClick={() => void retry(item)} disabled={busy === item.id} className="inline-flex h-8 items-center gap-1.5 border border-[#4967f2] bg-[#edf0ff] px-3 text-[9px] font-semibold text-[#2e49c8] transition hover:bg-[#dfe2ff] disabled:opacity-50"><ArrowClockwise size={11} /> {busy === item.id ? "Retrying" : "Retry"}</button> : item.href ? <Link href={item.href} className="inline-flex h-8 items-center gap-1.5 border border-[#cbd1d8] bg-white px-3 text-[9px] font-semibold text-[#3f4856] transition hover:border-[#151922]">Review <ArrowRight size={11} /></Link> : null}

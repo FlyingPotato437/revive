@@ -1,8 +1,9 @@
 import { actionApproval, type ControlAction, type ControlCase } from "@/lib/control-plane";
 import type { DeadQueueJob, WorkspaceConnectionSummary } from "@/lib/hosted";
 import type { ApprovalPolicy } from "@/lib/workspace-config";
+import type { OutcomeTransaction } from "@/lib/outcome-transactions";
 
-export type AttentionKind = "approval" | "uncertain_action" | "recovery" | "delivery";
+export type AttentionKind = "approval" | "transaction_approval" | "transaction_exception" | "uncertain_action" | "recovery" | "delivery";
 
 export interface AttentionItem {
   id: string;
@@ -11,6 +12,7 @@ export interface AttentionItem {
   detail: string;
   href?: string;
   actionId?: string;
+  transactionId?: string;
   jobId?: string;
   updatedAt: number;
 }
@@ -36,10 +38,37 @@ export function buildAttentionQueue(input: {
   actions: ControlAction[];
   cases: ControlCase[];
   deadJobs: DeadQueueJob[];
+  transactions?: OutcomeTransaction[];
   now?: number;
 }): AttentionItem[] {
   const now = input.now ?? Date.now();
   const items: AttentionItem[] = [];
+
+  for (const transaction of input.transactions ?? []) {
+    if (transaction.state === "awaiting_approval") {
+      items.push({
+        id: `transaction-approval:${transaction.id}`,
+        kind: "transaction_approval",
+        title: `Approve ${transaction.title}`,
+        detail: `${transaction.steps.length} planned changes will settle as one outcome.`,
+        href: `/app/transactions/${transaction.id}`,
+        transactionId: transaction.id,
+        updatedAt: transaction.approval?.requestedAt || transaction.updatedAt,
+      });
+    }
+    if (transaction.state === "recovering" || transaction.state === "needs_human") {
+      const unresolved = transaction.steps.filter((step) => step.state === "unknown" || step.state === "failed").length;
+      items.push({
+        id: `transaction-exception:${transaction.id}`,
+        kind: "transaction_exception",
+        title: `Settle ${transaction.title}`,
+        detail: `${unresolved || 1} step${unresolved === 1 ? "" : "s"} could not be proved automatically.`,
+        href: `/app/transactions/${transaction.id}`,
+        transactionId: transaction.id,
+        updatedAt: transaction.updatedAt,
+      });
+    }
+  }
 
   for (const action of input.actions) {
     const approval = actionApproval(action);
@@ -93,9 +122,11 @@ export function buildAttentionQueue(input: {
 
   const priority: Record<AttentionKind, number> = {
     approval: 0,
-    uncertain_action: 1,
-    recovery: 2,
-    delivery: 3,
+    transaction_approval: 0,
+    transaction_exception: 1,
+    uncertain_action: 2,
+    recovery: 3,
+    delivery: 4,
   };
   return items.sort((a, b) => priority[a.kind] - priority[b.kind] || a.updatedAt - b.updatedAt);
 }

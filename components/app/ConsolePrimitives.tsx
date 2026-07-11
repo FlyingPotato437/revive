@@ -60,6 +60,16 @@ export function CaseStateBadge({ state }: { state: string }) {
   return <StatusBadge tone={tone}>{state.replaceAll("_", " ")}</StatusBadge>;
 }
 
+/** Task-scoped outcome state. Verified/compensated are settled outcomes;
+ * recovering and needs-human remain operational work, not generic errors. */
+export function TransactionStateBadge({ state }: { state: string }) {
+  const ok = new Set(["verified", "compensated"]);
+  const fail = new Set(["cancelled"]);
+  const warn = new Set(["recovering", "needs_human", "awaiting_approval"]);
+  const tone = ok.has(state) ? "ok" : fail.has(state) ? "fail" : warn.has(state) ? "warn" : "cobalt";
+  return <StatusBadge tone={tone}>{state.replaceAll("_", " ")}</StatusBadge>;
+}
+
 /** A meter: cobalt fill, warn at ≥80%, fail at 100%. limit null = unlimited. */
 export function MetricMeter({ used, limit }: { used: number; limit: number | null }) {
   if (limit === null) {

@@ -106,8 +106,8 @@ export async function runWrite({ runId, send }) {
 
 const NEXT_STEPS = [
   { href: "/app/api-keys", label: "Create an API key", detail: "Give the integration a workspace-scoped credential." },
-  { href: "/app/settings", label: "Review the policy", detail: "Start with high-risk writes waiting for a person." },
-  { href: "/app/runs", label: "Watch the ledger", detail: "Your first protected action is the setup proof." },
+  { href: "/app/action-contracts", label: "Define one outcome", detail: "Name the final provider state that means the work is done." },
+  { href: "/app/transactions", label: "Watch it settle", detail: "See every step verify, recover, compensate, or escalate." },
 ];
 
 export function QuickstartFlow() {
@@ -131,8 +131,8 @@ export function QuickstartFlow() {
       <div className="grid border-b border-[#151922] lg:grid-cols-[.84fr_1.16fr]">
         <div className="p-5 sm:p-6">
           <span className="font-mono text-[8px] tracking-[.12em] text-[#4967f2]">CHOOSE A PATH</span>
-          <h2 className="mt-3 max-w-[360px] text-[22px] font-semibold leading-tight tracking-[-.04em] text-[#151922]">Protect one write first.</h2>
-          <p className="mt-2 max-w-[390px] text-[11px] leading-5 text-[#687180]">MCP is the fastest route. SDK and REST are for runtimes you own.</p>
+          <h2 className="mt-3 max-w-[360px] text-[22px] font-semibold leading-tight tracking-[-.04em] text-[#151922]">Protect one write. Then settle the whole outcome.</h2>
+          <p className="mt-2 max-w-[410px] text-[11px] leading-5 text-[#687180]">MCP is the fastest route for actions. SDK and REST also group multi-system work into verified transactions.</p>
         </div>
         <div className="grid border-t border-[#e1e2de] sm:grid-cols-3 lg:border-l lg:border-t-0">
           {(Object.keys(PATHS) as SetupPath[]).map((key) => {
@@ -162,7 +162,7 @@ export function QuickstartFlow() {
       </div>
 
       <div className="border-t border-[#151922] bg-[#fbfcf8]">
-        <div className="px-5 pt-4 sm:px-6"><h3 className="text-[11px] font-semibold text-[#151922]">After you install</h3><p className="mt-1 text-[10px] text-[#687180]">Three things make the setup real.</p></div>
+        <div className="px-5 pt-4 sm:px-6"><h3 className="text-[11px] font-semibold text-[#151922]">After you install</h3><p className="mt-1 text-[10px] text-[#687180]">Move from one safe write to one verified business outcome.</p></div>
         <div className="grid gap-px bg-[#e1e2de] p-5 sm:grid-cols-3 sm:p-6">
           {NEXT_STEPS.map((step) => <Link key={step.href} href={step.href} className="group flex min-h-[92px] flex-col justify-between bg-white p-3.5 transition hover:bg-[#f7f8f5]"><span><span className="text-[10.5px] font-semibold text-[#151922]">{step.label}</span><span className="mt-1 block text-[9.5px] leading-4 text-[#687180]">{step.detail}</span></span><ArrowRight size={12} className="mt-3 text-[#4967f2] transition group-hover:translate-x-0.5" /></Link>)}
         </div>

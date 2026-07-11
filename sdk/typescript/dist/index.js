@@ -129,6 +129,18 @@ export class ReviveClient {
             }, lease.generation);
         }
     }
+    /** Register one task-scoped operation spanning multiple protected actions. */
+    createTransaction(input) {
+        return this.transport.registerTransaction(input);
+    }
+    /** Advance a transaction step only after the runtime has concrete execution
+     * or provider-verification evidence for that state change. */
+    transitionTransactionStep(input) {
+        return this.transport.transitionTransactionStep(input);
+    }
+    decideTransaction(input) {
+        return this.transport.decideTransaction(input);
+    }
     async park(input, action, idempotencyKey, failure, leaseGeneration) {
         const recoveryCase = await this.transport.openRecoveryCase({
             runId: input.runId,
@@ -176,6 +188,18 @@ export class HttpReviveTransport {
     openRecoveryCase(input) {
         return this.request("/v1/recovery-cases", input);
     }
+    async registerTransaction(input) {
+        const response = await this.request("/v1/transactions", input);
+        return response.transaction;
+    }
+    async transitionTransactionStep(input) {
+        const response = await this.request(`/v1/transactions/${encodeURIComponent(input.transactionId)}/steps/${encodeURIComponent(input.stepKey)}`, input);
+        return response.transaction;
+    }
+    async decideTransaction(input) {
+        const response = await this.request(`/v1/transactions/${encodeURIComponent(input.transactionId)}/approval`, input);
+        return response.transaction;
+    }
     async request(path, body) {
         const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
             method: "POST",
@@ -197,6 +221,7 @@ export class HttpReviveTransport {
 export class MemoryReviveTransport {
     actions = new Map();
     recoveryCases = new Map();
+    transactions = new Map();
     async registerAction(input) {
         const id = `act_${hash(`${input.runId}:${input.actionKey}:${input.idempotencyKey}`)}`;
         const existing = this.actions.get(id);
@@ -261,6 +286,62 @@ export class MemoryReviveTransport {
         this.recoveryCases.set(id, recoveryCase);
         return recoveryCase;
     }
+    async registerTransaction(input) {
+        const id = `txn_${hash(`${input.contractKey}:${input.idempotencyKey}`)}`;
+        const existing = this.transactions.get(id);
+        if (existing)
+            return existing;
+        const transaction = {
+            id, runId: input.runId, contractKey: input.contractKey, idempotencyKey: input.idempotencyKey,
+            title: input.title || input.contractKey.replaceAll("-", " "), state: input.requireApproval ? "awaiting_approval" : "planned", version: 1,
+            traceContext: input.traceContext,
+            steps: input.steps.map((step) => ({ id: `txs_${hash(`${id}:${step.key}`)}`, key: step.key, actionKey: step.actionKey, connectionId: step.connectionId, actionId: step.actionId, expectedOutcome: step.expectedOutcome, state: "planned", version: 1 })),
+        };
+        this.transactions.set(id, transaction);
+        return transaction;
+    }
+    async transitionTransactionStep(input) {
+        const transaction = this.transactions.get(input.transactionId);
+        if (!transaction)
+            throw new Error("transaction not found");
+        if (transaction.state === "awaiting_approval" || transaction.state === "cancelled")
+            throw new Error(`transaction is ${transaction.state}`);
+        const step = transaction.steps.find((item) => item.key === input.stepKey);
+        if (!step)
+            throw new Error("transaction step not found");
+        if (step.version !== input.expectedVersion)
+            throw new Error("stale transaction step version");
+        step.state = input.to;
+        step.version += 1;
+        step.actionId = input.actionId || step.actionId;
+        step.remoteId = input.remoteId || step.remoteId;
+        transaction.version += 1;
+        transaction.state = memoryTransactionState(transaction.steps);
+        return transaction;
+    }
+    async decideTransaction(input) {
+        const transaction = this.transactions.get(input.transactionId);
+        if (!transaction)
+            throw new Error("transaction not found");
+        if (transaction.state !== "awaiting_approval")
+            throw new Error("transaction is not awaiting approval");
+        transaction.state = input.decision === "approve" ? "planned" : "cancelled";
+        transaction.version += 1;
+        return transaction;
+    }
+}
+function memoryTransactionState(steps) {
+    if (steps.some((step) => step.state === "failed"))
+        return "needs_human";
+    if (steps.some((step) => step.state === "unknown" || step.state === "compensating"))
+        return "recovering";
+    if (steps.every((step) => ["verified", "compensated", "skipped"].includes(step.state)))
+        return steps.some((step) => step.state === "compensated") ? "compensated" : "verified";
+    if (steps.some((step) => step.state === "succeeded" || step.state === "verifying"))
+        return "verifying";
+    if (steps.some((step) => step.state === "executing"))
+        return "executing";
+    return "planned";
 }
 export function createIdempotencyKey(runId, actionKey, checkpointId = "checkpoint") {
     // Deterministic SHA-256 over the action coordinates. 32-bit hashes collide

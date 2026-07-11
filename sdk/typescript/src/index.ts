@@ -47,6 +47,49 @@ export interface ActionRegistration {
   resultRef?: string;
 }
 
+export type OutcomeTransactionState = "planned" | "awaiting_approval" | "executing" | "verifying" | "verified" | "recovering" | "compensated" | "needs_human" | "cancelled";
+export type OutcomeStepState = "planned" | "executing" | "succeeded" | "verifying" | "verified" | "unknown" | "failed" | "compensating" | "compensated" | "skipped";
+export interface OutcomeTransactionStep {
+  id: string;
+  key: string;
+  actionKey: string;
+  connectionId: string;
+  state: OutcomeStepState;
+  version: number;
+  actionId?: string;
+  remoteId?: string;
+  expectedOutcome?: { key: string; label: string; provider?: string; expectedState?: string };
+}
+export interface OutcomeTransaction {
+  id: string;
+  runId: string;
+  contractKey: string;
+  idempotencyKey: string;
+  title: string;
+  state: OutcomeTransactionState;
+  version: number;
+  steps: OutcomeTransactionStep[];
+  traceContext?: { provider?: string; traceId?: string; spanId?: string; traceUrl?: string };
+}
+export interface CreateOutcomeTransactionInput {
+  runId: string;
+  contractKey: string;
+  idempotencyKey: string;
+  title?: string;
+  requireApproval?: boolean;
+  inputRef?: string;
+  traceContext?: OutcomeTransaction["traceContext"];
+  steps: Array<{
+    key: string;
+    actionKey: string;
+    connectionId: string;
+    actionId?: string;
+    reversible?: boolean;
+    compensationActionKey?: string;
+    expectedOutcome?: { key: string; label: string; provider?: string; expectedState?: string };
+  }>;
+}
+
 /** Provider probe fields attached at registration so recovery can auto-answer
  *  "did this side effect already happen?" before the run resumes. */
 export interface ReconcileHints {
@@ -163,6 +206,9 @@ export interface ReviveTransport {
     leaseGeneration?: number;
     metadata?: Record<string, unknown>;
   }): Promise<RecoveryCase>;
+  registerTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction>;
+  transitionTransactionStep(input: { transactionId: string; stepKey: string; to: OutcomeStepState; expectedVersion: number; actionId?: string; remoteId?: string; evidence?: Record<string, unknown>; note?: string; resultSummary?: string }): Promise<OutcomeTransaction>;
+  decideTransaction(input: { transactionId: string; decision: "approve" | "deny"; reason?: string }): Promise<OutcomeTransaction>;
 }
 
 export interface ReviveClientOptions {
@@ -308,6 +354,21 @@ export class ReviveClient {
     }
   }
 
+  /** Register one task-scoped operation spanning multiple protected actions. */
+  createTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction> {
+    return this.transport.registerTransaction(input);
+  }
+
+  /** Advance a transaction step only after the runtime has concrete execution
+   * or provider-verification evidence for that state change. */
+  transitionTransactionStep(input: { transactionId: string; stepKey: string; to: OutcomeStepState; expectedVersion: number; actionId?: string; remoteId?: string; evidence?: Record<string, unknown>; note?: string; resultSummary?: string }): Promise<OutcomeTransaction> {
+    return this.transport.transitionTransactionStep(input);
+  }
+
+  decideTransaction(input: { transactionId: string; decision: "approve" | "deny"; reason?: string }): Promise<OutcomeTransaction> {
+    return this.transport.decideTransaction(input);
+  }
+
   private async park<TCredential, TResult>(
     input: ProtectActionInput<TCredential, TResult>,
     action: ActionRegistration,
@@ -376,6 +437,21 @@ export class HttpReviveTransport implements ReviveTransport {
     return this.request("/v1/recovery-cases", input);
   }
 
+  async registerTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction> {
+    const response = await this.request<{ transaction: OutcomeTransaction }>("/v1/transactions", input);
+    return response.transaction;
+  }
+
+  async transitionTransactionStep(input: Parameters<ReviveTransport["transitionTransactionStep"]>[0]): Promise<OutcomeTransaction> {
+    const response = await this.request<{ transaction: OutcomeTransaction }>(`/v1/transactions/${encodeURIComponent(input.transactionId)}/steps/${encodeURIComponent(input.stepKey)}`, input);
+    return response.transaction;
+  }
+
+  async decideTransaction(input: Parameters<ReviveTransport["decideTransaction"]>[0]): Promise<OutcomeTransaction> {
+    const response = await this.request<{ transaction: OutcomeTransaction }>(`/v1/transactions/${encodeURIComponent(input.transactionId)}/approval`, input);
+    return response.transaction;
+  }
+
   private async request<T>(path: string, body: unknown): Promise<T> {
     const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
       method: "POST",
@@ -397,6 +473,7 @@ export class HttpReviveTransport implements ReviveTransport {
 export class MemoryReviveTransport implements ReviveTransport {
   readonly actions = new Map<string, ActionRegistration & Record<string, unknown>>();
   readonly recoveryCases = new Map<string, RecoveryCase>();
+  readonly transactions = new Map<string, OutcomeTransaction>();
 
   async registerAction(input: Parameters<ReviveTransport["registerAction"]>[0]): Promise<ActionRegistration> {
     const id = `act_${hash(`${input.runId}:${input.actionKey}:${input.idempotencyKey}`)}`;
@@ -465,6 +542,49 @@ export class MemoryReviveTransport implements ReviveTransport {
     this.recoveryCases.set(id, recoveryCase);
     return recoveryCase;
   }
+
+  async registerTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction> {
+    const id = `txn_${hash(`${input.contractKey}:${input.idempotencyKey}`)}`;
+    const existing = this.transactions.get(id);
+    if (existing) return existing;
+    const transaction: OutcomeTransaction = {
+      id, runId: input.runId, contractKey: input.contractKey, idempotencyKey: input.idempotencyKey,
+      title: input.title || input.contractKey.replaceAll("-", " "), state: input.requireApproval ? "awaiting_approval" : "planned", version: 1,
+      traceContext: input.traceContext,
+      steps: input.steps.map((step) => ({ id: `txs_${hash(`${id}:${step.key}`)}`, key: step.key, actionKey: step.actionKey, connectionId: step.connectionId, actionId: step.actionId, expectedOutcome: step.expectedOutcome, state: "planned", version: 1 })),
+    };
+    this.transactions.set(id, transaction);
+    return transaction;
+  }
+
+  async transitionTransactionStep(input: Parameters<ReviveTransport["transitionTransactionStep"]>[0]): Promise<OutcomeTransaction> {
+    const transaction = this.transactions.get(input.transactionId);
+    if (!transaction) throw new Error("transaction not found");
+    if (transaction.state === "awaiting_approval" || transaction.state === "cancelled") throw new Error(`transaction is ${transaction.state}`);
+    const step = transaction.steps.find((item) => item.key === input.stepKey);
+    if (!step) throw new Error("transaction step not found");
+    if (step.version !== input.expectedVersion) throw new Error("stale transaction step version");
+    step.state = input.to; step.version += 1; step.actionId = input.actionId || step.actionId; step.remoteId = input.remoteId || step.remoteId;
+    transaction.version += 1; transaction.state = memoryTransactionState(transaction.steps);
+    return transaction;
+  }
+
+  async decideTransaction(input: Parameters<ReviveTransport["decideTransaction"]>[0]): Promise<OutcomeTransaction> {
+    const transaction = this.transactions.get(input.transactionId);
+    if (!transaction) throw new Error("transaction not found");
+    if (transaction.state !== "awaiting_approval") throw new Error("transaction is not awaiting approval");
+    transaction.state = input.decision === "approve" ? "planned" : "cancelled"; transaction.version += 1;
+    return transaction;
+  }
+}
+
+function memoryTransactionState(steps: OutcomeTransactionStep[]): OutcomeTransactionState {
+  if (steps.some((step) => step.state === "failed")) return "needs_human";
+  if (steps.some((step) => step.state === "unknown" || step.state === "compensating")) return "recovering";
+  if (steps.every((step) => ["verified", "compensated", "skipped"].includes(step.state))) return steps.some((step) => step.state === "compensated") ? "compensated" : "verified";
+  if (steps.some((step) => step.state === "succeeded" || step.state === "verifying")) return "verifying";
+  if (steps.some((step) => step.state === "executing")) return "executing";
+  return "planned";
 }
 
 export function createIdempotencyKey(runId: string, actionKey: string, checkpointId = "checkpoint"): string {

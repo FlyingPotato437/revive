@@ -23,9 +23,9 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Revive | Credential recovery for durable workflows",
+  title: "Revive | Transactions for AI agents",
   description:
-    "Revive correlates credential failures to durable runs, reauthorizes the correct account, and resumes failed actions with idempotency protection.",
+    "Revive turns multi-system agent work into verified outcomes with exactly-once execution, approvals, provider reconciliation, compensation, and recovery.",
 };
 
 export default function RootLayout({

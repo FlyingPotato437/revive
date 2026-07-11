@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ArrowSquareOut, Buildings, CaretDown, Check, Command, Flask,
-  FolderSimple, Gauge, HandPalm, Key, LinkSimple, ListBullets, MagnifyingGlass,
+  FileText, FolderSimple, Gauge, GitDiff, HandPalm, Key, LinkSimple, ListBullets, MagnifyingGlass,
   RocketLaunch, SlidersHorizontal, UserCircle, UsersThree, Wallet,
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -16,6 +16,8 @@ type WorkspaceOption = { id: string; name: string; organization: string };
 const OPERATIONS = [
   { href: "/app/quickstart", label: "Quickstart", icon: RocketLaunch },
   { href: "/app/overview", label: "Overview", icon: Gauge },
+  { href: "/app/transactions", label: "Transactions", icon: GitDiff },
+  { href: "/app/action-contracts", label: "Outcome contracts", icon: FileText },
   { href: "/app/approvals", label: "Approvals", icon: HandPalm },
   { href: "/app/runs", label: "Recovery cases", icon: ListBullets },
   { href: "/app", label: "Demo lab", icon: Flask },
@@ -51,7 +53,7 @@ export function AppChrome({
   const [switching, setSwitching] = useState(false);
   const reduceMotion = useReducedMotion();
   const initials = email.slice(0, 2).toUpperCase();
-  const title = pathname.startsWith("/app/runs/") ? "Recovery case" : pathname.startsWith("/app/actions") ? "Action ledger" : TITLES[pathname] || "Control plane";
+  const title = pathname.startsWith("/app/runs/") ? "Recovery case" : pathname.startsWith("/app/actions") ? "Action ledger" : pathname.startsWith("/app/transactions/") ? "Transaction" : TITLES[pathname] || "Control plane";
 
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {

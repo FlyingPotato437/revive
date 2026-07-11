@@ -6,24 +6,24 @@ import { ArrowLeft, ArrowRight, Check, X } from "@phosphor-icons/react";
 
 const STEPS = [
   {
-    title: "Your agents, made safe",
-    body: "Revive sits in front of every action your agents take. Nothing runs twice. Risky things wait for you. Failed runs recover.",
-    labels: ["Overview shows what needs a human right now.", "Every number comes from real records, not samples."],
+    title: "One outcome across every action",
+    body: "Revive groups the writes behind one agent task and keeps the operation open until the final provider state is proved.",
+    labels: ["Transactions show what settled and what is still uncertain.", "Every status comes from execution evidence, not the agent's summary."],
   },
   {
-    title: "You approve the risky stuff",
-    body: "Payments, emails, deletes: they pause in Approvals until someone says yes. Approved runs once. Denied never runs.",
-    labels: ["Pick what pauses in Settings. Your call, not ours.", "Get pinged in Slack when something is waiting."],
+    title: "Define what done means",
+    body: "Outcome contracts name the preconditions, required final states, and recovery path for work like refunds, cancellations, and deployments.",
+    labels: ["The agent chooses the path. Revive validates the result.", "State-bound approvals go stale when the underlying operation changes."],
   },
   {
-    title: "Dead runs come back",
-    body: "A login dies mid-task and the run parks instead of crashing. The right person reconnects. The run finishes. Nothing repeats.",
-    labels: ["Recovery cases show every step of the save.", "The ledger proves what ran and what was blocked."],
+    title: "Partial work cannot hide",
+    body: "If one provider times out after another step commits, Revive checks what really happened before it retries, compensates, or asks a human.",
+    labels: ["Exactly-once actions prevent duplicate side effects.", "The transaction records verified, compensated, or needs-human as distinct outcomes."],
   },
   {
     title: "Set up in five minutes",
-    body: "Paste one line in front of your MCP server. Or drop the SDK into your runtime. Your first protected action proves it works.",
-    labels: ["Quickstart has copy-paste configs for every path.", "Remove the line and Revive is gone. No lock-in."],
+    body: "Start with one protected action through MCP, the SDK, or REST. Add a transaction when a task spans multiple external changes.",
+    labels: ["Quickstart has copy-paste configs for every path.", "Attach your LangSmith or OpenTelemetry trace without duplicating observability."],
   },
 ] as const;
 

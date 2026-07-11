@@ -1,52 +1,29 @@
-import Link from "next/link";
-import { ShieldCheck, ArrowRight } from "@phosphor-icons/react/dist/ssr";
+import { cookies } from "next/headers";
+import { CheckCircle, GitDiff, Path, ShieldCheck } from "@phosphor-icons/react/dist/ssr";
 import { PageHeader, SectionHeading, StatusBadge } from "@/components/app/ConsolePrimitives";
-import { ACTION_CONTRACTS } from "@/lib/action-contracts";
+import { OutcomeContractBuilder } from "@/components/app/OutcomeContractBuilder";
+import { SESSION_COOKIE, verifySession } from "@/lib/auth";
+import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
+import { BUILT_IN_OUTCOME_CONTRACTS, listOutcomeContracts } from "@/lib/outcome-transactions";
 
-export default function ActionContractsPage() {
-  return (
-    <div className="mx-auto max-w-[1180px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
-      <PageHeader
-        eyebrow="Policy system"
-        title="Action contracts"
-        description="A common vocabulary for what an agent is about to do. Contracts provide policy facts and provider-aware recovery hints without copying raw tool arguments into Revive."
-        actions={<StatusBadge tone="cobalt">privacy preserving</StatusBadge>}
-      />
+export const dynamic = "force-dynamic";
 
-      <section className="instrument-panel mt-5 overflow-hidden">
-        <SectionHeading title="Built-in contracts" meta="gateway and SDK ready" />
-        <div className="grid gap-px bg-[#d8dde3] md:grid-cols-2">
-          {ACTION_CONTRACTS.map((contract, index) => (
-            <article key={contract.id} className={`relative min-h-[190px] bg-[#fbfcf8] p-5 ${index === 0 ? "md:col-span-2 md:grid md:grid-cols-[.9fr_1.1fr] md:gap-8" : ""}`}>
-              <div>
-                <span className="flex h-9 w-9 items-center justify-center border border-[#4967f2] bg-[#edf0ff] text-[#2e49c8]"><ShieldCheck size={18} weight="duotone" /></span>
-                <h2 className="mt-5 text-[17px] font-semibold tracking-[-.035em] text-[#151922]">{contract.title}</h2>
-                <p className="mt-2 max-w-[340px] text-[10.5px] leading-5 text-[#687180]">{contract.examples}</p>
-              </div>
-              <dl className="mt-5 grid gap-3 border-l-0 border-[#d8dde3] pt-4 md:mt-0 md:border-l md:pl-6 md:pt-0">
-                <div><dt className="font-mono text-[8px] uppercase tracking-[.1em] text-[#7b8491]">Recorded fact</dt><dd className="mt-1 text-[10.5px] font-semibold text-[#151922]">{contract.facts}</dd></div>
-                <div><dt className="font-mono text-[8px] uppercase tracking-[.1em] text-[#7b8491]">Policy behavior</dt><dd className="mt-1 text-[10.5px] leading-5 text-[#596273]">{contract.policy}</dd></div>
-              </dl>
-            </article>
-          ))}
-        </div>
-      </section>
+export default async function OutcomeContractsPage() {
+  const jar = await cookies();
+  const auth = verifySession(jar.get(SESSION_COOKIE)?.value)!;
+  const workspace = await selectedWorkspace(auth.email, jar.get(WORKSPACE_COOKIE)?.value);
+  const contracts = await listOutcomeContracts(workspace.id).catch(() => []);
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
-        <section className="instrument-panel p-5">
-          <h2 className="text-[15px] font-semibold tracking-[-.03em] text-[#151922]">What reaches the ledger</h2>
-          <p className="mt-2 max-w-[660px] text-[10.5px] leading-5 text-[#687180]">The MCP gateway registers the action key, idempotency key, replay status, and compact contract facts. Its approval summary is generated from those facts, so the gateway does not send message text or recipient addresses to Revive.</p>
-          <pre className="mt-5 overflow-x-auto border border-[#151922] bg-[#f7f8f5] p-4 font-mono text-[10px] leading-5 text-[#151922]">{`{
-  "operation": "outbound_message",
-  "recipientCount": 42
-}`}</pre>
-        </section>
-        <aside className="recorder-panel border border-[#151922] p-5">
-          <h2 className="text-[15px] font-semibold tracking-[-.03em] text-[#151922]">Turn facts into policy</h2>
-          <p className="mt-2 text-[10.5px] leading-5 text-[#596273]">Set a bulk threshold, require every send, and test the exact decision before an agent reaches the provider.</p>
-          <Link href="/app/settings" className="mt-6 inline-flex h-9 items-center gap-2 border border-[#151922] bg-[#151922] px-4 text-[10px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">Configure policy <ArrowRight size={13} /></Link>
-        </aside>
-      </div>
-    </div>
-  );
+  return <div className="mx-auto max-w-[1180px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
+    <PageHeader eyebrow="Outcome integrity" title="Outcome contracts" description="Define the final state Revive must prove before an agent operation can be called complete." actions={<OutcomeContractBuilder />} />
+
+    {contracts.length > 0 && <section className="instrument-panel mt-5 overflow-hidden"><SectionHeading title="Workspace contracts" meta={`${contracts.length} version${contracts.length === 1 ? "" : "s"}`} /><div className="divide-y divide-[#e1e2de]">{contracts.map((contract) => <article key={contract.id} className="grid gap-5 px-5 py-5 lg:grid-cols-[.85fr_1.15fr]"><div><div className="flex items-center gap-2"><h2 className="text-[15px] font-semibold tracking-[-.03em] text-[#151922]">{contract.name}</h2><StatusBadge tone={contract.status === "active" ? "ok" : "neutral"}>{contract.status}</StatusBadge></div><p className="mt-2 max-w-[420px] text-[10.5px] leading-5 text-[#687180]">{contract.description || "No description provided."}</p><div className="mt-3 font-mono text-[8.5px] text-[#8a929d]">{contract.key} · v{contract.version} · approval {contract.approvalMode}</div></div><div className="grid gap-3 sm:grid-cols-3"><RuleCount icon={Path} label="Preconditions" value={contract.preconditions.length} /><RuleCount icon={CheckCircle} label="Required outcomes" value={contract.requiredOutcomes.length} /><RuleCount icon={GitDiff} label="Recovery rules" value={contract.compensation.length} /></div></article>)}</div></section>}
+
+    <section className="instrument-panel mt-5 overflow-hidden"><SectionHeading title="Starting contracts" meta="copy the pattern, then make it yours" /><div className="grid gap-px bg-[#d8dde3] lg:grid-cols-3">{BUILT_IN_OUTCOME_CONTRACTS.map((contract) => <article key={contract.key} className="flex min-h-[270px] flex-col bg-[#fbfcf8] p-5"><span className="flex h-9 w-9 items-center justify-center border border-[#4967f2] bg-[#edf0ff] text-[#2e49c8]"><ShieldCheck size={18} weight="duotone" /></span><h2 className="mt-5 text-[16px] font-semibold tracking-[-.035em] text-[#151922]">{contract.name}</h2><p className="mt-2 text-[10.5px] leading-5 text-[#687180]">{contract.description}</p><dl className="mt-auto grid grid-cols-3 gap-2 border-t border-[#e1e2de] pt-4"><SmallMetric label="Before" value={contract.preconditions.length} /><SmallMetric label="Prove" value={contract.requiredOutcomes.length} /><SmallMetric label="Recover" value={contract.compensation.length} /></dl></article>)}</div></section>
+
+    <aside className="mt-5 border-l-[4px] border-[#4967f2] bg-[#edf0ff] px-5 py-4"><h2 className="text-[11px] font-semibold text-[#2e49c8]">Contracts describe outcomes, not prompts</h2><p className="mt-1 max-w-[760px] text-[10.5px] leading-5 text-[#596273]">The agent may choose its path. Revive checks the provider state, preserves exactly-once action records, and keeps the transaction open until the required outcome is verified or safely escalated.</p></aside>
+  </div>;
 }
+
+function RuleCount({ icon: Icon, label, value }: { icon: typeof Path; label: string; value: number }) { return <div className="border border-[#dfe3df] bg-[#f7f8f5] p-3"><Icon size={14} className="text-[#4967f2]" /><div className="mt-3 text-[18px] font-semibold tabular-nums text-[#151922]">{value}</div><div className="mt-0.5 font-mono text-[8px] text-[#7b8491]">{label}</div></div>; }
+function SmallMetric({ label, value }: { label: string; value: number }) { return <div><dt className="font-mono text-[7.5px] uppercase tracking-[.08em] text-[#8a929d]">{label}</dt><dd className="mt-1 text-[14px] font-semibold text-[#151922]">{value}</dd></div>; }

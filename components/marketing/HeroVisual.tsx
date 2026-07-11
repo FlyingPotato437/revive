@@ -7,12 +7,12 @@ import { useEffect, useState } from "react";
 type EventKind = "ok" | "fail" | "hold" | "auth";
 
 const EVENTS: { t: string; label: string; status: string; kind: EventKind; pause: number }[] = [
-  { t: "09:14:02", label: "fetch_invoices", status: "committed", kind: "ok", pause: 750 },
-  { t: "09:14:05", label: "draft_summary", status: "committed", kind: "ok", pause: 750 },
-  { t: "09:14:07", label: "send_email · gmail", status: "grant rejected", kind: "fail", pause: 1500 },
-  { t: "09:14:07", label: "run parked at checkpoint 05", status: "nothing lost", kind: "hold", pause: 1500 },
-  { t: "09:16:31", label: "owner reconnected", status: "same subject · same tenant", kind: "auth", pause: 1100 },
-  { t: "09:16:32", label: "send_email · gmail", status: "resumed · not replayed", kind: "ok", pause: 750 },
+  { t: "09:14:02", label: "refund_and_cancel", status: "plan locked", kind: "auth", pause: 750 },
+  { t: "09:14:05", label: "stripe.refund", status: "settled", kind: "ok", pause: 750 },
+  { t: "09:14:07", label: "billing.cancel", status: "timeout · unknown", kind: "fail", pause: 1500 },
+  { t: "09:14:08", label: "provider reconciliation", status: "cancelled upstream", kind: "hold", pause: 1500 },
+  { t: "09:14:11", label: "salesforce.update", status: "verified", kind: "ok", pause: 1100 },
+  { t: "09:14:12", label: "business outcome", status: "verified once", kind: "ok", pause: 750 },
 ];
 
 const ICONS: Record<EventKind, { icon: typeof Check; color: string }> = {
@@ -23,10 +23,10 @@ const ICONS: Record<EventKind, { icon: typeof Check; color: string }> = {
 };
 
 function phaseFor(count: number) {
-  if (count <= 2) return { label: "RUNNING", className: "bg-[#dfe4ff] text-[#2e49c8]" };
-  if (count <= 4) return { label: "PARKED", className: "bg-[#fcedeb] text-[#c2413a]" };
-  if (count === 5) return { label: "RECOVERING", className: "bg-[#f6e3b4] text-[#151922]" };
-  return { label: "RESUMED", className: "bg-[#151922] text-white" };
+  if (count <= 2) return { label: "EXECUTING", className: "bg-[#dfe4ff] text-[#2e49c8]" };
+  if (count <= 3) return { label: "UNCERTAIN", className: "bg-[#fcedeb] text-[#c2413a]" };
+  if (count <= 5) return { label: "RECONCILING", className: "bg-[#f6e3b4] text-[#151922]" };
+  return { label: "VERIFIED", className: "bg-[#151922] text-white" };
 }
 
 export function HeroVisual() {
@@ -64,7 +64,7 @@ export function HeroVisual() {
     <div className="hero-intro-visual relative min-w-0">
       <figure
         className="relative flex h-full min-h-[560px] items-center justify-center overflow-hidden border-t border-[#151922] bg-[#2946cf] px-5 py-16 sm:px-10 lg:border-l lg:border-t-0"
-        aria-label="A Revive recovery case: a run fails on a rejected grant, parks at its checkpoint, and resumes after the account owner reconnects"
+        aria-label="A Revive outcome transaction: a refund settles, cancellation times out, Revive reconciles the provider state, and the complete business outcome verifies"
       >
         <div
           aria-hidden="true"
@@ -82,7 +82,7 @@ export function HeroVisual() {
                 <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:hidden ${resumed ? "bg-[#2946cf]" : "bg-[#c2413a]"}`} />
                 <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${resumed ? "bg-[#2946cf]" : "bg-[#c2413a]"}`} />
               </span>
-              <span className="font-mono text-[10px] font-medium tracking-[.08em] text-[#151922]">RECOVERY CASE · run_7f2</span>
+              <span className="font-mono text-[10px] font-medium tracking-[.08em] text-[#151922]">OUTCOME TRANSACTION · txn_7f2</span>
             </div>
             <AnimatePresence mode="wait" initial={false}>
               <motion.span
@@ -123,13 +123,13 @@ export function HeroVisual() {
           </div>
 
           <div className="flex items-center justify-between border-t border-[#e0e3dd] bg-[#f4f5f1] px-5 py-3 font-mono text-[9px] tracking-[.06em] text-[#7b8491]">
-            <span>CHECKPOINT 05 PRESERVED</span>
-            <span>{resumed ? "GEN 01 → 02" : "GEN 01"} · 0 REPLAYED</span>
+            <span>4 SYSTEM STATES BOUND</span>
+            <span>{resumed ? "OUTCOME SETTLED" : "COMMIT IN PROGRESS"} · 0 DUPLICATES</span>
           </div>
         </div>
 
         <figcaption className="sr-only">
-          One run fails on a rejected credential, parks at its checkpoint, and the same run resumes after the account owner reconnects. No committed action is replayed.
+          A refund succeeds, subscription cancellation times out, and Revive verifies the provider state before completing the remaining work. No committed action is replayed.
         </figcaption>
       </figure>
     </div>

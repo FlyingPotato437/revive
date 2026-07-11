@@ -5,24 +5,24 @@ import { IntegrationPanel } from "@/components/marketing/IntegrationPanel";
 import { SavingsMath } from "@/components/marketing/SavingsMath";
 
 const recoveryStages = [
-  { title: "Know why it stopped", body: "Revive separates retryable failures from grants that need a person to reconnect, before another tool call runs.", system: "Identity" },
-  { title: "Park the work safely", body: "The run pauses at its last checkpoint instead of crashing. Nothing is lost, and nothing gets repeated while you wait.", system: "Revive" },
-  { title: "Bring back the account owner", body: "A secure, single-use link routes reauthorization to the bound account. No shared password or exposed credential.", system: "Account owner" },
-  { title: "Pick up exactly where it left off", body: "The same run continues from its checkpoint. The email that already went out stays sent once.", system: "Runtime" },
+  { title: "Bind the intended outcome", body: "An Outcome Contract records the preconditions, required final states, approval rule, and recovery path for the whole task.", system: "Contract" },
+  { title: "Commit every action once", body: "Each external write registers before execution. A replay returns the stored result instead of repeating the side effect.", system: "Ledger" },
+  { title: "Verify provider truth", body: "A timeout is treated as unknown, not failed. Revive reconciles the external system before any retry can run.", system: "Provider" },
+  { title: "Settle or escalate", body: "The operation ends verified, compensated, or assigned to a human. Partial work never quietly reports success.", system: "Outcome" },
 ];
 
 const invariants = [
-  ["Same job, continued", "The interrupted run picks up where it stopped. No replacement job, no starting over."],
-  ["Old copies locked out", "A crashed worker still holding the dead login can't wake up and repeat the work."],
-  ["Survives restarts", "The saved progress lives outside the worker, so recovery works even if the machine is gone."],
-  ["Receipts for everything", "Every action keeps a record of whether it ran, so a retry can check before acting."],
+  ["Task-scoped transaction", "One operation identity follows the task across every provider action and worker restart."],
+  ["Exactly-once effects", "Retries, loops, and racing workers resolve against one durable action result."],
+  ["State-bound approval", "Approval covers the exact plan and source state. A stale operation cannot execute later."],
+  ["Verified final state", "The agent cannot declare itself done. Provider evidence settles the outcome."],
 ];
 
 const faqs = [
-  ["Why can't we just retry?", "A rejected grant fails again, while blind replay can duplicate work that already committed. Revive reconnects the account and checks the action ledger first."],
-  ["Is Revive another token vault?", "No. Nango, Auth0, or your provider vault keeps token custody. Revive coordinates the in-flight run around that credential change."],
-  ["Does recovery survive a worker restart?", "Yes. The recovery case and checkpoint are durable, so another worker can continue the same run later."],
-  ["Which runtimes can Revive coordinate?", "LangGraph and Temporal adapters ship in the repo today (adapter preview). The contract is designed to support more durable runtimes."],
+  ["Is this agent observability?", "No. LangSmith or OpenTelemetry explains why an agent chose a path. Revive controls the external writes and records whether the intended business outcome actually settled."],
+  ["Why isn't action idempotency enough?", "One safe API call does not make a five-system workflow complete. Revive groups protected actions under one Outcome Contract and keeps partial work open."],
+  ["Does recovery survive a worker restart?", "Yes. Transaction state, action results, recovery cases, and checkpoints are durable, so another worker can continue without replaying committed effects."],
+  ["Does Revive store provider credentials?", "No. Nango, Auth0, Entra, or your vault keeps token custody. Revive binds credential generation and execution evidence to the transaction."],
 ];
 
 export default function Home() {
@@ -36,10 +36,10 @@ export default function Home() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4967f2] opacity-60 motion-reduce:hidden" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#4967f2]" />
               </span>
-              <span className="font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[#151922]">Agent action control plane</span>
+              <span className="font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[#151922]">Transaction layer for AI agents</span>
             </div>
-            <h1 className="mt-6 text-[clamp(42px,5vw,64px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]"><span className="block">Agents take actions.</span><span className="block">Revive makes them safe.</span></h1>
-            <p className="mt-6 max-w-[460px] text-[17px] leading-[1.6] text-[#5f6876]">Exactly-once execution, human approvals, and automatic recovery for every action your agents take. One line in front of any MCP server.</p>
+            <h1 className="mt-6 text-[clamp(42px,5vw,64px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]"><span className="block">Agents think probabilistically.</span><span className="block">Their actions should commit deterministically.</span></h1>
+            <p className="mt-6 max-w-[520px] text-[17px] leading-[1.6] text-[#5f6876]">Revive turns multi-system agent work into one verified outcome, with exactly-once execution, approvals, reconciliation, and recovery built in.</p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link href="/app" className="inline-flex h-12 items-center rounded-[8px] bg-[#4967f2] px-5 text-[13px] font-semibold text-white transition hover:bg-[#3954d9] active:translate-y-px">See it work</Link>
               <Link href="#product" className="inline-flex h-12 items-center rounded-[8px] border border-[#d9ddd6] bg-transparent px-5 text-[13px] font-semibold text-[#151922] transition hover:border-[#151922] hover:bg-white active:translate-y-px">How it works</Link>
@@ -52,18 +52,18 @@ export default function Home() {
 
     <section aria-label="What Revive guarantees" className="border-b border-[#e0e3dd] bg-[#eef0eb]">
       <div className="mx-auto grid max-w-[1380px] divide-y divide-[#dcdfd8] sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-        <GuaranteeCell label="Exactly-once" title="Never runs twice" detail="duplicate calls return the stored result" tone="cobalt" />
-        <GuaranteeCell label="Approvals" title="Human in the loop" detail="high-risk actions pause for a yes" tone="warn" />
-        <GuaranteeCell label="Recovery" title="Resumes after failure" detail="reconnect the account, continue the run" tone="ok" />
-        <GuaranteeCell label="Audit" title="Every action logged" detail="verdict, approval, reconciliation" tone="ink" />
+        <GuaranteeCell label="Transaction" title="One business outcome" detail="every related write shares one final state" tone="cobalt" />
+        <GuaranteeCell label="Exactly-once" title="No repeated effects" detail="duplicates return the stored result" tone="ok" />
+        <GuaranteeCell label="Reconciliation" title="Unknown stays unknown" detail="provider truth is checked before retry" tone="warn" />
+        <GuaranteeCell label="Evidence" title="Completion is proved" detail="verified, compensated, or escalated" tone="ink" />
       </div>
     </section>
 
     <section id="product" className="mx-auto grid max-w-[1380px] gap-16 px-5 py-24 sm:px-8 lg:grid-cols-[.75fr_1.25fr] lg:py-36">
       <Reveal className="lg:sticky lg:top-28 lg:self-start">
-        <p className="text-[11px] font-semibold text-[#4967f2]">What actually happens</p>
-        <h2 className="mt-5 max-w-[520px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">When a login dies mid-task, the work shouldn&apos;t die with it.</h2>
-        <p className="mt-6 max-w-[430px] text-[14px] leading-6 text-[#697281]">Retrying blind can send the same email twice or charge the same card again. Revive pauses the job safely, brings the right person back, and finishes it. Once.</p>
+        <p className="text-[11px] font-semibold text-[#4967f2]">From plan to provider truth</p>
+        <h2 className="mt-5 max-w-[520px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">A successful tool call is not a completed business operation.</h2>
+        <p className="mt-6 max-w-[450px] text-[14px] leading-6 text-[#697281]">Refunding a customer may touch payments, billing, CRM, support, and email. Revive keeps that whole operation open until the required state is proved.</p>
       </Reveal>
       <Stagger className="stage-stack">
         {recoveryStages.map((stage) => <StaggerItem key={stage.title}>
@@ -101,17 +101,17 @@ export default function Home() {
 
     <section id="architecture" className="border-y border-[#e0e3dd] bg-[#eef0eb]">
       <div className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
-        <Reveal><p className="text-[11px] font-semibold text-[#4967f2]">The recovery contract</p><h2 className="mt-5 max-w-[860px] text-[clamp(38px,5vw,60px)] font-semibold leading-[1.0] tracking-[-0.03em] text-[#151922]">Same run ID.<br />New credential generation.</h2></Reveal>
+        <Reveal><p className="text-[11px] font-semibold text-[#4967f2]">The transaction contract</p><h2 className="mt-5 max-w-[860px] text-[clamp(38px,5vw,60px)] font-semibold leading-[1.0] tracking-[-0.03em] text-[#151922]">One operation ID.<br />Every provider state.</h2></Reveal>
         <div className="continuity-sheet mt-16 grid overflow-hidden rounded-[14px] border border-[#151922] bg-[#fbfcf8] lg:grid-cols-[1.08fr_.92fr]">
           <Reveal className="relative min-h-[440px] overflow-hidden border-b border-[#d9ddd6] p-7 sm:p-10 lg:border-b-0 lg:border-r">
             <div className="continuity-ruler" aria-hidden="true" />
             <div className="relative flex h-full flex-col justify-between">
               <div className="flex items-center justify-between font-mono text-[10px] tracking-[.1em] text-[#727b89]"><span>LOGICAL EXECUTION</span><span>PROTECTED</span></div>
               <div className="py-16">
-                <div className="font-mono text-[clamp(58px,8vw,104px)] font-semibold leading-none tracking-[-.04em] text-[#151922]">run_7f2</div>
-                <div className="mt-6 grid grid-cols-[auto_1fr_auto] items-center gap-4"><span className="font-mono text-[10px] font-medium text-[#c2413a]">GRANT REJECTED</span><span className="h-px bg-[#cbd0d5]" /><span className="font-mono text-[10px] font-medium text-[#2e49c8]">GENERATION 02</span></div>
+                <div className="font-mono text-[clamp(58px,8vw,104px)] font-semibold leading-none tracking-[-.04em] text-[#151922]">txn_7f2</div>
+                <div className="mt-6 grid grid-cols-[auto_1fr_auto] items-center gap-4"><span className="font-mono text-[10px] font-medium text-[#c2413a]">PARTIAL STATE</span><span className="h-px bg-[#cbd0d5]" /><span className="font-mono text-[10px] font-medium text-[#2e49c8]">OUTCOME VERIFIED</span></div>
               </div>
-              <div className="font-mono text-[10px] text-[#737c89]">CHECKPOINT + ACTION KEY PRESERVED</div>
+              <div className="font-mono text-[10px] text-[#737c89]">CONTRACT + ACTION RESULTS + PROVIDER EVIDENCE</div>
             </div>
           </Reveal>
           <Stagger className="grid sm:grid-cols-2 lg:grid-cols-1">
@@ -126,9 +126,9 @@ export default function Home() {
     <section className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
       <Reveal><h2 className="max-w-[760px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">Built between systems that already do their jobs well.</h2></Reveal>
       <Reveal className="systems-ledger mt-14 border-t border-[#d9ddd6]">
-        <SystemRow label="Credential custody" systems="Microsoft Entra, Nango, Auth0" detail="Tokens stay with the identity layer." />
-        <SystemRow label="Recovery contract" systems="Revive" detail="Correlates identity, execution and replay evidence." active />
-        <SystemRow label="Durable execution" systems="LangGraph, Temporal" detail="The runtime handles checkpointing and scheduling." />
+        <SystemRow label="Reasoning trace" systems="LangSmith, Braintrust, OpenTelemetry" detail="Explains why the agent chose its path." />
+        <SystemRow label="Outcome integrity" systems="Revive" detail="Controls writes and proves the final provider state." active />
+        <SystemRow label="Runtime and identity" systems="LangGraph, Temporal, Nango, Auth0" detail="Runs the workflow and keeps credential custody." />
       </Reveal>
     </section>
 
@@ -170,7 +170,7 @@ export default function Home() {
 
     <section className="border-b border-[#e0e3dd] bg-[#eef0eb]">
       <div className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-32">
-        <Reveal><h2 className="max-w-[780px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">Add recovery at the action boundary.</h2><p className="mt-5 max-w-[620px] text-[14px] leading-6 text-[#687180]">Use the runtime and credential system already in production. Revive records the contract between them.</p></Reveal>
+        <Reveal><h2 className="max-w-[780px] text-[clamp(34px,4.4vw,54px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">Add outcome integrity at the action boundary.</h2><p className="mt-5 max-w-[620px] text-[14px] leading-6 text-[#687180]">Keep the runtime, observability, and credential systems already in production. Revive owns whether the external work settled correctly.</p></Reveal>
         <Reveal delay={.06} className="mt-12"><IntegrationPanel /></Reveal>
       </div>
     </section>
@@ -184,8 +184,8 @@ export default function Home() {
 
     <section className="mx-auto max-w-[1380px] px-5 py-24 sm:px-8 lg:py-36">
       <Reveal className="relative border-l-[4px] border-[#4967f2] pl-6 sm:pl-10">
-        <h2 className="max-w-[880px] text-[clamp(40px,5.2vw,68px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">Break the credential.<br />Keep the execution.</h2>
-        <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-center"><p className="max-w-[550px] text-[15px] leading-6 text-[#687180]">Run the local fault injection and inspect every recovery transition.</p><Link href="/app" className="inline-flex h-12 w-fit items-center rounded-[8px] bg-[#151922] px-6 text-[13px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">Open recovery lab</Link></div>
+        <h2 className="max-w-[880px] text-[clamp(40px,5.2vw,68px)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#151922]">Let the agent choose the path.<br />Prove the outcome.</h2>
+        <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-center"><p className="max-w-[550px] text-[15px] leading-6 text-[#687180]">Protect the first action in minutes, then group multi-system work under one Outcome Contract.</p><Link href="/app/quickstart" className="inline-flex h-12 w-fit items-center rounded-[8px] bg-[#151922] px-6 text-[13px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">Protect an operation</Link></div>
       </Reveal>
     </section>
   </div>;
