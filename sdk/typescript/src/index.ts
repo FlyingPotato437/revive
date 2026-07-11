@@ -90,6 +90,92 @@ export interface CreateOutcomeTransactionInput {
   }>;
 }
 
+export type UserActionType = "approval" | "structured_input" | "clarification" | "reauthorization" | "verification" | "permission" | "browser_handoff" | "document_request";
+export type UserActionFieldType = "text" | "textarea" | "select" | "boolean" | "currency" | "email" | "url" | "date" | "file_url";
+export interface UserActionField {
+  key: string;
+  type: UserActionFieldType;
+  label: string;
+  description?: string;
+  placeholder?: string;
+  required?: boolean;
+  options?: Array<{ value: string; label: string }>;
+  requiredWhen?: { field: string; equals: string | boolean };
+}
+export interface CreateUserActionRequestInput {
+  runId: string;
+  checkpointId?: string;
+  generation?: number;
+  idempotencyKey: string;
+  actionType: UserActionType;
+  title: string;
+  description?: string;
+  recipient: { subjectId: string; email: string; role?: string };
+  fields?: UserActionField[];
+  context?: Record<string, unknown>;
+  identityMode?: "secure_link" | "authenticated";
+  destinationUrl?: string;
+  expiresIn?: string;
+}
+export interface UserActionRequest {
+  id: string;
+  runId: string;
+  checkpointId?: string;
+  generation: number;
+  actionType: UserActionType;
+  idempotencyKey: string;
+  title: string;
+  status: "pending" | "completed" | "cancelled" | "expired";
+  recipient: { subjectId: string; email: string; role?: string };
+  fields: UserActionField[];
+  expiresAt: number;
+  resumeStatus: "not_configured" | "queued" | "acknowledged" | "failed" | "held_for_review";
+  url?: string;
+  response?: Record<string, unknown>;
+}
+
+export type DeadRunCategory = "expired_oauth" | "missing_input" | "approval_needed" | "permission_denied" | "browser_intervention" | "ambiguous_side_effect" | "unknown";
+export interface RecordDeadRunInput {
+  runId: string;
+  checkpointId?: string;
+  generation?: number;
+  idempotencyKey: string;
+  runtime?: string;
+  failureMessage: string;
+  trace?: unknown;
+  inputTokens?: number;
+  outputTokens?: number;
+  estimatedCostUsd?: number;
+}
+export interface DeadRunRecord {
+  id: string;
+  runId: string;
+  checkpointId?: string;
+  generation: number;
+  runtime: string;
+  category: DeadRunCategory;
+  confidence: number;
+  recoverable: boolean;
+  suggestedActionType: UserActionType;
+  suggestedRecipientRole: string;
+  suggestedQuestion: string;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUsd: number;
+  status: "detected" | "resolution_requested" | "resolved" | "ignored";
+  actionRequestId?: string;
+}
+export interface DeadRunStats {
+  days: number;
+  totalRunsLost: number;
+  recoverableRuns: number;
+  recoverableRate: number;
+  wastedTokens: number;
+  estimatedCostUsd: number;
+  resolvedRuns: number;
+  categories: Array<{ category: DeadRunCategory; count: number; share: number }>;
+}
+
 /** Provider probe fields attached at registration so recovery can auto-answer
  *  "did this side effect already happen?" before the run resumes. */
 export interface ReconcileHints {
@@ -209,6 +295,12 @@ export interface ReviveTransport {
   registerTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction>;
   transitionTransactionStep(input: { transactionId: string; stepKey: string; to: OutcomeStepState; expectedVersion: number; actionId?: string; remoteId?: string; evidence?: Record<string, unknown>; note?: string; resultSummary?: string }): Promise<OutcomeTransaction>;
   decideTransaction(input: { transactionId: string; decision: "approve" | "deny"; reason?: string }): Promise<OutcomeTransaction>;
+  requestUserAction(input: CreateUserActionRequestInput): Promise<UserActionRequest>;
+  getUserAction(id: string): Promise<UserActionRequest>;
+  cancelUserAction(id: string): Promise<UserActionRequest>;
+  recordDeadRun(input: RecordDeadRunInput): Promise<DeadRunRecord>;
+  getDeadRunStats(days?: number): Promise<DeadRunStats>;
+  resolveDeadRun(input: { deadRunId: string; recipient: { subjectId: string; email: string; role?: string }; destinationUrl?: string; expiresIn?: string }): Promise<{ deadRun: DeadRunRecord; request: UserActionRequest }>;
 }
 
 export interface ReviveClientOptions {
@@ -369,6 +461,34 @@ export class ReviveClient {
     return this.transport.decideTransaction(input);
   }
 
+  /** Ask a specific person to unblock a suspended run. Revive returns a
+   * single-use action URL and later emits a signed continuation event. */
+  requestAction(input: CreateUserActionRequestInput): Promise<UserActionRequest> {
+    return this.transport.requestUserAction(input);
+  }
+
+  getActionRequest(id: string): Promise<UserActionRequest> {
+    return this.transport.getUserAction(id);
+  }
+
+  cancelActionRequest(id: string): Promise<UserActionRequest> {
+    return this.transport.cancelUserAction(id);
+  }
+
+  /** Record one run that terminated at a human-dependent boundary. Trace is
+   * redacted server-side before classification or storage. */
+  detectDeadRun(input: RecordDeadRunInput): Promise<DeadRunRecord> {
+    return this.transport.recordDeadRun(input);
+  }
+
+  deadRunStats(days = 7): Promise<DeadRunStats> {
+    return this.transport.getDeadRunStats(days);
+  }
+
+  reviveDeadRun(input: Parameters<ReviveTransport["resolveDeadRun"]>[0]): Promise<{ deadRun: DeadRunRecord; request: UserActionRequest }> {
+    return this.transport.resolveDeadRun(input);
+  }
+
   private async park<TCredential, TResult>(
     input: ProtectActionInput<TCredential, TResult>,
     action: ActionRegistration,
@@ -452,14 +572,47 @@ export class HttpReviveTransport implements ReviveTransport {
     return response.transaction;
   }
 
+  async requestUserAction(input: CreateUserActionRequestInput): Promise<UserActionRequest> {
+    const response = await this.request<{ request: UserActionRequest }>("/v1/action-requests", input);
+    return response.request;
+  }
+
+  async getUserAction(id: string): Promise<UserActionRequest> {
+    const response = await this.fetchJson<{ request: UserActionRequest }>(`/v1/action-requests/${encodeURIComponent(id)}`, { method: "GET" });
+    return response.request;
+  }
+
+  async cancelUserAction(id: string): Promise<UserActionRequest> {
+    const response = await this.fetchJson<{ request: UserActionRequest }>(`/v1/action-requests/${encodeURIComponent(id)}`, { method: "DELETE" });
+    return response.request;
+  }
+
+  async recordDeadRun(input: RecordDeadRunInput): Promise<DeadRunRecord> {
+    const response = await this.request<{ run: DeadRunRecord }>("/v1/dead-runs", input);
+    return response.run;
+  }
+
+  async getDeadRunStats(days = 7): Promise<DeadRunStats> {
+    const response = await this.fetchJson<{ stats: DeadRunStats }>(`/v1/dead-runs/stats?days=${Math.max(1, Math.floor(days))}`, { method: "GET" });
+    return response.stats;
+  }
+
+  async resolveDeadRun(input: Parameters<ReviveTransport["resolveDeadRun"]>[0]): Promise<{ deadRun: DeadRunRecord; request: UserActionRequest }> {
+    const { deadRunId, ...body } = input;
+    return this.request(`/v1/dead-runs/${encodeURIComponent(deadRunId)}/revive`, body);
+  }
+
   private async request<T>(path: string, body: unknown): Promise<T> {
-    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+    return this.fetchJson<T>(path, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        ...(this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {}),
-      },
       body: JSON.stringify(body),
+    });
+  }
+
+  private async fetchJson<T>(path: string, init: { method: "GET" | "POST" | "DELETE"; body?: string }): Promise<T> {
+    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      ...init,
+      headers: { "content-type": "application/json", ...(this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {}) },
     });
     if (!response.ok) {
       const text = await response.text();
@@ -474,6 +627,8 @@ export class MemoryReviveTransport implements ReviveTransport {
   readonly actions = new Map<string, ActionRegistration & Record<string, unknown>>();
   readonly recoveryCases = new Map<string, RecoveryCase>();
   readonly transactions = new Map<string, OutcomeTransaction>();
+  readonly userActionRequests = new Map<string, UserActionRequest>();
+  readonly deadRuns = new Map<string, DeadRunRecord>();
 
   async registerAction(input: Parameters<ReviveTransport["registerAction"]>[0]): Promise<ActionRegistration> {
     const id = `act_${hash(`${input.runId}:${input.actionKey}:${input.idempotencyKey}`)}`;
@@ -576,7 +731,81 @@ export class MemoryReviveTransport implements ReviveTransport {
     transaction.state = input.decision === "approve" ? "planned" : "cancelled"; transaction.version += 1;
     return transaction;
   }
+
+  async requestUserAction(input: CreateUserActionRequestInput): Promise<UserActionRequest> {
+    const id = `uar_${hash(`${input.runId}:${input.idempotencyKey}`)}`;
+    const existing = this.userActionRequests.get(id);
+    if (existing) return existing;
+    const defaults: Partial<Record<UserActionType, UserActionField[]>> = {
+      approval: [{ key: "decision", type: "select", label: "Decision", required: true, options: [{ value: "approve", label: "Approve" }, { value: "reject", label: "Reject" }] }],
+      clarification: [{ key: "answer", type: "textarea", label: "Your answer", required: true }],
+      verification: [{ key: "result", type: "select", label: "What happened?", required: true, options: [{ value: "confirmed", label: "It happened" }, { value: "not_happened", label: "It did not happen" }] }],
+    };
+    const record: UserActionRequest = {
+      id, runId: input.runId, checkpointId: input.checkpointId, generation: input.generation ?? 1,
+      actionType: input.actionType, idempotencyKey: input.idempotencyKey, title: input.title, status: "pending",
+      recipient: input.recipient, fields: input.fields || defaults[input.actionType] || [],
+      expiresAt: Date.now() + 48 * 60 * 60 * 1000, resumeStatus: "not_configured", url: `/actions/${id}`,
+    };
+    this.userActionRequests.set(id, record);
+    return record;
+  }
+
+  async getUserAction(id: string): Promise<UserActionRequest> {
+    const request = this.userActionRequests.get(id);
+    if (!request) throw new Error("action request not found");
+    return request;
+  }
+
+  async cancelUserAction(id: string): Promise<UserActionRequest> {
+    const request = await this.getUserAction(id);
+    if (request.status === "pending") request.status = "cancelled";
+    return request;
+  }
+
+  async recordDeadRun(input: RecordDeadRunInput): Promise<DeadRunRecord> {
+    const id = `dr_${hash(`${input.runId}:${input.idempotencyKey}`)}`;
+    const existing = this.deadRuns.get(id); if (existing) return existing;
+    const text = `${input.failureMessage} ${JSON.stringify(input.trace || {})}`.toLowerCase();
+    const category: DeadRunCategory = /(invalid_grant|oauth|token expired|revoked|401)/.test(text) ? "expired_oauth"
+      : /(approval|required approval|budget limit)/.test(text) ? "approval_needed"
+        : /(missing input|required field|clarif)/.test(text) ? "missing_input"
+          : /(403|permission|scope)/.test(text) ? "permission_denied"
+            : /(captcha|otp|passkey|browser session)/.test(text) ? "browser_intervention" : "unknown";
+    const action: Record<DeadRunCategory, UserActionType> = { expired_oauth: "reauthorization", missing_input: "clarification", approval_needed: "approval", permission_denied: "permission", browser_intervention: "browser_handoff", ambiguous_side_effect: "verification", unknown: "clarification" };
+    const record: DeadRunRecord = { id, runId: input.runId, checkpointId: input.checkpointId, generation: input.generation ?? 1, runtime: input.runtime || "custom", category, confidence: category === "unknown" ? .35 : .88, recoverable: category !== "unknown", suggestedActionType: action[category], suggestedRecipientRole: category === "expired_oauth" ? "account owner" : "run owner", suggestedQuestion: category === "expired_oauth" ? "Reconnect this account so the agent can continue." : "Provide the action needed to continue.", inputTokens: input.inputTokens || 0, outputTokens: input.outputTokens || 0, estimatedCostUsd: input.estimatedCostUsd || 0, status: "detected" };
+    this.deadRuns.set(id, record); return record;
+  }
+
+  async getDeadRunStats(days = 7): Promise<DeadRunStats> {
+    const runs = [...this.deadRuns.values()]; const total = runs.length; const recoverable = runs.filter((run) => run.recoverable).length;
+    const counts = new Map<DeadRunCategory, number>(); for (const run of runs) counts.set(run.category, (counts.get(run.category) || 0) + 1);
+    return { days, totalRunsLost: total, recoverableRuns: recoverable, recoverableRate: total ? recoverable / total : 0, wastedTokens: runs.reduce((sum, run) => sum + run.inputTokens + run.outputTokens, 0), estimatedCostUsd: runs.reduce((sum, run) => sum + run.estimatedCostUsd, 0), resolvedRuns: runs.filter((run) => run.status === "resolved").length, categories: [...counts].map(([category, count]) => ({ category, count, share: total ? count / total : 0 })) };
+  }
+
+  async resolveDeadRun(input: Parameters<ReviveTransport["resolveDeadRun"]>[0]): Promise<{ deadRun: DeadRunRecord; request: UserActionRequest }> {
+    const deadRun = this.deadRuns.get(input.deadRunId); if (!deadRun) throw new Error("dead run not found");
+    const request = await this.requestUserAction({ runId: deadRun.runId, checkpointId: deadRun.checkpointId, generation: deadRun.generation, idempotencyKey: `dead-run:${deadRun.id}`, actionType: deadRun.suggestedActionType, title: deadRun.suggestedQuestion, recipient: input.recipient, destinationUrl: input.destinationUrl, expiresIn: input.expiresIn });
+    deadRun.status = "resolution_requested"; deadRun.actionRequestId = request.id; return { deadRun, request };
+  }
 }
+
+export interface InterruptFailure {
+  runId: string; checkpointId?: string; generation?: number; failureMessage: string; trace?: unknown;
+  inputTokens?: number; outputTokens?: number; estimatedCostUsd?: number; idempotencyKey?: string;
+}
+
+function interruptAdapter(client: ReviveClient, runtime: string) {
+  return (failure: InterruptFailure) => client.detectDeadRun({
+    ...failure, runtime,
+    idempotencyKey: failure.idempotencyKey || createIdempotencyKey(failure.runId, `dead-run:${runtime}`, failure.checkpointId),
+  });
+}
+
+/** Point existing interrupt/failure hook at one of these adapters. */
+export const createLangGraphInterruptHandler = (client: ReviveClient) => interruptAdapter(client, "langgraph");
+export const createTemporalFailureSignal = (client: ReviveClient) => interruptAdapter(client, "temporal");
+export const createMcpElicitationHandler = (client: ReviveClient) => interruptAdapter(client, "mcp");
 
 function memoryTransactionState(steps: OutcomeTransactionStep[]): OutcomeTransactionState {
   if (steps.some((step) => step.state === "failed")) return "needs_human";

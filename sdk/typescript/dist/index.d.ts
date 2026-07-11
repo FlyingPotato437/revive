@@ -89,6 +89,108 @@ export interface CreateOutcomeTransactionInput {
         };
     }>;
 }
+export type UserActionType = "approval" | "structured_input" | "clarification" | "reauthorization" | "verification" | "permission" | "browser_handoff" | "document_request";
+export type UserActionFieldType = "text" | "textarea" | "select" | "boolean" | "currency" | "email" | "url" | "date" | "file_url";
+export interface UserActionField {
+    key: string;
+    type: UserActionFieldType;
+    label: string;
+    description?: string;
+    placeholder?: string;
+    required?: boolean;
+    options?: Array<{
+        value: string;
+        label: string;
+    }>;
+    requiredWhen?: {
+        field: string;
+        equals: string | boolean;
+    };
+}
+export interface CreateUserActionRequestInput {
+    runId: string;
+    checkpointId?: string;
+    generation?: number;
+    idempotencyKey: string;
+    actionType: UserActionType;
+    title: string;
+    description?: string;
+    recipient: {
+        subjectId: string;
+        email: string;
+        role?: string;
+    };
+    fields?: UserActionField[];
+    context?: Record<string, unknown>;
+    identityMode?: "secure_link" | "authenticated";
+    destinationUrl?: string;
+    expiresIn?: string;
+}
+export interface UserActionRequest {
+    id: string;
+    runId: string;
+    checkpointId?: string;
+    generation: number;
+    actionType: UserActionType;
+    idempotencyKey: string;
+    title: string;
+    status: "pending" | "completed" | "cancelled" | "expired";
+    recipient: {
+        subjectId: string;
+        email: string;
+        role?: string;
+    };
+    fields: UserActionField[];
+    expiresAt: number;
+    resumeStatus: "not_configured" | "queued" | "acknowledged" | "failed" | "held_for_review";
+    url?: string;
+    response?: Record<string, unknown>;
+}
+export type DeadRunCategory = "expired_oauth" | "missing_input" | "approval_needed" | "permission_denied" | "browser_intervention" | "ambiguous_side_effect" | "unknown";
+export interface RecordDeadRunInput {
+    runId: string;
+    checkpointId?: string;
+    generation?: number;
+    idempotencyKey: string;
+    runtime?: string;
+    failureMessage: string;
+    trace?: unknown;
+    inputTokens?: number;
+    outputTokens?: number;
+    estimatedCostUsd?: number;
+}
+export interface DeadRunRecord {
+    id: string;
+    runId: string;
+    checkpointId?: string;
+    generation: number;
+    runtime: string;
+    category: DeadRunCategory;
+    confidence: number;
+    recoverable: boolean;
+    suggestedActionType: UserActionType;
+    suggestedRecipientRole: string;
+    suggestedQuestion: string;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCostUsd: number;
+    status: "detected" | "resolution_requested" | "resolved" | "ignored";
+    actionRequestId?: string;
+}
+export interface DeadRunStats {
+    days: number;
+    totalRunsLost: number;
+    recoverableRuns: number;
+    recoverableRate: number;
+    wastedTokens: number;
+    estimatedCostUsd: number;
+    resolvedRuns: number;
+    categories: Array<{
+        category: DeadRunCategory;
+        count: number;
+        share: number;
+    }>;
+}
 /** Provider probe fields attached at registration so recovery can auto-answer
  *  "did this side effect already happen?" before the run resumes. */
 export interface ReconcileHints {
@@ -216,6 +318,24 @@ export interface ReviveTransport {
         decision: "approve" | "deny";
         reason?: string;
     }): Promise<OutcomeTransaction>;
+    requestUserAction(input: CreateUserActionRequestInput): Promise<UserActionRequest>;
+    getUserAction(id: string): Promise<UserActionRequest>;
+    cancelUserAction(id: string): Promise<UserActionRequest>;
+    recordDeadRun(input: RecordDeadRunInput): Promise<DeadRunRecord>;
+    getDeadRunStats(days?: number): Promise<DeadRunStats>;
+    resolveDeadRun(input: {
+        deadRunId: string;
+        recipient: {
+            subjectId: string;
+            email: string;
+            role?: string;
+        };
+        destinationUrl?: string;
+        expiresIn?: string;
+    }): Promise<{
+        deadRun: DeadRunRecord;
+        request: UserActionRequest;
+    }>;
 }
 export interface ReviveClientOptions {
     transport?: ReviveTransport;
@@ -248,6 +368,19 @@ export declare class ReviveClient {
         decision: "approve" | "deny";
         reason?: string;
     }): Promise<OutcomeTransaction>;
+    /** Ask a specific person to unblock a suspended run. Revive returns a
+     * single-use action URL and later emits a signed continuation event. */
+    requestAction(input: CreateUserActionRequestInput): Promise<UserActionRequest>;
+    getActionRequest(id: string): Promise<UserActionRequest>;
+    cancelActionRequest(id: string): Promise<UserActionRequest>;
+    /** Record one run that terminated at a human-dependent boundary. Trace is
+     * redacted server-side before classification or storage. */
+    detectDeadRun(input: RecordDeadRunInput): Promise<DeadRunRecord>;
+    deadRunStats(days?: number): Promise<DeadRunStats>;
+    reviveDeadRun(input: Parameters<ReviveTransport["resolveDeadRun"]>[0]): Promise<{
+        deadRun: DeadRunRecord;
+        request: UserActionRequest;
+    }>;
     private park;
 }
 export declare class AmbiguousCommitError extends Error {
@@ -271,12 +404,24 @@ export declare class HttpReviveTransport implements ReviveTransport {
     registerTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction>;
     transitionTransactionStep(input: Parameters<ReviveTransport["transitionTransactionStep"]>[0]): Promise<OutcomeTransaction>;
     decideTransaction(input: Parameters<ReviveTransport["decideTransaction"]>[0]): Promise<OutcomeTransaction>;
+    requestUserAction(input: CreateUserActionRequestInput): Promise<UserActionRequest>;
+    getUserAction(id: string): Promise<UserActionRequest>;
+    cancelUserAction(id: string): Promise<UserActionRequest>;
+    recordDeadRun(input: RecordDeadRunInput): Promise<DeadRunRecord>;
+    getDeadRunStats(days?: number): Promise<DeadRunStats>;
+    resolveDeadRun(input: Parameters<ReviveTransport["resolveDeadRun"]>[0]): Promise<{
+        deadRun: DeadRunRecord;
+        request: UserActionRequest;
+    }>;
     private request;
+    private fetchJson;
 }
 export declare class MemoryReviveTransport implements ReviveTransport {
     readonly actions: Map<string, ActionRegistration & Record<string, unknown>>;
     readonly recoveryCases: Map<string, RecoveryCase>;
     readonly transactions: Map<string, OutcomeTransaction>;
+    readonly userActionRequests: Map<string, UserActionRequest>;
+    readonly deadRuns: Map<string, DeadRunRecord>;
     registerAction(input: Parameters<ReviveTransport["registerAction"]>[0]): Promise<ActionRegistration>;
     markStarted(input: Parameters<ReviveTransport["markStarted"]>[0]): Promise<void>;
     completeAction(input: Parameters<ReviveTransport["completeAction"]>[0]): Promise<void>;
@@ -285,7 +430,31 @@ export declare class MemoryReviveTransport implements ReviveTransport {
     registerTransaction(input: CreateOutcomeTransactionInput): Promise<OutcomeTransaction>;
     transitionTransactionStep(input: Parameters<ReviveTransport["transitionTransactionStep"]>[0]): Promise<OutcomeTransaction>;
     decideTransaction(input: Parameters<ReviveTransport["decideTransaction"]>[0]): Promise<OutcomeTransaction>;
+    requestUserAction(input: CreateUserActionRequestInput): Promise<UserActionRequest>;
+    getUserAction(id: string): Promise<UserActionRequest>;
+    cancelUserAction(id: string): Promise<UserActionRequest>;
+    recordDeadRun(input: RecordDeadRunInput): Promise<DeadRunRecord>;
+    getDeadRunStats(days?: number): Promise<DeadRunStats>;
+    resolveDeadRun(input: Parameters<ReviveTransport["resolveDeadRun"]>[0]): Promise<{
+        deadRun: DeadRunRecord;
+        request: UserActionRequest;
+    }>;
 }
+export interface InterruptFailure {
+    runId: string;
+    checkpointId?: string;
+    generation?: number;
+    failureMessage: string;
+    trace?: unknown;
+    inputTokens?: number;
+    outputTokens?: number;
+    estimatedCostUsd?: number;
+    idempotencyKey?: string;
+}
+/** Point existing interrupt/failure hook at one of these adapters. */
+export declare const createLangGraphInterruptHandler: (client: ReviveClient) => (failure: InterruptFailure) => Promise<DeadRunRecord>;
+export declare const createTemporalFailureSignal: (client: ReviveClient) => (failure: InterruptFailure) => Promise<DeadRunRecord>;
+export declare const createMcpElicitationHandler: (client: ReviveClient) => (failure: InterruptFailure) => Promise<DeadRunRecord>;
 export declare function createIdempotencyKey(runId: string, actionKey: string, checkpointId?: string): string;
 /** Derive only policy facts from a local tool call. The caller keeps the input. */
 export declare function inferActionRisk(actionKey: string, input?: unknown): ActionRiskContext;

@@ -92,7 +92,7 @@ export function AttentionQueue({ initialItems, readiness, showAll = false }: { i
           {!showAll && items.length > 4 && <Link href="/app/attention" className="flex items-center justify-between px-5 py-3 text-[10px] font-semibold text-[#2e49c8] hover:bg-[#f5f6f2]">View all {items.length} open items <ArrowRight size={12} /></Link>}
         </div>
       ) : (
-        <div className="flex items-center gap-3 px-5 py-5"><span className="flex h-7 w-7 items-center justify-center border border-[#cbe3d7] bg-[#edf8f2] text-[#18724e]"><Check size={14} weight="bold" /></span><p className="text-[11px] text-[#596273]">No approval, recovery, uncertain action, or delivery needs your attention.</p></div>
+        <div className="flex items-center gap-3 px-5 py-5"><span className="flex h-7 w-7 items-center justify-center border border-[#cbe3d7] bg-[#edf8f2] text-[#18724e]"><Check size={14} weight="bold" /></span><p className="text-[11px] text-[#596273]">No user request, recovery, uncertain action, or delivery needs your attention.</p></div>
       )}
 
       {incomplete.length > 0 && (

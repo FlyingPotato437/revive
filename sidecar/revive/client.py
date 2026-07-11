@@ -67,6 +67,69 @@ class ReviveClient:
             except json.JSONDecodeError:
                 return error.code, {}
 
+    def detect_dead_run(
+        self,
+        *,
+        run_id: str,
+        failure_message: str,
+        checkpoint_id: Optional[str] = None,
+        generation: int = 1,
+        idem_key: Optional[str] = None,
+        runtime: str = "custom",
+        trace: Any = None,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        estimated_cost_usd: float = 0,
+    ) -> dict:
+        """Record a terminal run at an existing interrupt boundary.
+
+        The server redacts the trace before classification or durable storage.
+        Detection never contacts an end user and is safe to install first.
+        """
+        key = idem_key or idempotency_key(run_id, f"dead-run:{runtime}", checkpoint_id or "checkpoint")
+        payload: dict[str, Any] = {
+            "runId": run_id,
+            "generation": generation,
+            "idempotencyKey": key,
+            "runtime": runtime,
+            "failureMessage": failure_message,
+            "inputTokens": input_tokens,
+            "outputTokens": output_tokens,
+            "estimatedCostUsd": estimated_cost_usd,
+        }
+        if checkpoint_id:
+            payload["checkpointId"] = checkpoint_id
+        if trace is not None:
+            payload["trace"] = trace
+        status, response = self._request("POST", "/v1/dead-runs", payload)
+        if status not in (200, 201):
+            raise RuntimeError(f"dead-run detection failed ({status}): {response}")
+        return dict(response.get("run") or response)
+
+    def dead_run_stats(self, days: int = 7) -> dict:
+        safe_days = max(1, min(365, int(days)))
+        status, response = self._request("GET", f"/v1/dead-runs/stats?days={safe_days}")
+        if status != 200:
+            raise RuntimeError(f"dead-run stats failed ({status}): {response}")
+        return dict(response.get("stats") or response)
+
+    def revive_dead_run(
+        self,
+        dead_run_id: str,
+        *,
+        recipient: dict,
+        destination_url: Optional[str] = None,
+        expires_in: str = "48h",
+    ) -> dict:
+        """Create the secure human action for one classified dead run."""
+        payload: dict[str, Any] = {"recipient": recipient, "expiresIn": expires_in}
+        if destination_url:
+            payload["destinationUrl"] = destination_url
+        status, response = self._request("POST", f"/v1/dead-runs/{dead_run_id}/revive", payload)
+        if status not in (200, 201):
+            raise RuntimeError(f"dead-run resolution failed ({status}): {response}")
+        return response
+
     def protect_action(
         self,
         *,

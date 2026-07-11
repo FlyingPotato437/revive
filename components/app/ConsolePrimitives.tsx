@@ -70,6 +70,11 @@ export function TransactionStateBadge({ state }: { state: string }) {
   return <StatusBadge tone={tone}>{state.replaceAll("_", " ")}</StatusBadge>;
 }
 
+export function ActionRequestStateBadge({ state }: { state: string }) {
+  const tone = state === "completed" ? "ok" : state === "pending" ? "warn" : state === "expired" ? "neutral" : "fail";
+  return <StatusBadge tone={tone}>{state}</StatusBadge>;
+}
+
 /** A meter: cobalt fill, warn at ≥80%, fail at 100%. limit null = unlimited. */
 export function MetricMeter({ used, limit }: { used: number; limit: number | null }) {
   if (limit === null) {

@@ -4,6 +4,7 @@ import { hmacHex } from "./secure-envelope";
 import { audit } from "./audit";
 import { getCase, transition, type ControlCase } from "./control-plane";
 import { getResumeEndpoint } from "./workspace-secrets";
+import { markUserActionResume, type UserActionRequest } from "./action-requests";
 
 export interface WebhookEvent {
   id: string;
@@ -67,6 +68,32 @@ export async function enqueueRuntimeResume(record: ControlCase, generation: numb
   });
 }
 
+/** Queue a signed continuation event after a recipient completes a user action.
+ * The original response stays in Revive; the runtime receives the structured
+ * value plus the exact run/checkpoint/generation coordinates it must resume. */
+export async function enqueueUserActionResume(record: UserActionRequest): Promise<string | null> {
+  const config = await resolveRuntimeResumeConfig(record.workspaceId);
+  if (!config) return null;
+  return enqueueJob("runtime.action_resume", {
+    endpoint: config.url,
+    secretSource: config.source,
+    workspaceId: record.workspaceId,
+    actionRequestId: record.id,
+    runId: record.runId,
+    checkpointId: record.checkpointId,
+    actionType: record.actionType,
+    generation: record.generation,
+    response: record.response || {},
+    completedBy: record.completedBy || {},
+    resumeDecision: record.resumeAssessment?.decision || "resume",
+    resumeReason: record.resumeAssessment?.reason || "",
+  }, {
+    id: `action_resume_${record.id}_g${record.generation}`,
+    maxAttempts: 8,
+    workspaceId: record.workspaceId,
+  });
+}
+
 export function safeWebhookEndpoint(raw: string): URL {
   const endpoint = new URL(raw);
   const local = endpoint.hostname === "localhost" || endpoint.hostname === "127.0.0.1";
@@ -106,6 +133,7 @@ type RuntimeResumeAcknowledgement = {
   resumed?: boolean;
   runId?: string;
   checkpointId?: string;
+  generation?: number;
 };
 
 export async function deliverRuntimeResumeJob(job: QueueJob): Promise<void> {
@@ -178,10 +206,59 @@ export async function deliverRuntimeResumeJob(job: QueueJob): Promise<void> {
   });
 }
 
+export async function deliverUserActionResumeJob(job: QueueJob): Promise<void> {
+  if (job.kind !== "runtime.action_resume") throw new Error(`unsupported job kind ${job.kind}`);
+  const workspaceId = String(job.payload.workspaceId);
+  const config = await resolveRuntimeResumeConfig(workspaceId);
+  if (!config?.secret) throw new Error("no runtime resume endpoint is configured for this workspace");
+  const endpoint = safeWebhookEndpoint(String(job.payload.endpoint));
+  const data = {
+    actionRequestId: String(job.payload.actionRequestId),
+    workspaceId,
+    runId: String(job.payload.runId),
+    checkpointId: job.payload.checkpointId ? String(job.payload.checkpointId) : undefined,
+    actionType: String(job.payload.actionType),
+    generation: Number(job.payload.generation),
+    response: job.payload.response || {},
+    completedBy: job.payload.completedBy || {},
+    resumeDecision: String(job.payload.resumeDecision || "resume"),
+    resumeReason: String(job.payload.resumeReason || ""),
+  };
+  const event: WebhookEvent = { id: job.id, type: "action_request.completed", createdAt: new Date().toISOString(), data };
+  const body = JSON.stringify(event);
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "user-agent": "Revive-Runtime/1.0",
+      "webhook-id": event.id,
+      "webhook-timestamp": timestamp,
+      "webhook-signature": signWebhook(config.secret, event.id, timestamp, body),
+      "idempotency-key": event.id,
+    },
+    body,
+    redirect: "error",
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (!response.ok) throw new Error(`runtime adapter returned ${response.status}`);
+  const acknowledgement = await response.json().catch(() => ({})) as RuntimeResumeAcknowledgement;
+  if (acknowledgement.ok !== true || acknowledgement.resumed !== true) throw new Error("runtime adapter did not acknowledge a completed resume");
+  if (acknowledgement.runId !== data.runId) throw new Error("runtime adapter acknowledged the wrong run");
+  if (data.checkpointId && acknowledgement.checkpointId !== data.checkpointId) throw new Error("runtime adapter acknowledged the wrong checkpoint");
+  if (acknowledgement.generation !== data.generation) throw new Error("runtime adapter acknowledged the wrong generation");
+  await markUserActionResume(workspaceId, data.actionRequestId, "acknowledged", job.id);
+  await audit({
+    workspaceId, actor: "runtime-adapter", subjectKind: "action_request", subjectId: data.actionRequestId,
+    event: "resume_acknowledged", detail: { runId: data.runId, checkpointId: data.checkpointId, generation: data.generation },
+  });
+}
+
 export async function processJob(job: QueueJob): Promise<void> {
   try {
     if (job.kind === "webhook.deliver") await deliverWebhookJob(job);
     else if (job.kind === "runtime.resume") await deliverRuntimeResumeJob(job);
+    else if (job.kind === "runtime.action_resume") await deliverUserActionResumeJob(job);
     else throw new Error(`unknown job kind: ${job.kind}`);
     await completeJob(job.id);
   } catch (error) {

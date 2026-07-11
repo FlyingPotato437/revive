@@ -10,6 +10,7 @@
 import type { ControlCase } from "@/lib/control-plane";
 import { loadConnectionBinding } from "@/lib/hosted";
 import { audit } from "@/lib/audit";
+import { markUserActionDelivery, type UserActionRequest } from "@/lib/action-requests";
 
 export function notificationChannels(): { email: boolean; slack: boolean } {
   return {
@@ -133,6 +134,40 @@ export async function notifyApprovalRequested(input: {
   }
 }
 
+/** Deliver a customer-facing action link to the selected recipient. The link
+ * is a one-use capability; messages intentionally omit raw context fields. */
+export async function notifyUserActionRequest(record: UserActionRequest): Promise<void> {
+  const actionUrl = record.url?.startsWith("http") ? record.url : publicUrl(record.url);
+  const emailText = [
+    `An AI workflow needs one action from you before it can continue.`,
+    ``,
+    record.title,
+    record.description,
+    ``,
+    `Run: ${record.runId}`,
+    record.checkpointId ? `Paused at: ${record.checkpointId}` : ``,
+    ``,
+    actionUrl ? `Complete the action: ${actionUrl}` : `Ask the workflow owner for a new secure action link.`,
+    ``,
+    `This link is single-use and expires ${new Date(record.expiresAt).toISOString()}.`,
+  ].filter(Boolean).join("\n");
+  const consoleUrl = publicUrl(`/app/requests/${record.id}`);
+  const slackText = [
+    `:hand: *User action needed* — ${record.title}`,
+    `run \`${record.runId}\`${record.checkpointId ? ` · checkpoint \`${record.checkpointId}\`` : ""}`,
+    consoleUrl ? `<${consoleUrl}|View delivery status in Revive>` : "view delivery status in the Revive console",
+  ].join("\n");
+  const [email, slack] = await Promise.all([
+    actionUrl ? sendEmail({ to: record.recipient.email, subject: `Action needed: ${record.title}`, text: emailText }) : Promise.resolve(false),
+    postSlack(slackText),
+  ]);
+  await markUserActionDelivery(record.workspaceId, record.id, { email, slack }).catch(() => undefined);
+  await audit({
+    workspaceId: record.workspaceId, actor: "notifier", subjectKind: "action_request", subjectId: record.id,
+    event: "delivery_attempted", detail: { email, slack, recipientSubject: record.recipient.subjectId },
+  }).catch(() => undefined);
+}
+
 /** Invite email + Slack ping when a teammate is added to a workspace. */
 export async function sendWorkspaceInvite(input: {
   email: string;
@@ -144,7 +179,7 @@ export async function sendWorkspaceInvite(input: {
   const emailText = [
     `${input.inviterEmail} added you to the "${input.workspaceName}" workspace on Revive as ${input.role}.`,
     ``,
-    `Revive is the agent recovery control plane — it keeps automated workflows recoverable when their credentials fail.`,
+    `Revive is the secure user-action layer for AI agents — it gets the human action a blocked run needs and resumes the same workflow.`,
     ``,
     `Sign in to accept:`,
     signInUrl,

@@ -10,6 +10,9 @@ export interface MonthlyUsage {
   month: string; // YYYY-MM (UTC)
   recoveryCases: number;
   protectedActions: number;
+  actionRequests: number;
+  resolvedActions: number;
+  deadRuns: number;
 }
 
 function monthStartUtc(): { start: Date; label: string } {
@@ -21,7 +24,7 @@ function monthStartUtc(): { start: Date; label: string } {
 
 export async function getMonthlyUsage(workspaceId: string): Promise<MonthlyUsage> {
   const { start, label } = monthStartUtc();
-  if (!hostedDatabaseEnabled()) return { month: label, recoveryCases: 0, protectedActions: 0 };
+  if (!hostedDatabaseEnabled()) return { month: label, recoveryCases: 0, protectedActions: 0, actionRequests: 0, resolvedActions: 0, deadRuns: 0 };
   return withWorkspaceTransaction(workspaceId, async (sql) => {
     const [cases] = await sql<{ n: number }[]>`
       select count(*)::int as n from revive_recovery_cases
@@ -31,8 +34,37 @@ export async function getMonthlyUsage(workspaceId: string): Promise<MonthlyUsage
       select count(*)::int as n from revive_actions
       where workspace_id = ${workspaceId} and created_at >= ${start}
     `;
-    return { month: label, recoveryCases: cases?.n ?? 0, protectedActions: actions?.n ?? 0 };
+    const [requests] = await sql<{ n: number }[]>`
+      select count(*)::int as n from revive_action_requests
+      where workspace_id = ${workspaceId} and created_at >= ${start}
+    `;
+    const [resolved] = await sql<{ n: number }[]>`
+      select count(*)::int as n from revive_action_requests
+      where workspace_id = ${workspaceId} and completed_at >= ${start}
+    `;
+    const [deadRuns] = await sql<{ n: number }[]>`
+      select count(*)::int as n from revive_dead_runs
+      where workspace_id = ${workspaceId} and created_at >= ${start}
+    `;
+    return { month: label, recoveryCases: cases?.n ?? 0, protectedActions: actions?.n ?? 0, actionRequests: requests?.n ?? 0, resolvedActions: resolved?.n ?? 0, deadRuns: deadRuns?.n ?? 0 };
   });
+}
+
+/** User-action requests use the existing monthly intervention allowance. This
+ * keeps billing stable while recovery cases become one request type. */
+export async function checkActionRequestQuota(workspaceId: string): Promise<QuotaCheck> {
+  if (workspaceId === "ws_revive_local") return { allowed: true, plan: "free", used: 0, limit: null };
+  try {
+    const organizationId = await organizationIdForWorkspace(workspaceId);
+    const billing = await getOrganizationBilling(workspaceId, organizationId);
+    const limit = PLAN_LIMITS[billing.plan].casesPerMonth;
+    if (limit === null) return { allowed: true, plan: billing.plan, used: 0, limit: null };
+    const usage = await getMonthlyUsage(workspaceId);
+    const used = usage.actionRequests + usage.recoveryCases;
+    return { allowed: used < limit, plan: billing.plan, used, limit };
+  } catch {
+    return { allowed: true, plan: "free", used: 0, limit: null };
+  }
 }
 
 export interface QuotaCheck {

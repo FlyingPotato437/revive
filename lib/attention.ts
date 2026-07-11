@@ -2,8 +2,10 @@ import { actionApproval, type ControlAction, type ControlCase } from "@/lib/cont
 import type { DeadQueueJob, WorkspaceConnectionSummary } from "@/lib/hosted";
 import type { ApprovalPolicy } from "@/lib/workspace-config";
 import type { OutcomeTransaction } from "@/lib/outcome-transactions";
+import type { UserActionRequest } from "@/lib/action-requests";
+import type { DeadRunRecord } from "@/lib/dead-runs";
 
-export type AttentionKind = "approval" | "transaction_approval" | "transaction_exception" | "uncertain_action" | "recovery" | "delivery";
+export type AttentionKind = "dead_run" | "action_request" | "approval" | "transaction_approval" | "transaction_exception" | "uncertain_action" | "recovery" | "delivery";
 
 export interface AttentionItem {
   id: string;
@@ -39,10 +41,36 @@ export function buildAttentionQueue(input: {
   cases: ControlCase[];
   deadJobs: DeadQueueJob[];
   transactions?: OutcomeTransaction[];
+  actionRequests?: UserActionRequest[];
+  deadRuns?: DeadRunRecord[];
   now?: number;
 }): AttentionItem[] {
   const now = input.now ?? Date.now();
   const items: AttentionItem[] = [];
+
+  for (const run of input.deadRuns ?? []) {
+    if (run.status !== "detected" || !run.recoverable) continue;
+    items.push({
+      id: `dead-run:${run.id}`,
+      kind: "dead_run",
+      title: `Revive ${run.runId}`,
+      detail: `${run.category.replaceAll("_", " ")} · send the smallest ask to ${run.suggestedRecipientRole}`,
+      href: "/app/detector",
+      updatedAt: run.updatedAt,
+    });
+  }
+
+  for (const request of input.actionRequests ?? []) {
+    if (request.status !== "pending") continue;
+    items.push({
+      id: `action-request:${request.id}`,
+      kind: "action_request",
+      title: `Waiting on ${request.recipient.email}`,
+      detail: `${request.title} · expires ${new Date(request.expiresAt).toLocaleDateString()}`,
+      href: `/app/requests/${request.id}`,
+      updatedAt: request.updatedAt,
+    });
+  }
 
   for (const transaction of input.transactions ?? []) {
     if (transaction.state === "awaiting_approval") {
@@ -121,6 +149,8 @@ export function buildAttentionQueue(input: {
   }
 
   const priority: Record<AttentionKind, number> = {
+    dead_run: 0,
+    action_request: 0,
     approval: 0,
     transaction_approval: 0,
     transaction_exception: 1,
@@ -137,6 +167,8 @@ export function buildReadiness(input: {
   connections: WorkspaceConnectionSummary[];
   policy: ApprovalPolicy;
   resumeEndpointConfigured: boolean;
+  actionRequests?: UserActionRequest[];
+  deadRuns?: DeadRunRecord[];
 }): ReadinessItem[] {
   return [
     {
@@ -147,16 +179,23 @@ export function buildReadiness(input: {
       done: input.activeApiKeys > 0,
     },
     {
-      id: "first-action",
-      label: "Record a protected action",
-      detail: "This is the real proof that an agent is using Revive.",
+      id: "first-dead-run",
+      label: "Send one dead run",
+      detail: "Point an existing interrupt at the free detector.",
       href: "/app/quickstart",
-      done: input.actions.length > 0,
+      done: Boolean(input.deadRuns?.length),
+    },
+    {
+      id: "first-action",
+      label: "Create an action request",
+      detail: "Ask one real user to unblock a paused agent run.",
+      href: "/app/requests",
+      done: Boolean(input.actionRequests?.length),
     },
     {
       id: "policy",
-      label: "Choose an approval policy",
-      detail: "Decide which writes should wait for a human.",
+      label: "Choose an escalation policy",
+      detail: "Decide when agent writes or blockers need a person.",
       href: "/app/settings",
       done: input.policy.mode !== "off",
     },

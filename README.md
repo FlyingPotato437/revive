@@ -1,12 +1,77 @@
 # Revive
 
-**The transaction and outcome-integrity layer for AI agents.**
+**Recover the agent runs you are already paying for and losing.**
 
-Revive turns multi-system agent work into one verified business outcome. Each
-external action registers before execution, replays resolve against the stored
-result, uncertain commits reconcile against provider state, and the task stays
-open until every required outcome is verified, compensated, or safely assigned
-to a human.
+When a run dies because it needs a person—expired access, missing input, an
+approval, a document, or a browser step—Revive detects the blocker, gets the
+right person to resolve it, validates the answer, and resumes the exact
+suspended run.
+
+## Detect, resolve, resume
+
+1. **Detect (free):** send terminal failures from the interrupt boundary you
+   already have. Revive redacts the trace, classifies the blocker, and reports
+   lost runs, wasted tokens, estimated cost, and recoverable-run rate.
+2. **Resolve:** create a secure identity-bound request for the deterministic
+   recipient. Revive asks for only the structured action needed to unblock the
+   run and delivers it by email or workspace notification.
+3. **Resume:** validate the response, check whether paused context is stale,
+   and emit a signed continuation for the original run, checkpoint, and fenced
+   generation. Long pauses replan or hold for review.
+
+Exactly-once writes, provider reconciliation, credential recovery, signed
+callbacks, and stale-worker fencing remain the execution-integrity layer under
+this flow.
+
+## Install the free detector
+
+```ts
+import { ReviveClient, createLangGraphInterruptHandler } from "revive-sdk";
+
+const revive = new ReviveClient({
+  baseUrl: "https://revivelabs.app/api",
+  apiKey: process.env.REVIVE_API_KEY,
+});
+const detect = createLangGraphInterruptHandler(revive);
+
+await detect({
+  runId: state.runId,
+  checkpointId: state.checkpointId,
+  generation: state.generation,
+  failureMessage: error.message,
+  trace: state.trace,
+  inputTokens: usage.input,
+  outputTokens: usage.output,
+  estimatedCostUsd: usage.costUsd,
+});
+```
+
+Equivalent adapters ship for Temporal failures and MCP elicitation boundaries.
+
+## Resolve a detected run
+
+```ts
+const { request } = await revive.reviveDeadRun({
+  deadRunId: "dr_4kf9Gv2d",
+  recipient: {
+    subjectId: "quickbooks-account-owner",
+    email: "owner@customer.com",
+  },
+  destinationUrl: "https://connect.example.com/quickbooks",
+});
+```
+
+`POST /v1/dead-runs/:id/revive` returns a single-use user-action URL. Completion is
+bound to the request recipient, run, checkpoint and generation. Revive accepts
+only declared fields, records the actor context, and emits a signed
+`action_request.completed` continuation event to the workspace resume endpoint.
+
+Set `ANTHROPIC_API_KEY` and `REVIVE_CLAUDE_MODEL` to enable Claude trace
+classification, response validation, and resume-safety assistance. Without
+them, safe deterministic classification and validation remain active. Claude
+never chooses who may respond; recipient identity and authorization are always
+enforced outside the model. `REVIVE_CLAUDE_TIMEOUT_MS` optionally changes the
+3.5-second fail-open timeout (bounded to 0.5–8 seconds).
 
 ## Outcome contracts and transactions
 

@@ -141,6 +141,28 @@ export class ReviveClient {
     decideTransaction(input) {
         return this.transport.decideTransaction(input);
     }
+    /** Ask a specific person to unblock a suspended run. Revive returns a
+     * single-use action URL and later emits a signed continuation event. */
+    requestAction(input) {
+        return this.transport.requestUserAction(input);
+    }
+    getActionRequest(id) {
+        return this.transport.getUserAction(id);
+    }
+    cancelActionRequest(id) {
+        return this.transport.cancelUserAction(id);
+    }
+    /** Record one run that terminated at a human-dependent boundary. Trace is
+     * redacted server-side before classification or storage. */
+    detectDeadRun(input) {
+        return this.transport.recordDeadRun(input);
+    }
+    deadRunStats(days = 7) {
+        return this.transport.getDeadRunStats(days);
+    }
+    reviveDeadRun(input) {
+        return this.transport.resolveDeadRun(input);
+    }
     async park(input, action, idempotencyKey, failure, leaseGeneration) {
         const recoveryCase = await this.transport.openRecoveryCase({
             runId: input.runId,
@@ -200,14 +222,40 @@ export class HttpReviveTransport {
         const response = await this.request(`/v1/transactions/${encodeURIComponent(input.transactionId)}/approval`, input);
         return response.transaction;
     }
+    async requestUserAction(input) {
+        const response = await this.request("/v1/action-requests", input);
+        return response.request;
+    }
+    async getUserAction(id) {
+        const response = await this.fetchJson(`/v1/action-requests/${encodeURIComponent(id)}`, { method: "GET" });
+        return response.request;
+    }
+    async cancelUserAction(id) {
+        const response = await this.fetchJson(`/v1/action-requests/${encodeURIComponent(id)}`, { method: "DELETE" });
+        return response.request;
+    }
+    async recordDeadRun(input) {
+        const response = await this.request("/v1/dead-runs", input);
+        return response.run;
+    }
+    async getDeadRunStats(days = 7) {
+        const response = await this.fetchJson(`/v1/dead-runs/stats?days=${Math.max(1, Math.floor(days))}`, { method: "GET" });
+        return response.stats;
+    }
+    async resolveDeadRun(input) {
+        const { deadRunId, ...body } = input;
+        return this.request(`/v1/dead-runs/${encodeURIComponent(deadRunId)}/revive`, body);
+    }
     async request(path, body) {
-        const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+        return this.fetchJson(path, {
             method: "POST",
-            headers: {
-                "content-type": "application/json",
-                ...(this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {}),
-            },
             body: JSON.stringify(body),
+        });
+    }
+    async fetchJson(path, init) {
+        const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+            ...init,
+            headers: { "content-type": "application/json", ...(this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {}) },
         });
         if (!response.ok) {
             const text = await response.text();
@@ -222,6 +270,8 @@ export class MemoryReviveTransport {
     actions = new Map();
     recoveryCases = new Map();
     transactions = new Map();
+    userActionRequests = new Map();
+    deadRuns = new Map();
     async registerAction(input) {
         const id = `act_${hash(`${input.runId}:${input.actionKey}:${input.idempotencyKey}`)}`;
         const existing = this.actions.get(id);
@@ -329,7 +379,82 @@ export class MemoryReviveTransport {
         transaction.version += 1;
         return transaction;
     }
+    async requestUserAction(input) {
+        const id = `uar_${hash(`${input.runId}:${input.idempotencyKey}`)}`;
+        const existing = this.userActionRequests.get(id);
+        if (existing)
+            return existing;
+        const defaults = {
+            approval: [{ key: "decision", type: "select", label: "Decision", required: true, options: [{ value: "approve", label: "Approve" }, { value: "reject", label: "Reject" }] }],
+            clarification: [{ key: "answer", type: "textarea", label: "Your answer", required: true }],
+            verification: [{ key: "result", type: "select", label: "What happened?", required: true, options: [{ value: "confirmed", label: "It happened" }, { value: "not_happened", label: "It did not happen" }] }],
+        };
+        const record = {
+            id, runId: input.runId, checkpointId: input.checkpointId, generation: input.generation ?? 1,
+            actionType: input.actionType, idempotencyKey: input.idempotencyKey, title: input.title, status: "pending",
+            recipient: input.recipient, fields: input.fields || defaults[input.actionType] || [],
+            expiresAt: Date.now() + 48 * 60 * 60 * 1000, resumeStatus: "not_configured", url: `/actions/${id}`,
+        };
+        this.userActionRequests.set(id, record);
+        return record;
+    }
+    async getUserAction(id) {
+        const request = this.userActionRequests.get(id);
+        if (!request)
+            throw new Error("action request not found");
+        return request;
+    }
+    async cancelUserAction(id) {
+        const request = await this.getUserAction(id);
+        if (request.status === "pending")
+            request.status = "cancelled";
+        return request;
+    }
+    async recordDeadRun(input) {
+        const id = `dr_${hash(`${input.runId}:${input.idempotencyKey}`)}`;
+        const existing = this.deadRuns.get(id);
+        if (existing)
+            return existing;
+        const text = `${input.failureMessage} ${JSON.stringify(input.trace || {})}`.toLowerCase();
+        const category = /(invalid_grant|oauth|token expired|revoked|401)/.test(text) ? "expired_oauth"
+            : /(approval|required approval|budget limit)/.test(text) ? "approval_needed"
+                : /(missing input|required field|clarif)/.test(text) ? "missing_input"
+                    : /(403|permission|scope)/.test(text) ? "permission_denied"
+                        : /(captcha|otp|passkey|browser session)/.test(text) ? "browser_intervention" : "unknown";
+        const action = { expired_oauth: "reauthorization", missing_input: "clarification", approval_needed: "approval", permission_denied: "permission", browser_intervention: "browser_handoff", ambiguous_side_effect: "verification", unknown: "clarification" };
+        const record = { id, runId: input.runId, checkpointId: input.checkpointId, generation: input.generation ?? 1, runtime: input.runtime || "custom", category, confidence: category === "unknown" ? .35 : .88, recoverable: category !== "unknown", suggestedActionType: action[category], suggestedRecipientRole: category === "expired_oauth" ? "account owner" : "run owner", suggestedQuestion: category === "expired_oauth" ? "Reconnect this account so the agent can continue." : "Provide the action needed to continue.", inputTokens: input.inputTokens || 0, outputTokens: input.outputTokens || 0, estimatedCostUsd: input.estimatedCostUsd || 0, status: "detected" };
+        this.deadRuns.set(id, record);
+        return record;
+    }
+    async getDeadRunStats(days = 7) {
+        const runs = [...this.deadRuns.values()];
+        const total = runs.length;
+        const recoverable = runs.filter((run) => run.recoverable).length;
+        const counts = new Map();
+        for (const run of runs)
+            counts.set(run.category, (counts.get(run.category) || 0) + 1);
+        return { days, totalRunsLost: total, recoverableRuns: recoverable, recoverableRate: total ? recoverable / total : 0, wastedTokens: runs.reduce((sum, run) => sum + run.inputTokens + run.outputTokens, 0), estimatedCostUsd: runs.reduce((sum, run) => sum + run.estimatedCostUsd, 0), resolvedRuns: runs.filter((run) => run.status === "resolved").length, categories: [...counts].map(([category, count]) => ({ category, count, share: total ? count / total : 0 })) };
+    }
+    async resolveDeadRun(input) {
+        const deadRun = this.deadRuns.get(input.deadRunId);
+        if (!deadRun)
+            throw new Error("dead run not found");
+        const request = await this.requestUserAction({ runId: deadRun.runId, checkpointId: deadRun.checkpointId, generation: deadRun.generation, idempotencyKey: `dead-run:${deadRun.id}`, actionType: deadRun.suggestedActionType, title: deadRun.suggestedQuestion, recipient: input.recipient, destinationUrl: input.destinationUrl, expiresIn: input.expiresIn });
+        deadRun.status = "resolution_requested";
+        deadRun.actionRequestId = request.id;
+        return { deadRun, request };
+    }
 }
+function interruptAdapter(client, runtime) {
+    return (failure) => client.detectDeadRun({
+        ...failure, runtime,
+        idempotencyKey: failure.idempotencyKey || createIdempotencyKey(failure.runId, `dead-run:${runtime}`, failure.checkpointId),
+    });
+}
+/** Point existing interrupt/failure hook at one of these adapters. */
+export const createLangGraphInterruptHandler = (client) => interruptAdapter(client, "langgraph");
+export const createTemporalFailureSignal = (client) => interruptAdapter(client, "temporal");
+export const createMcpElicitationHandler = (client) => interruptAdapter(client, "mcp");
 function memoryTransactionState(steps) {
     if (steps.some((step) => step.state === "failed"))
         return "needs_human";

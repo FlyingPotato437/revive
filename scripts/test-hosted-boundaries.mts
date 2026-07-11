@@ -13,6 +13,8 @@ import { deleteCustomConnector, getCustomConnector, setCustomConnector } from ".
 import { workspaceForApiKey } from "../lib/workspaces.ts";
 import { GET as listActionsRoute, POST as createActionRoute } from "../app/api/v1/actions/route.ts";
 import { POST as completeActionRoute } from "../app/api/v1/actions/[id]/complete/route.ts";
+import { getDeadRun, getDeadRunStats, listDeadRuns, recordDeadRun } from "../lib/dead-runs.ts";
+import { reviveDeadRun } from "../lib/revive-dead-run.ts";
 
 if (!hostedDatabaseEnabled()) throw new Error("DATABASE_URL is required");
 const suffix = crypto.randomBytes(6).toString("hex");
@@ -43,6 +45,27 @@ try {
   assert.notEqual(caseA.id, caseB.id);
   assert.equal(await getCase(workspaceId, caseA.id, projectB), null);
   assert.deepEqual((await listCases(workspaceId, { projectId: projectB })).map((item) => item.id), [caseB.id]);
+
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const claudeModel = process.env.REVIVE_CLAUDE_MODEL;
+  delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.REVIVE_CLAUDE_MODEL;
+  const deadRun = await recordDeadRun(workspaceId, {
+    projectId: projectA, runId: "dead-run", checkpointId: "oauth", generation: 3,
+    idempotencyKey: "terminal", runtime: "langgraph", failureMessage: "OAuth invalid_grant after token revoked",
+    inputTokens: 500, outputTokens: 100, estimatedCostUsd: .2,
+  });
+  if (anthropicKey) process.env.ANTHROPIC_API_KEY = anthropicKey;
+  if (claudeModel) process.env.REVIVE_CLAUDE_MODEL = claudeModel;
+  assert.equal((await getDeadRun(workspaceId, deadRun.id))?.category, "expired_oauth");
+  assert.deepEqual((await listDeadRuns(workspaceId, projectB)).map((item) => item.id), []);
+  assert.equal((await getDeadRunStats(workspaceId, 7, projectA)).wastedTokens, 600);
+  const resolution = await reviveDeadRun(workspaceId, deadRun.id, {
+    recipient: { subjectId: "owner", email: "owner@example.com" },
+    destinationUrl: "https://connect.example.com/oauth", requestedBy: ownerEmail,
+  });
+  assert.equal(resolution.request.validation?.deadRunId, deadRun.id);
+  assert.equal(resolution.request.generation, 3);
 
   async function makeKey(name: string, projectId: string, role: "viewer" | "operator" | "admin") {
     const raw = `rv_live_${Buffer.from(workspaceId).toString("base64url")}.${crypto.randomBytes(24).toString("base64url")}`;
@@ -91,9 +114,11 @@ try {
   assert.equal((await getCustomConnector(workspaceId, `linear-${suffix}`))?.provisional, true);
   await deleteCustomConnector(workspaceId, `linear-${suffix}`);
   assert.equal(await getCustomConnector(workspaceId, `linear-${suffix}`), null);
-  console.log("hosted project, role, and connector boundary checks passed");
+  console.log("hosted project, role, detector, and connector boundary checks passed");
 } finally {
   await withWorkspaceTransaction(workspaceId, async (tx) => {
+    await tx`delete from revive_dead_runs where workspace_id = ${workspaceId}`;
+    await tx`delete from revive_action_requests where workspace_id = ${workspaceId}`;
     await tx`delete from revive_recovery_cases where workspace_id = ${workspaceId}`;
     await tx`delete from revive_actions where workspace_id = ${workspaceId}`;
     await tx`delete from revive_api_keys where workspace_id = ${workspaceId}`;

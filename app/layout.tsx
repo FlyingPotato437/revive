@@ -23,9 +23,9 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Revive | Transactions for AI agents",
+  title: "Revive | Recover dead AI agent runs",
   description:
-    "Revive turns multi-system agent work into verified outcomes with exactly-once execution, approvals, provider reconciliation, compensation, and recovery.",
+    "Detect agent runs lost to human-dependent blockers, get the right person to resolve them, and safely resume the exact suspended run.",
 };
 
 export default function RootLayout({

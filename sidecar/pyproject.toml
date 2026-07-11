@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "revive-sdk"
 version = "0.1.0"
-description = "Agent recovery control plane SDK: protect agent actions so a failed credential parks the run and resumes exactly-once, without duplicating side effects. LangGraph, OpenAI Agents, and Anthropic tool-use adapters included."
+description = "Detect AI-agent runs lost to human blockers, resolve them securely, and resume the exact suspended run."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Revive Labs" }]
-keywords = ["oauth", "agents", "langgraph", "temporal", "durable-execution", "token-refresh", "ai-agents", "mcp"]
+keywords = ["oauth", "agents", "langgraph", "temporal", "dead-run-detection", "human-in-the-loop", "ai-agents", "mcp"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: Apache Software License",

@@ -3,14 +3,14 @@ import { LegalShell, Section } from "../legal/LegalShell";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Revive",
-  description: "How Revive collects, uses, and protects data across the agent recovery control plane.",
+  description: "How Revive collects, uses, and protects data across secure user-action requests and agent continuation.",
 };
 
 export default function PrivacyPage() {
   return (
     <LegalShell
       title="Privacy Policy"
-      updated="JULY 3, 2026"
+      updated="JULY 11, 2026"
       intro="This Privacy Policy explains how Revive Labs (“Revive”, “we”, “us”) collects, uses, and protects information when you use the Revive control plane, APIs, SDKs, and websites (the “Service”). Revive is designed to coordinate workflow recovery without taking custody of your provider tokens: token custody stays with your configured credential system."
     >
       <Section heading="1. Information we collect">
@@ -26,9 +26,11 @@ export default function PrivacyPage() {
           credential vault.
         </p>
         <p>
-          <strong>Operational records:</strong> recovery cases, action ledger entries, idempotency keys, lease
-          generations, and an append-only audit log of control-plane events. These describe what happened to a run, not
-          the contents of your provider data.
+          <strong>Operational records:</strong> dead-run failure messages and redacted trace excerpts, classifications,
+          reported token and cost totals, action requests and responses, recovery cases, action ledger entries,
+          idempotency keys, lease generations, and an audit log of control-plane events. Customers should not send raw
+          provider credentials or unnecessary personal data in traces. Revive applies automated redaction for common
+          tokens, secrets, email addresses, and payment-like numbers before classification or durable trace storage.
         </p>
         <p>
           <strong>Billing data:</strong> plan and subscription state, and a customer identifier from our payment
@@ -42,9 +44,10 @@ export default function PrivacyPage() {
 
       <Section heading="2. How we use information">
         <p>
-          We use information to provide and operate the Service (verify identity during recovery, coordinate and resume
-          runs, prevent duplicate side effects), to secure the Service, to process billing, to communicate with you about
-          your account, and to comply with legal obligations. We do not sell your personal information.
+          We use information to provide and operate the Service (classify terminal runs, generate and validate focused
+          human action requests, verify identity during recovery, coordinate and resume runs, and prevent duplicate side
+          effects), to secure the Service, to process billing, to communicate with you about your account, and to comply
+          with legal obligations. We do not sell your personal information.
         </p>
       </Section>
 
@@ -53,8 +56,9 @@ export default function PrivacyPage() {
           We share data with service providers that help us run the Service, under contractual confidentiality and
           data-protection obligations. Current categories include: hosting and compute (Vercel), managed database
           (Neon/Postgres), authentication (Clerk), credential custody (Nango and, where you configure it, Auth0),
-          payments (Stripe), and, if you enable them, notifications (Slack, and email via Resend). We may disclose
-          information if required by law or to protect the rights, safety, and security of Revive and its users.
+          payments (Stripe), AI-assisted classification and validation when configured (Anthropic), and notifications
+          when enabled (Slack, and email via Resend). Trace data sent for AI assistance is redacted first. We may
+          disclose information if required by law or to protect the rights, safety, and security of Revive and its users.
         </p>
       </Section>
 

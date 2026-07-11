@@ -3,22 +3,24 @@ import { LegalShell, Section } from "../legal/LegalShell";
 
 export const metadata: Metadata = {
   title: "Terms of Service | Revive",
-  description: "The terms that govern use of the Revive agent recovery control plane.",
+  description: "The terms that govern use of the Revive user-action and continuation layer.",
 };
 
 export default function TermsPage() {
   return (
     <LegalShell
       title="Terms of Service"
-      updated="JULY 3, 2026"
+      updated="JULY 11, 2026"
       intro="These Terms of Service (“Terms”) govern your access to and use of the Revive control plane, APIs, SDKs, and websites (the “Service”), operated by Revive Labs (“Revive”, “we”, “us”). By creating an account, connecting a credential, or otherwise using the Service, you agree to these Terms. If you use the Service on behalf of an organization, you represent that you are authorized to bind that organization."
     >
       <Section heading="1. The Service">
         <p>
-          Revive coordinates recovery of automated workflows when the credentials they depend on fail. It correlates a
-          credential failure to the affected run, pauses that run, routes a reauthorization request to the account owner,
-          and resumes the original run once access is restored. Revive does not take custody of provider tokens; token
-          custody remains with your configured credential system (for example Nango, Auth0, or Microsoft Entra).
+          Revive detects automated runs that terminate at human-dependent blockers, classifies the blocker, creates a
+          secure action request for a recipient selected by the customer, validates the structured response, and sends a
+          continuation signal for the original run. Action types may include reauthorization, clarification, approval,
+          verification, permission, document collection, and browser handoff. Revive does not take custody of provider
+          tokens; token custody remains with your configured credential system (for example Nango, Auth0, or Microsoft
+          Entra).
         </p>
         <p>
           The Service is provided for legitimate operation of your own workflows and the accounts you are authorized to
@@ -50,10 +52,10 @@ export default function TermsPage() {
       <Section heading="4. Plans, fees, and billing">
         <p>
           Paid plans are billed in advance through our payment processor (Stripe) on a recurring basis until cancelled.
-          Fees are stated at the time of purchase and are non-refundable except where required by law. We may change
-          prices on renewal with notice. Taxes are your responsibility unless we are required to collect them. You can
-          cancel at any time through the billing portal; cancellation takes effect at the end of the current billing
-          period.
+          Some plans may also include usage fees for completed resolution actions, as stated at purchase. Fees are stated
+          at the time of purchase and are non-refundable except where required by law. We may change prices on renewal
+          with notice. Taxes are your responsibility unless we are required to collect them. You can cancel at any time
+          through the billing portal; cancellation takes effect at the end of the current billing period.
         </p>
       </Section>
 

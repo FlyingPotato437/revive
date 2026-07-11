@@ -1,137 +1,42 @@
 "use client";
 
-import { Check, Key, LinkBreak, Pause } from "@phosphor-icons/react";
+import { Check, EnvelopeSimple, HandPointing, Pause, Play } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 
-type EventKind = "ok" | "fail" | "hold" | "auth";
-
-const EVENTS: { t: string; label: string; status: string; kind: EventKind; pause: number }[] = [
-  { t: "09:14:02", label: "refund_and_cancel", status: "plan locked", kind: "auth", pause: 750 },
-  { t: "09:14:05", label: "stripe.refund", status: "settled", kind: "ok", pause: 750 },
-  { t: "09:14:07", label: "billing.cancel", status: "timeout · unknown", kind: "fail", pause: 1500 },
-  { t: "09:14:08", label: "provider reconciliation", status: "cancelled upstream", kind: "hold", pause: 1500 },
-  { t: "09:14:11", label: "salesforce.update", status: "verified", kind: "ok", pause: 1100 },
-  { t: "09:14:12", label: "business outcome", status: "verified once", kind: "ok", pause: 750 },
+type EventKind = "blocked" | "request" | "person" | "verified" | "resumed";
+const EVENTS: Array<{ t: string; label: string; status: string; kind: EventKind; pause: number }> = [
+  { t: "09:14:02", label: "QuickBooks sync", status: "run died · 18,420 tokens", kind: "blocked", pause: 900 },
+  { t: "09:14:03", label: "dead-run detector", status: "expired OAuth · 96%", kind: "verified", pause: 1100 },
+  { t: "09:14:04", label: "secure reconnect link", status: "sent to account owner", kind: "request", pause: 1200 },
+  { t: "09:18:41", label: "QuickBooks access", status: "same subject restored", kind: "person", pause: 1200 },
+  { t: "09:18:42", label: "resume safety", status: "recent · resume", kind: "verified", pause: 900 },
+  { t: "09:18:43", label: "fetch-open-invoices", status: "same run resumed", kind: "resumed", pause: 900 },
 ];
+const ICONS = { blocked: Pause, request: EnvelopeSimple, person: HandPointing, verified: Check, resumed: Play };
 
-const ICONS: Record<EventKind, { icon: typeof Check; color: string }> = {
-  ok: { icon: Check, color: "#2946cf" },
-  fail: { icon: LinkBreak, color: "#c2413a" },
-  hold: { icon: Pause, color: "#66707e" },
-  auth: { icon: Key, color: "#151922" },
-};
-
-function phaseFor(count: number) {
-  if (count <= 2) return { label: "EXECUTING", className: "bg-[#dfe4ff] text-[#2e49c8]" };
-  if (count <= 3) return { label: "UNCERTAIN", className: "bg-[#fcedeb] text-[#c2413a]" };
-  if (count <= 5) return { label: "RECONCILING", className: "bg-[#f6e3b4] text-[#151922]" };
-  return { label: "VERIFIED", className: "bg-[#151922] text-white" };
+function phase(count: number) {
+  if (count <= 1) return { label: "BLOCKED", className: "bg-[#fcedeb] text-[#a13b35]" };
+  if (count <= 2) return { label: "WAITING", className: "bg-[#fff1cf] text-[#83521c]" };
+  if (count <= 5) return { label: "VALIDATING", className: "bg-[#edf0ff] text-[#2e49c8]" };
+  return { label: "RESUMED", className: "bg-[#151922] text-white" };
 }
 
 export function HeroVisual() {
-  const reduceMotion = useReducedMotion();
-  const [count, setCount] = useState(0);
-
+  const reduceMotion = useReducedMotion(); const [count, setCount] = useState(0);
   useEffect(() => {
-    if (reduceMotion) {
-      setCount(EVENTS.length);
-      return;
-    }
-    let step = 0;
-    let timer: ReturnType<typeof setTimeout>;
-    const tick = () => {
-      step += 1;
-      setCount(step);
-      if (step < EVENTS.length) {
-        timer = setTimeout(tick, EVENTS[step - 1].pause);
-      } else {
-        timer = setTimeout(() => {
-          step = 0;
-          setCount(0);
-          timer = setTimeout(tick, 700);
-        }, 4600);
-      }
-    };
-    timer = setTimeout(tick, 800);
-    return () => clearTimeout(timer);
+    if (reduceMotion) { setCount(EVENTS.length); return; }
+    let step = 0; let timer: ReturnType<typeof setTimeout>;
+    const tick = () => { step += 1; setCount(step); timer = step < EVENTS.length ? setTimeout(tick, EVENTS[step - 1].pause) : setTimeout(() => { step = 0; setCount(0); timer = setTimeout(tick, 700); }, 4300); };
+    timer = setTimeout(tick, 750); return () => clearTimeout(timer);
   }, [reduceMotion]);
-
-  const phase = phaseFor(Math.max(count, 1));
-  const resumed = count >= EVENTS.length;
-
-  return (
-    <div className="hero-intro-visual relative min-w-0">
-      <figure
-        className="relative flex h-full min-h-[560px] items-center justify-center overflow-hidden border-t border-[#151922] bg-[#2946cf] px-5 py-16 sm:px-10 lg:border-l lg:border-t-0"
-        aria-label="A Revive outcome transaction: a refund settles, cancellation times out, Revive reconciles the provider state, and the complete business outcome verifies"
-      >
-        <div
-          aria-hidden="true"
-          className="absolute aspect-square w-[130%] rounded-full border border-dashed border-[#f4f5f1]/20"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute aspect-square w-[94%] rounded-full border border-[#151922]/20"
-        />
-
-        <div className="relative w-full max-w-[500px] border border-[#151922] bg-[#fbfcf8] shadow-[10px_12px_0_rgba(21,25,34,.28)]">
-          <div className="flex items-center justify-between border-b border-[#e0e3dd] px-5 py-3.5">
-            <div className="flex items-center gap-2.5">
-              <span className="relative flex h-1.5 w-1.5" aria-hidden>
-                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:hidden ${resumed ? "bg-[#2946cf]" : "bg-[#c2413a]"}`} />
-                <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${resumed ? "bg-[#2946cf]" : "bg-[#c2413a]"}`} />
-              </span>
-              <span className="font-mono text-[10px] font-medium tracking-[.08em] text-[#151922]">OUTCOME TRANSACTION · txn_7f2</span>
-            </div>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={phase.label}
-                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? {} : { opacity: 0, y: -4 }}
-                transition={{ duration: 0.2 }}
-                className={`px-2 py-1 font-mono text-[9px] font-semibold tracking-[.08em] ${phase.className}`}
-              >
-                {phase.label}
-              </motion.span>
-            </AnimatePresence>
-          </div>
-
-          <div className="min-h-[318px] px-5 py-4">
-            {EVENTS.slice(0, count).map((event, index) => {
-              const { icon: Icon, color } = ICONS[event.kind];
-              return (
-                <motion.div
-                  key={`${event.label}-${index}`}
-                  initial={reduceMotion ? false : { opacity: 0, y: 7 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                  className={`grid grid-cols-[64px_20px_1fr_auto] items-center gap-3 border-b border-[#eef0eb] py-3 last:border-0 ${event.kind === "hold" ? "opacity-80" : ""}`}
-                >
-                  <span className="font-mono text-[10px] text-[#9aa1aa]">{event.t}</span>
-                  <span className="flex h-5 w-5 items-center justify-center border border-[#e0e3dd] bg-white">
-                    <Icon size={11} weight="bold" color={color} />
-                  </span>
-                  <span className="truncate font-mono text-[12px] text-[#151922]">{event.label}</span>
-                  <span className={`font-mono text-[9px] tracking-[.04em] ${event.kind === "fail" ? "text-[#c2413a]" : "text-[#7b8491]"}`}>
-                    {event.status.toUpperCase()}
-                  </span>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center justify-between border-t border-[#e0e3dd] bg-[#f4f5f1] px-5 py-3 font-mono text-[9px] tracking-[.06em] text-[#7b8491]">
-            <span>4 SYSTEM STATES BOUND</span>
-            <span>{resumed ? "OUTCOME SETTLED" : "COMMIT IN PROGRESS"} · 0 DUPLICATES</span>
-          </div>
-        </div>
-
-        <figcaption className="sr-only">
-          A refund succeeds, subscription cancellation times out, and Revive verifies the provider state before completing the remaining work. No committed action is replayed.
-        </figcaption>
-      </figure>
+  const current = phase(Math.max(1, count)); const resumed = count === EVENTS.length;
+  return <div className="hero-intro-visual relative min-w-0"><figure className="relative flex h-full min-h-[560px] items-center justify-center overflow-hidden border-t border-[#151922] bg-[#2946cf] px-5 py-16 sm:px-10 lg:border-l lg:border-t-0" aria-label="A bookkeeping agent run dies after QuickBooks access expires, Revive detects the blocker, sends the account owner a reconnect link, and resumes the same run">
+    <div aria-hidden className="absolute aspect-square w-[125%] rounded-full border border-dashed border-white/20" /><div aria-hidden className="absolute aspect-square w-[88%] rounded-full border border-[#151922]/20" />
+    <div className="relative w-full max-w-[510px] border border-[#151922] bg-[#fbfcf8] shadow-[10px_12px_0_rgba(21,25,34,.28)]">
+      <div className="flex items-center justify-between border-b border-[#e0e3dd] px-5 py-3.5"><div className="flex items-center gap-2.5"><span className={`h-1.5 w-1.5 rounded-full ${resumed ? "bg-[#18724e]" : "bg-[#c2413a]"}`} /><span className="font-mono text-[10px] font-medium tracking-[.08em]">RUN · books_842</span></div><AnimatePresence mode="wait" initial={false}><motion.span key={current.label} initial={reduceMotion ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className={`px-2 py-1 font-mono text-[9px] font-semibold tracking-[.08em] ${current.className}`}>{current.label}</motion.span></AnimatePresence></div>
+      <div className="min-h-[310px] px-5 py-4">{EVENTS.slice(0, count).map((event, index) => { const Icon = ICONS[event.kind]; const accent = event.kind === "blocked" ? "text-[#c2413a]" : event.kind === "resumed" || event.kind === "verified" ? "text-[#18724e]" : "text-[#2946cf]"; return <motion.div key={`${event.label}-${index}`} initial={reduceMotion ? false : { opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .3 }} className="grid grid-cols-[62px_20px_1fr] gap-3 border-b border-[#eef0eb] py-3.5 last:border-0"><span className="font-mono text-[9px] text-[#9aa1aa]">{event.t}</span><span className={`flex h-5 w-5 items-center justify-center border border-[#dfe2dc] bg-white ${accent}`}><Icon size={11} weight="bold" /></span><span className="min-w-0"><span className="block truncate font-mono text-[11px] text-[#151922]">{event.label}</span><span className={`mt-0.5 block truncate font-mono text-[8.5px] tracking-[.04em] ${accent}`}>{event.status.toUpperCase()}</span></span></motion.div>; })}</div>
+      <div className="flex items-center justify-between border-t border-[#e0e3dd] bg-[#f4f5f1] px-5 py-3 font-mono text-[8.5px] tracking-[.06em] text-[#7b8491]"><span>RECIPIENT · RUN · CHECKPOINT · GEN 8</span><span>{resumed ? "CONTINUED ONCE" : "WORKER PARKED"}</span></div>
     </div>
-  );
+  </figure></div>;
 }

@@ -1,48 +1,64 @@
 # revive-sdk
 
-Agent recovery control plane SDK. Wrap a workflow action so that when its
-credential fails, the run parks, the right account owner reconnects, and the
-run resumes — without ever duplicating a side effect that already committed.
+Detect AI-agent runs lost to human-dependent blockers, get the right person to
+resolve them, and resume the exact suspended run.
 
 ```bash
 npm install revive-sdk
 ```
 
-## Protect one action
+## Detect dead runs for free
 
 ```ts
-import { ReviveClient } from "revive-sdk";
+import { ReviveClient, createLangGraphInterruptHandler } from "revive-sdk";
 
 const revive = new ReviveClient({
-  baseUrl: "https://revivelabs.app",
+  baseUrl: "https://revivelabs.app/api",
   apiKey: process.env.REVIVE_API_KEY, // rv_live_…
 });
 
-const result = await revive.protectAction({
+const detect = createLangGraphInterruptHandler(revive);
+
+await detect({
   runId: workflow.runId,
   checkpointId: workflow.checkpointId,
-  connectionId: "conn_microsoft_ops",
-  actionKey: "send_followup_email",
-  // Policy facts only. Do not send message text or recipient addresses.
-  riskContext: { operation: "outbound_message", recipientCount: 1 },
-  credential: () => vault.lease("conn_microsoft_ops"),
-  execute: ({ credential, idempotencyKey }) =>
-    graph.sendMail(message, { credential, idempotencyKey }),
-  // optional: prove a prior attempt did or did not commit before any replay
-  reconcile: ({ idempotencyKey }) => graph.findMailByIdempotencyKey(idempotencyKey),
+  generation: workflow.generation,
+  failureMessage: error.message,
+  trace: workflow.trace,
+  inputTokens: usage.input,
+  outputTokens: usage.output,
+  estimatedCostUsd: usage.costUsd,
 });
-
-if (result.status === "parked") {
-  // credential is dead — route result.recoveryCase.url to the account owner
-} else {
-  // result.value — executed exactly once, or the stored result on replay
-}
 ```
 
-The client registers the action, gates execution on the ledger verdict
-(`safe_to_execute` / `already_committed` / `reconcile_first`), records the
-attempt, and opens a recovery case when the credential is rejected. Idempotency
-keys are derived from `runId + checkpointId + actionKey` when not supplied.
+Use `createTemporalFailureSignal` or `createMcpElicitationHandler` at the
+equivalent interrupt boundary. Detection returns the blocker category,
+confidence, smallest suggested ask, recipient role, and recoverability.
+
+## Resolve a recoverable run
+
+```ts
+const { request } = await revive.reviveDeadRun({
+  deadRunId: detected.id,
+  recipient: {
+    subjectId: "quickbooks-account-owner",
+    email: "owner@customer.com",
+  },
+  destinationUrl: "https://connect.example.com/quickbooks",
+});
+
+console.log(request.url);
+```
+
+The secure response is bound to recipient, run, checkpoint, and generation.
+Revive validates declared fields, checks whether the paused context should
+resume, replan, or enter manual review, then emits a signed continuation.
+
+## Protect a write
+
+`protectAction` remains available for exactly-once external writes, provider
+reconciliation, and credential recovery. This prevents a resumed run from
+duplicating a side effect that may already have committed.
 
 ## Action contracts
 
@@ -76,9 +92,9 @@ structured result the model can surface to the user.
 
 ## What Revive is not
 
-Revive does not take custody of provider tokens — that stays with your
-credential vault (Nango, Auth0, Entra). It coordinates the in-flight run
-around a credential change: park, verify identity, fence stale workers,
-reconcile, resume.
+Revive is not a workflow runtime, credential vault, or reasoning-observability
+tool. LangGraph or Temporal owns durable execution; Nango, Auth0, or your vault
+owns provider tokens. Revive owns dead-run detection and the secure human
+action that returns to the correct suspended execution.
 
 License: Apache-2.0 · [revivelabs.app](https://revivelabs.app)

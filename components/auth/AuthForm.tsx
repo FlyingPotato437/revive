@@ -7,7 +7,8 @@ import { useState } from "react";
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/app/overview";
+  const requestedNext = params.get("next");
+  const next = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/app/overview";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,7 +67,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           {mode === "login" ? "Sign in" : "Create your account"}
         </h1>
         <p className="mt-2 text-[13px] leading-6 text-[#66707e]">
-          {mode === "login" ? "Access your Revive workspace." : "Set up a workspace for recovery cases, keys, and integrations."}
+          {mode === "login" ? "Access your Revive workspace." : "Set up a workspace for user actions, continuations, keys, and integrations."}
         </p>
 
         <form onSubmit={submit} className="mt-8 border border-[#d9ddd6] bg-[#fbfcf8] p-6 sm:p-7">

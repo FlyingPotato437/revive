@@ -6,16 +6,16 @@ export default function QuickstartPage() {
   return <div className="mx-auto max-w-[1180px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
     <PageHeader
       eyebrow="Setup"
-      title="Protect your first action"
-      description="One line. Actions run once, risky ones wait, failed runs recover."
+      title="Point your interrupt at Revive"
+      description="Free detector measures dead runs first. Resolve only human-dependent blockers worth recovering."
       actions={<Link href="/app/api-keys" className="inline-flex h-9 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2a2f3a]">Get an API key</Link>}
     />
 
     <div className="mt-5 grid gap-px border border-[#151922] bg-[#e1e2de] sm:grid-cols-3">
       {[
-        ["1", "Grab a key", "Ten seconds, one click."],
-        ["2", "Paste one line", "Wrap your MCP server or drop in the SDK."],
-        ["3", "Watch it work", "First protected action lands in the ledger."],
+        ["1", "Add one handler", "Use current interrupt or failure boundary."],
+        ["2", "Measure loss", "See blocker mix, jobs and wasted model cost."],
+        ["3", "Revive selected runs", "Reach person, validate fix, resume or replan."],
       ].map(([n, title, body]) => (
         <div key={n} className="bg-[#fbfcf8] px-5 py-4">
           <div className="flex items-center gap-2.5">

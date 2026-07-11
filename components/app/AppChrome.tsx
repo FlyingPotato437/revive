@@ -3,8 +3,8 @@
 import Link from "next/link";
 import {
   ArrowSquareOut, Buildings, CaretDown, Check, Command, Flask,
-  FileText, FolderSimple, Gauge, GitDiff, HandPalm, Key, LinkSimple, ListBullets, MagnifyingGlass,
-  RocketLaunch, SlidersHorizontal, UserCircle, UsersThree, Wallet,
+  FileText, FolderSimple, Gauge, GitDiff, HandPointing, Key, LinkSimple, ListBullets, MagnifyingGlass,
+  Pulse, RocketLaunch, SlidersHorizontal, UserCircle, UsersThree, Wallet,
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
@@ -16,12 +16,16 @@ type WorkspaceOption = { id: string; name: string; organization: string };
 const OPERATIONS = [
   { href: "/app/quickstart", label: "Quickstart", icon: RocketLaunch },
   { href: "/app/overview", label: "Overview", icon: Gauge },
+  { href: "/app/detector", label: "Dead-run detector", icon: Pulse },
+  { href: "/app/requests", label: "Action requests", icon: HandPointing },
+  { href: "/app/connections", label: "Connections", icon: LinkSimple },
+] as const;
+
+const ADVANCED = [
   { href: "/app/transactions", label: "Transactions", icon: GitDiff },
   { href: "/app/action-contracts", label: "Outcome contracts", icon: FileText },
-  { href: "/app/approvals", label: "Approvals", icon: HandPalm },
   { href: "/app/runs", label: "Recovery cases", icon: ListBullets },
   { href: "/app", label: "Demo lab", icon: Flask },
-  { href: "/app/connections", label: "Connections", icon: LinkSimple },
 ] as const;
 
 const ACCOUNT = [
@@ -33,7 +37,7 @@ const ACCOUNT = [
   { href: "/app/settings", label: "Settings", icon: SlidersHorizontal },
 ] as const;
 
-const NAV = [...OPERATIONS, ...ACCOUNT] as const;
+const NAV = [...OPERATIONS, ...ADVANCED, ...ACCOUNT] as const;
 const TITLES: Record<string, string> = Object.fromEntries(NAV.map((item) => [item.href, item.label]));
 
 export function AppChrome({
@@ -53,7 +57,7 @@ export function AppChrome({
   const [switching, setSwitching] = useState(false);
   const reduceMotion = useReducedMotion();
   const initials = email.slice(0, 2).toUpperCase();
-  const title = pathname.startsWith("/app/runs/") ? "Recovery case" : pathname.startsWith("/app/actions") ? "Action ledger" : pathname.startsWith("/app/transactions/") ? "Transaction" : TITLES[pathname] || "Control plane";
+  const title = pathname.startsWith("/app/runs/") ? "Recovery case" : pathname.startsWith("/app/actions") ? "Action ledger" : pathname.startsWith("/app/requests/") ? "Action request" : pathname.startsWith("/app/transactions/") ? "Transaction" : TITLES[pathname] || "Control plane";
 
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
@@ -119,7 +123,7 @@ export function AppChrome({
       </div>
 
       <nav className="flex min-h-0 flex-1 flex-col justify-between overflow-y-auto px-2 py-3" aria-label="Console navigation">
-        <NavGroup label="Operations" items={OPERATIONS} pathname={pathname} />
+        <div><NavGroup label="Operations" items={OPERATIONS} pathname={pathname} /><NavGroup label="Advanced" items={ADVANCED} pathname={pathname} /></div>
         <NavGroup label="Account" items={ACCOUNT} pathname={pathname} />
       </nav>
 
@@ -143,7 +147,7 @@ export function AppChrome({
           <div className="ml-auto flex items-center gap-2">
             <button onClick={() => setCommands(true)} className="hidden h-9 min-w-[230px] items-center gap-2 border border-[#c8cdd2] bg-[#fbfcf8] px-3 text-left text-[10px] text-[#818a96] transition hover:border-[#151922] sm:flex"><MagnifyingGlass size={13} /><span className="flex-1">Search or jump to</span><kbd className="flex items-center gap-0.5 border border-[#d1d6db] bg-[#eef0eb] px-1.5 py-0.5 font-mono text-[8px]"><Command size={9} />K</kbd></button>
             <span className="hidden border-l border-[#cbd0d5] pl-3 font-mono text-[8px] tracking-[.09em] text-[#67717f] lg:flex">LOCAL SANDBOX</span>
-            <Link href="/app" className="inline-flex h-9 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">New drill</Link>
+            <Link href="/app/requests" className="inline-flex h-9 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">New request</Link>
           </div>
         </div>
         <nav className="flex overflow-x-auto border-t border-[#cfd4da] px-2 md:hidden" aria-label="Mobile navigation">{NAV.map((item) => { const active = isActive(item.href, pathname); return <Link key={item.href} href={item.href} className={`shrink-0 border-b-[3px] px-3 py-2.5 text-[10.5px] ${active ? "border-[#4967f2] text-[#2e49c8]" : "border-transparent text-[#737c89]"}`}>{item.label}</Link>; })}</nav>

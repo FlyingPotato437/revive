@@ -1,20 +1,52 @@
 # revive-sdk
 
-Agent recovery control plane SDK for Python. Wrap an agent's real-world action
-so that when its credential fails, the run parks, the right account owner
-reconnects, and the run resumes — without ever duplicating a side effect that
-already committed.
+Detect AI-agent runs lost to human-dependent blockers, route the smallest
+secure action to the right person, and resume the exact suspended run.
 
 ```bash
 pip install revive-sdk
 ```
 
-## Protect one action
+## Detect dead runs for free
+
+```python
+from revive import ReviveClient, create_langgraph_interrupt_handler
+
+revive = ReviveClient("https://revivelabs.app/api", api_key="rv_live_…")
+detect = create_langgraph_interrupt_handler(revive)
+
+dead_run = detect(
+    run_id=state["run_id"],
+    checkpoint_id=state["checkpoint_id"],
+    generation=state["generation"],
+    failure_message=str(error),
+    trace=state["trace"],
+    input_tokens=usage.input_tokens,
+    output_tokens=usage.output_tokens,
+    estimated_cost_usd=usage.cost_usd,
+)
+```
+
+`create_temporal_failure_signal` and `create_mcp_elicitation_handler` expose
+the same call at those runtimes' existing boundaries. Detection classifies the
+blocker and loss without contacting an end user.
+
+Resolve only selected recoverable runs:
+
+```python
+resolution = revive.revive_dead_run(
+    dead_run["id"],
+    recipient={"subjectId": "account-owner", "email": "owner@customer.com"},
+    destination_url="https://connect.example.com/quickbooks",
+)
+```
+
+## Protect one write
 
 ```python
 from revive import ReviveClient, ReviveParkedError
 
-revive = ReviveClient("https://revivelabs.app", api_key="rv_live_…")
+revive = ReviveClient("https://revivelabs.app/api", api_key="rv_live_…")
 
 try:
     result = revive.protect_action(
@@ -94,10 +126,10 @@ end to end).
 
 ## What Revive is not
 
-Revive does not take custody of provider tokens — that stays with your
-credential vault (Nango, Auth0, Entra). It coordinates the in-flight run
-around a credential change: park, verify identity, fence stale workers,
-reconcile, resume.
+Revive is not the workflow runtime, credential vault, or reasoning tracer.
+LangGraph or Temporal owns durable execution; Nango, Auth0, or your vault owns
+provider tokens. Revive owns dead-run detection and the secure human action
+that returns to the correct suspended execution.
 
 ## Self-hosting (optional)
 

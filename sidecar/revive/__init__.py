@@ -1,16 +1,14 @@
-"""Revive — agent recovery control plane SDK.
+"""Revive — dead-run recovery SDK.
 
 Primary entrypoint (talks to the hosted control plane, stdlib-only, no deps):
 
     from revive import ReviveClient
-    revive = ReviveClient("https://revivelabs.app", api_key="rv_live_…")
-    result = revive.protect_action(run_id=..., connection_id=..., action_key=...,
-                                   execute=lambda: do_the_side_effect())
+    revive = ReviveClient("https://revivelabs.app/api", api_key="rv_live_…")
+    dead_run = revive.detect_dead_run(run_id=..., failure_message=...)
 
-When a protected action's credential dies mid-run, Revive classifies the
-death, parks the run, routes a single-use reauthorization to the bound
-account, rotates the credential lease, and resumes the same logical run
-without duplicating a side effect that already committed.
+Revive classifies terminal runs, routes a secure human action to the selected
+recipient, validates the response, and continues the same logical run. The
+existing action ledger prevents resumed work from duplicating committed writes.
 
 Framework adapters live under revive.adapters (OpenAI Agents, Anthropic tool
 use, LangGraph). The local self-hosted engine (Engine, CheckpointStore, …)
@@ -30,6 +28,9 @@ from .rendezvous import Kind, Rendezvous, console_channel, webhook_channel
 from .receiver import ResumeReceiver, verify_signature
 from .postgres import PostgresCheckpointStore
 from .reporter import Reporter
+from .adapters.dead_runs import (create_langgraph_interrupt_handler,
+                                 create_mcp_elicitation_handler,
+                                 create_temporal_failure_signal)
 
 __all__ = [
     "ReviveClient", "ReviveParkedError", "ParkedRun", "AmbiguousCommitError", "idempotency_key",
@@ -43,5 +44,7 @@ __all__ = [
     "classify", "ClassifierResult", "Verdict",
     "Rendezvous", "Kind", "console_channel", "webhook_channel",
     "ResumeReceiver", "verify_signature",
+    "create_langgraph_interrupt_handler", "create_temporal_failure_signal",
+    "create_mcp_elicitation_handler",
 ]
 __version__ = "0.1.0"

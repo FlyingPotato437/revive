@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { ago, CaseStateBadge, PageHeader, SummaryStrip, TransactionStateBadge, VerdictBadge } from "@/components/app/ConsolePrimitives";
+import { ActionRequestStateBadge, ago, CaseStateBadge, PageHeader, StatusBadge, SummaryStrip, TransactionStateBadge, VerdictBadge } from "@/components/app/ConsolePrimitives";
 import { AttentionQueue } from "@/components/app/AttentionQueue";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 import { listActions, listCases } from "@/lib/control-plane";
-import { getProtectionStats } from "@/lib/protection-stats";
 import { listDeadJobs, listWorkspaceConnections } from "@/lib/hosted";
 import { getApprovalPolicy } from "@/lib/workspace-config";
 import { getResumeEndpoint } from "@/lib/workspace-secrets";
 import { buildAttentionQueue, buildReadiness } from "@/lib/attention";
 import { listOutcomeTransactions } from "@/lib/outcome-transactions";
+import { listUserActionRequests } from "@/lib/action-requests";
+import { getDeadRunStats, listDeadRuns } from "@/lib/dead-runs";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +22,7 @@ export default async function OverviewPage() {
   const jar = await cookies();
   const auth = verifySession(jar.get(SESSION_COOKIE)?.value)!;
   const workspace = await selectedWorkspace(auth.email, jar.get(WORKSPACE_COOKIE)?.value);
-  const [stats, actions, cases, connections, policy, resumeEndpoint, deadJobs, transactions] = await Promise.all([
-    getProtectionStats(workspace.id).catch(() => null),
+  const [actions, cases, connections, policy, resumeEndpoint, deadJobs, transactions, actionRequests, deadRunStats, deadRuns] = await Promise.all([
     listActions(workspace.id).catch(() => []),
     listCases(workspace.id).catch(() => []),
     listWorkspaceConnections(workspace.id).catch(() => []),
@@ -30,22 +30,43 @@ export default async function OverviewPage() {
     getResumeEndpoint(workspace.id).catch(() => null),
     listDeadJobs(workspace.id).catch(() => []),
     listOutcomeTransactions(workspace.id).catch(() => []),
+    listUserActionRequests(workspace.id).catch(() => []),
+    getDeadRunStats(workspace.id, 7).catch(() => ({ days: 7, totalRunsLost: 0, recoverableRuns: 0, recoverableRate: 0, wastedTokens: 0, estimatedCostUsd: 0, resolvedRuns: 0, categories: [] })),
+    listDeadRuns(workspace.id).catch(() => []),
   ]);
 
   const safePolicy = policy ?? { mode: "high_risk" as const, requirePatterns: [], allowPatterns: [], guardrails: { outboundMessages: "bulk" as const, bulkRecipientThreshold: 25, monetaryActions: true, destructiveActions: true, productionChanges: true } };
-  const attention = buildAttentionQueue({ actions, cases, deadJobs, transactions });
+  const attention = buildAttentionQueue({ actions, cases, deadJobs, transactions, actionRequests, deadRuns });
   const readiness = buildReadiness({
     activeApiKeys: workspace.apiKeys.filter((key) => !key.revokedAt && (!key.expiresAt || key.expiresAt > Date.now())).length,
     actions,
     connections,
     policy: safePolicy,
     resumeEndpointConfigured: Boolean(resumeEndpoint),
+    actionRequests,
+    deadRuns,
   });
-  const s = stats ?? { actionsProtected: 0, duplicatesBlocked: 0, approvalsPending: 0, approvalsDecided: 0, recoveries: 0, month: "" };
   const openCases = cases.filter((item) => !TERMINAL_CASES.has(item.state)).length;
-  const verifiedTransactions = transactions.filter((item) => item.state === "verified" || item.state === "compensated").length;
-  const protectedOperations = transactions.length || s.actionsProtected;
+  const completedRequests = actionRequests.filter((item) => item.status === "completed").length;
+  const waitingRequests = actionRequests.filter((item) => item.status === "pending").length;
+  const resumedRequests = actionRequests.filter((item) => item.resumeStatus === "acknowledged").length;
   const activity = [
+    ...deadRuns.map((run) => ({
+      id: `dead-run:${run.id}`,
+      kind: "dead_run" as const,
+      title: run.runId,
+      detail: run.category,
+      href: "/app/detector",
+      at: run.updatedAt,
+    })),
+    ...actionRequests.map((request) => ({
+      id: `request:${request.id}`,
+      kind: "request" as const,
+      title: request.title,
+      detail: request.status,
+      href: `/app/requests/${request.id}`,
+      at: request.updatedAt,
+    })),
     ...transactions.map((transaction) => ({
       id: `transaction:${transaction.id}`,
       kind: "transaction" as const,
@@ -75,17 +96,18 @@ export default async function OverviewPage() {
   return (
     <div className="mx-auto max-w-[1180px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
       <PageHeader
-        eyebrow="Operations"
-        title="Agent operations"
-        description="See which agent operations settled, what needs a human, and where provider state is still uncertain."
-        actions={<Link href="/app/action-contracts" className="inline-flex h-9 items-center gap-2 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2a2f3a] active:translate-y-px">Define an outcome <ArrowRight size={12} /></Link>}
+        eyebrow="Detect · resolve · resume"
+        title="Keep blocked agents moving"
+        description="See who an agent is waiting on, which response arrived, and whether the exact paused run resumed."
+        actions={<Link href={deadRunStats.totalRunsLost ? "/app/detector" : "/app/quickstart"} className="inline-flex h-9 items-center gap-2 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2a2f3a] active:translate-y-px">{deadRunStats.totalRunsLost ? "Review dead runs" : "Install detector"} <ArrowRight size={12} /></Link>}
       />
 
       <div className="mt-5">
         <SummaryStrip items={[
-          { label: "Protected operations", value: String(protectedOperations), detail: transactions.length ? "business transactions" : "recorded actions", tone: protectedOperations ? "cobalt" : undefined },
-          { label: "Needs attention", value: String(attention.length), detail: attention.length ? "human work or retry" : "nothing open", tone: attention.length ? "warn" : "ok" },
-          { label: "Verified outcomes", value: String(verifiedTransactions), detail: transactions.length ? "settled completely" : "add a transaction", tone: verifiedTransactions ? "ok" : undefined },
+          { label: "Runs lost · 7d", value: String(deadRunStats.totalRunsLost), detail: deadRunStats.totalRunsLost ? `${Math.round(deadRunStats.recoverableRate * 100)}% human-recoverable` : "install free detector", tone: deadRunStats.totalRunsLost ? "warn" : undefined },
+          { label: "Waiting on people", value: String(waitingRequests), detail: waitingRequests ? "user actions still open" : "no blocked runs", tone: waitingRequests ? "warn" : "ok" },
+          { label: "Responses received", value: String(completedRequests), detail: "structured and validated", tone: completedRequests ? "cobalt" : undefined },
+          { label: "Runs resumed", value: String(resumedRequests), detail: "runtime acknowledged", tone: resumedRequests ? "ok" : undefined },
         ]} />
       </div>
 
@@ -95,16 +117,16 @@ export default async function OverviewPage() {
 
       <section className="instrument-panel mt-5 overflow-hidden" aria-labelledby="activity-title">
         <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[#e1e2de] px-4 sm:px-5">
-          <div><h2 id="activity-title" className="text-[12px] font-semibold text-[#25282d]">Recent activity</h2><p className="mt-0.5 text-[10px] text-[#687180]">Latest transactions, actions, and recovery changes.</p></div>
-          <Link href={transactions.length ? "/app/transactions" : "/app/actions"} className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#2e49c8] hover:underline">View operations <ArrowRight size={11} /></Link>
+          <div><h2 id="activity-title" className="text-[12px] font-semibold text-[#25282d]">Recent activity</h2><p className="mt-0.5 text-[10px] text-[#687180]">Latest user requests, continuations, transactions, and recoveries.</p></div>
+          <Link href="/app/requests" className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#2e49c8] hover:underline">View requests <ArrowRight size={11} /></Link>
         </div>
         {activity.length ? activity.map((item) => (
           <Link key={item.id} href={item.href} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-[#e8ebe7] px-4 py-3.5 last:border-b-0 hover:bg-[#f7f8f5] sm:px-5">
             <div className="min-w-0"><span className="truncate text-[11px] font-semibold text-[#151922]">{item.title}</span><span className="ml-2 hidden font-mono text-[8.5px] text-[#8a929d] sm:inline">{item.kind}</span></div>
-            {item.kind === "action" ? <VerdictBadge state={item.detail} /> : item.kind === "transaction" ? <TransactionStateBadge state={item.detail} /> : <CaseStateBadge state={item.detail} />}
+            {item.kind === "request" ? <ActionRequestStateBadge state={item.detail} /> : item.kind === "dead_run" ? <StatusBadge tone="warn">{item.detail.replaceAll("_", " ")}</StatusBadge> : item.kind === "action" ? <VerdictBadge state={item.detail} /> : item.kind === "transaction" ? <TransactionStateBadge state={item.detail} /> : <CaseStateBadge state={item.detail} />}
             <span className="font-mono text-[8.5px] text-[#8a929d]">{ago(item.at)}</span>
           </Link>
-        )) : <div className="px-5 py-8 text-[11px] text-[#687180]">No agent operation has reached Revive yet. Start with one protected action, then group multi-system work into a transaction.</div>}
+        )) : <div className="px-5 py-8 text-[11px] text-[#687180]">No agent has asked a person for help yet. Create one secure action request and complete it end to end.</div>}
       </section>
 
       {openCases > 0 && <p className="mt-4 text-[10px] text-[#687180]">{openCases} recovery case{openCases === 1 ? "" : "s"} remain open. <Link href="/app/runs" className="font-semibold text-[#2e49c8] hover:underline">Review recoveries</Link></p>}
