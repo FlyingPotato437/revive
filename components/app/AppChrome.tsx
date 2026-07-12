@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ArrowSquareOut, Buildings, CaretDown, Check, Command, Flask,
-  FileText, FolderSimple, Gauge, GitDiff, HandPointing, Key, LinkSimple, ListBullets, MagnifyingGlass,
+  CheckSquareOffset, FileText, FolderSimple, Gauge, GitDiff, HandPointing, Key, LinkSimple, ListBullets, MagnifyingGlass,
   Pulse, RocketLaunch, SlidersHorizontal, UserCircle, UsersThree, Wallet,
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -17,7 +17,8 @@ const OPERATIONS = [
   { href: "/app/quickstart", label: "Quickstart", icon: RocketLaunch },
   { href: "/app/overview", label: "Overview", icon: Gauge },
   { href: "/app/detector", label: "Dead-run detector", icon: Pulse },
-  { href: "/app/requests", label: "Action requests", icon: HandPointing },
+  { href: "/app/approvals", label: "Approvals", icon: CheckSquareOffset },
+  { href: "/app/requests", label: "Requests", icon: HandPointing },
   { href: "/app/connections", label: "Connections", icon: LinkSimple },
 ] as const;
 
@@ -29,23 +30,27 @@ const ADVANCED = [
 ] as const;
 
 const ACCOUNT = [
-  { href: "/app/account", label: "Account", icon: UserCircle },
   { href: "/app/organization", label: "Organization", icon: Buildings },
-  { href: "/app/projects", label: "Projects", icon: FolderSimple },
   { href: "/app/api-keys", label: "API keys", icon: Key },
-  { href: "/app/usage", label: "Usage", icon: Wallet },
   { href: "/app/settings", label: "Settings", icon: SlidersHorizontal },
 ] as const;
 
-const NAV = [...OPERATIONS, ...ADVANCED, ...ACCOUNT] as const;
+const SECONDARY = [
+  { href: "/app/account", label: "Account", icon: UserCircle },
+  { href: "/app/projects", label: "Projects", icon: FolderSimple },
+  { href: "/app/usage", label: "Usage", icon: Wallet },
+] as const;
+
+const NAV = [...OPERATIONS, ...ADVANCED, ...ACCOUNT, ...SECONDARY] as const;
 const TITLES: Record<string, string> = Object.fromEntries(NAV.map((item) => [item.href, item.label]));
 
 export function AppChrome({
-  email, workspaces, currentWorkspace, children,
+  email, workspaces, currentWorkspace, pendingApprovals, children,
 }: {
   email: string;
   workspaces: WorkspaceOption[];
   currentWorkspace: WorkspaceOption;
+  pendingApprovals: number;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -55,6 +60,7 @@ export function AppChrome({
   const [commands, setCommands] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [switching, setSwitching] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(() => ADVANCED.some((item) => isActive(item.href, pathname)));
   const reduceMotion = useReducedMotion();
   const initials = email.slice(0, 2).toUpperCase();
   const title = pathname.startsWith("/app/runs/") ? "Recovery case" : pathname.startsWith("/app/actions") ? "Action ledger" : pathname.startsWith("/app/requests/") ? "Action request" : pathname.startsWith("/app/transactions/") ? "Transaction" : TITLES[pathname] || "Control plane";
@@ -123,8 +129,14 @@ export function AppChrome({
       </div>
 
       <nav className="flex min-h-0 flex-1 flex-col justify-between overflow-y-auto px-2 py-3" aria-label="Console navigation">
-        <div><NavGroup label="Operations" items={OPERATIONS} pathname={pathname} /><NavGroup label="Advanced" items={ADVANCED} pathname={pathname} /></div>
-        <NavGroup label="Account" items={ACCOUNT} pathname={pathname} />
+        <div>
+          <NavGroup label="Operations" items={OPERATIONS} pathname={pathname} pendingApprovals={pendingApprovals} />
+          <div className="mb-3">
+            <button onClick={() => setAdvancedOpen((value) => !value)} aria-expanded={advancedOpen} className="flex w-full items-center justify-between px-2 pb-1.5 pt-2 font-mono text-[7.5px] tracking-[.12em] text-[#7b8491] hover:text-[#151922]"><span>ADVANCED</span><CaretDown size={10} className={`transition ${advancedOpen ? "rotate-180" : ""}`} /></button>
+            {advancedOpen && <NavItems items={ADVANCED} pathname={pathname} pendingApprovals={pendingApprovals} />}
+          </div>
+        </div>
+        <NavGroup label="Workspace" items={ACCOUNT} pathname={pathname} pendingApprovals={pendingApprovals} />
       </nav>
 
       <div className="border-t border-[#151922] p-3">
@@ -146,11 +158,9 @@ export function AppChrome({
           <div className="hidden min-w-0 items-center gap-2 text-[10.5px] md:flex"><span className="font-mono text-[8px] tracking-[.1em] text-[#8a929d]">{currentWorkspace.name.toUpperCase()}</span><span className="text-[#b2b8bf]">/</span><span className="truncate font-semibold text-[#333943]">{title}</span></div>
           <div className="ml-auto flex items-center gap-2">
             <button onClick={() => setCommands(true)} className="hidden h-9 min-w-[230px] items-center gap-2 border border-[#c8cdd2] bg-[#fbfcf8] px-3 text-left text-[10px] text-[#818a96] transition hover:border-[#151922] sm:flex"><MagnifyingGlass size={13} /><span className="flex-1">Search or jump to</span><kbd className="flex items-center gap-0.5 border border-[#d1d6db] bg-[#eef0eb] px-1.5 py-0.5 font-mono text-[8px]"><Command size={9} />K</kbd></button>
-            <span className="hidden border-l border-[#cbd0d5] pl-3 font-mono text-[8px] tracking-[.09em] text-[#67717f] lg:flex">LOCAL SANDBOX</span>
-            <Link href="/app/requests" className="inline-flex h-9 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">New request</Link>
           </div>
         </div>
-        <nav className="flex overflow-x-auto border-t border-[#cfd4da] px-2 md:hidden" aria-label="Mobile navigation">{NAV.map((item) => { const active = isActive(item.href, pathname); return <Link key={item.href} href={item.href} className={`shrink-0 border-b-[3px] px-3 py-2.5 text-[10.5px] ${active ? "border-[#4967f2] text-[#2e49c8]" : "border-transparent text-[#737c89]"}`}>{item.label}</Link>; })}</nav>
+        <nav className="flex overflow-x-auto border-t border-[#cfd4da] px-2 md:hidden" aria-label="Mobile navigation">{[...OPERATIONS, ...ACCOUNT].map((item) => { const active = isActive(item.href, pathname); return <Link key={item.href} href={item.href} className={`shrink-0 border-b-[3px] px-3 py-2.5 text-[10.5px] ${active ? "border-[#4967f2] text-[#2e49c8]" : "border-transparent text-[#737c89]"}`}>{item.label}{item.href === "/app/approvals" && pendingApprovals > 0 ? ` (${pendingApprovals})` : ""}</Link>; })}</nav>
       </header>
       <main>{children}</main>
     </div>
@@ -160,8 +170,12 @@ export function AppChrome({
   </div>;
 }
 
-function NavGroup({ label, items, pathname }: { label: string; items: readonly { href: string; label: string; icon: React.ComponentType<{ size?: number }> }[]; pathname: string }) {
-  return <div className="mb-3 last:mb-0"><div className="px-2 pb-1.5 pt-1 font-mono text-[7.5px] tracking-[.12em] text-[#8a929d]">{label.toUpperCase()}</div>{items.map((item) => { const active = isActive(item.href, pathname); const Icon = item.icon; return <Link key={item.href} href={item.href} className={`relative mb-0.5 flex h-8 items-center gap-2.5 border px-2.5 text-[10.5px] font-medium transition-colors ${active ? "border-[#4967f2] bg-[#edf0ff] text-[#2e49c8]" : "border-transparent text-[#596273] hover:border-[#c8cdd2] hover:bg-[#f8f9f5] hover:text-[#151922]"}`}>{active && <motion.span layoutId="app-nav" className="absolute -left-[3px] top-[6px] h-5 w-[3px] bg-[#4967f2]" />}<Icon size={14} />{item.label}</Link>; })}</div>;
+function NavGroup({ label, items, pathname, pendingApprovals }: { label: string; items: readonly { href: string; label: string; icon: React.ComponentType<{ size?: number }> }[]; pathname: string; pendingApprovals: number }) {
+  return <div className="mb-3 last:mb-0"><div className="px-2 pb-1.5 pt-1 font-mono text-[7.5px] tracking-[.12em] text-[#8a929d]">{label.toUpperCase()}</div><NavItems items={items} pathname={pathname} pendingApprovals={pendingApprovals} /></div>;
+}
+
+function NavItems({ items, pathname, pendingApprovals }: { items: readonly { href: string; label: string; icon: React.ComponentType<{ size?: number }> }[]; pathname: string; pendingApprovals: number }) {
+  return items.map((item) => { const active = isActive(item.href, pathname); const Icon = item.icon; const count = item.href === "/app/approvals" ? pendingApprovals : 0; return <Link key={item.href} href={item.href} className={`relative mb-0.5 flex h-8 items-center gap-2.5 border px-2.5 text-[10.5px] font-medium transition-colors ${active ? "border-[#4967f2] bg-[#edf0ff] text-[#2e49c8]" : "border-transparent text-[#596273] hover:border-[#c8cdd2] hover:bg-[#f8f9f5] hover:text-[#151922]"}`}>{active && <motion.span layoutId="app-nav" className="absolute -left-[3px] top-[6px] h-5 w-[3px] bg-[#4967f2]" />}<Icon size={14} />{item.label}{count > 0 && <span className="ml-auto min-w-5 border border-[#dfc18c] bg-[#fff7e8] px-1 py-0.5 text-center font-mono text-[8px] text-[#8a5815]">{count > 99 ? "99+" : count}</span>}</Link>; });
 }
 
 function isActive(href: string, pathname: string) {

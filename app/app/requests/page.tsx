@@ -20,7 +20,7 @@ export default async function RequestsPage() {
   const completed = requests.filter((request) => request.status === "completed").length;
   const resumed = requests.filter((request) => request.resumeStatus === "acknowledged").length;
   return <div className="mx-auto max-w-[1180px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
-    <PageHeader eyebrow="Revive Actions" title="User action requests" description="Ask the right person for one approval, answer, reconnect, verification, permission or browser step—then continue the same run." actions={canOperate ? <ActionRequestBuilder /> : undefined} />
+    <PageHeader eyebrow="Human action" title="User action requests" description="Ask the right person for one approval, answer, reconnect, verification, permission or browser step—then continue the same run." actions={canOperate && requests.length ? <ActionRequestBuilder /> : undefined} />
     <div className="mt-5"><SummaryStrip items={[{ label: "Waiting on people", value: String(pending), detail: "secure links still open", tone: pending ? "warn" : "ok" }, { label: "Completed", value: String(completed), detail: "structured responses received", tone: completed ? "cobalt" : undefined }, { label: "Runs resumed", value: String(resumed), detail: "runtime acknowledged", tone: resumed ? "ok" : undefined }]} /></div>
     <section className="instrument-panel mt-5 overflow-hidden">
       <div className="grid grid-cols-[minmax(0,1fr)_150px_105px_70px] border-b border-[#151922] bg-[#eef0eb] px-5 py-2.5 font-mono text-[8px] tracking-[.08em] text-[#7b8491]"><span>REQUEST</span><span className="hidden sm:block">RECIPIENT</span><span>STATUS</span><span className="text-right">UPDATED</span></div>

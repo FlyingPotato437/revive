@@ -11,7 +11,6 @@ const LINKS = [
   { href: "/#security", label: "How it fits" },
   { href: "/benchmarks", label: "Evidence" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/team", label: "Team" },
 ];
 
 export function Nav() {
@@ -39,7 +38,7 @@ export function Nav() {
 
         <div className="ml-auto flex items-center gap-2 md:ml-5">
           <Link href="/login" className="hidden px-2 text-[11px] font-medium text-[#66707e] transition-colors hover:text-[#151922] sm:inline-flex">Log in</Link>
-          <Link href="/app/quickstart" className="inline-flex h-9 items-center rounded-[7px] bg-[#151922] px-4 text-[11px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px"><span className="sm:hidden">Open app</span><span className="hidden sm:inline">Install detector</span></Link>
+          <Link href="/signup?next=%2Fapp%2Fquickstart" className="inline-flex h-9 items-center rounded-[7px] bg-[#151922] px-4 text-[11px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px"><span className="sm:hidden">Get started</span><span className="hidden sm:inline">Install detector</span></Link>
           <button onClick={() => setOpen((value) => !value)} className="ml-1 flex h-9 w-9 items-center justify-center rounded-[7px] border border-[#d9ddd6] bg-transparent md:hidden" aria-label="Toggle navigation" aria-expanded={open}><span className="relative h-3.5 w-4"><motion.span animate={{ rotate: reduceMotion ? 0 : open ? 45 : 0, y: reduceMotion ? 0 : open ? 5 : 0 }} className="absolute left-0 top-0 h-px w-4 bg-[#151922]" /><motion.span animate={{ opacity: open ? 0 : 1 }} className="absolute left-0 top-[6px] h-px w-4 bg-[#151922]" /><motion.span animate={{ rotate: reduceMotion ? 0 : open ? -45 : 0, y: reduceMotion ? 0 : open ? -5 : 0 }} className="absolute bottom-0 left-0 h-px w-4 bg-[#151922]" /></span></button>
         </div>
       </div>

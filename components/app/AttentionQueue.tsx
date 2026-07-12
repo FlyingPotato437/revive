@@ -6,7 +6,7 @@ import { ArrowRight, ArrowClockwise, Check, WarningCircle } from "@phosphor-icon
 import { useRouter } from "next/navigation";
 import type { AttentionItem, ReadinessItem } from "@/lib/attention";
 
-export function AttentionQueue({ initialItems, readiness, showAll = false }: { initialItems: AttentionItem[]; readiness: ReadinessItem[]; showAll?: boolean }) {
+export function AttentionQueue({ initialItems, readiness = [], showAll = false }: { initialItems: AttentionItem[]; readiness?: ReadinessItem[]; showAll?: boolean }) {
   const [items, setItems] = useState(initialItems);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

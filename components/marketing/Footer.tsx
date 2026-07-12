@@ -4,8 +4,7 @@ const links = [
   { label: "Product", href: "/#product" },
   { label: "Why Revive", href: "/compare" },
   { label: "Evidence", href: "/benchmarks" },
-  { label: "Team", href: "/team" },
-  { label: "Dead-run detector", href: "/app/detector" },
+  { label: "Dead-run detector", href: "/signup?next=%2Fapp%2Fdetector" },
   { label: "Terms", href: "/terms" },
   { label: "Privacy", href: "/privacy" },
 ];

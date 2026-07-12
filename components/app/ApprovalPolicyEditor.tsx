@@ -25,6 +25,14 @@ interface Policy {
   guardrails: Guardrails;
 }
 
+interface Interpretation {
+  policy: Policy;
+  summary: string;
+  changes: string[];
+  assumptions: string[];
+  source: "claude" | "deterministic";
+}
+
 const MODES: Array<{ value: Mode; label: string; detail: string }> = [
   { value: "off", label: "Off", detail: "No action ever waits for approval." },
   { value: "high_risk", label: "High-risk only", detail: "Payments, refunds, emails, deletes, deploys pause. Everything else runs." },
@@ -44,6 +52,9 @@ export function ApprovalPolicyEditor() {
   const [previewProduction, setPreviewProduction] = useState(false);
   const [preview, setPreview] = useState<{ required: boolean; reason: string } | null>(null);
   const [previewing, setPreviewing] = useState(false);
+  const [instruction, setInstruction] = useState("");
+  const [interpreting, setInterpreting] = useState(false);
+  const [interpretation, setInterpretation] = useState<Interpretation | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -81,12 +92,50 @@ export function ApprovalPolicyEditor() {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "save failed");
       setPolicy(body.policy);
-      setStatus("Saved. New actions use this policy immediately.");
+      setStatus("Activated. New actions use this policy immediately.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "save failed");
     } finally {
       setSaving(false);
     }
+  };
+
+  const policyWithPatternDrafts = (): Policy | null => policy ? {
+    ...policy,
+    requirePatterns: requireText.split(",").map((value) => value.trim()).filter(Boolean),
+    allowPatterns: allowText.split(",").map((value) => value.trim()).filter(Boolean),
+  } : null;
+
+  const interpret = async () => {
+    const currentPolicy = policyWithPatternDrafts();
+    if (!currentPolicy) return;
+    setInterpreting(true);
+    setInterpretation(null);
+    setStatus(null);
+    setError(null);
+    try {
+      const response = await fetch("/api/workspaces/approval-policy/interpret", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ instruction, currentPolicy }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "could not interpret policy");
+      setInterpretation(body as Interpretation);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "could not interpret policy");
+    } finally {
+      setInterpreting(false);
+    }
+  };
+
+  const applyInterpretation = () => {
+    if (!interpretation) return;
+    setPolicy(interpretation.policy);
+    setRequireText(interpretation.policy.requirePatterns.join(", "));
+    setAllowText(interpretation.policy.allowPatterns.join(", "));
+    setInterpretation(null);
+    setStatus("Draft applied below. Review it, then activate the policy when ready.");
   };
 
   const testPolicy = async () => {
@@ -128,6 +177,57 @@ export function ApprovalPolicyEditor() {
 
   return (
     <div className="p-5">
+      <section className="mb-6 border border-[#cfd6ef] bg-[#f7f8ff] p-4" aria-labelledby="natural-policy-title">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="max-w-[660px]">
+            <h3 id="natural-policy-title" className="text-[11.5px] font-semibold text-[#151922]">Describe the policy in plain English</h3>
+            <p className="mt-1 text-[10px] leading-5 text-[#687180]">Revive converts your instruction into the same enforceable settings below. Before Claude sees it, Revive removes common secrets and direct identifiers. Tool inputs, message content, recipients, and credentials are never included.</p>
+          </div>
+          <span className="border border-[#cad2f3] bg-white px-2 py-1 font-mono text-[8px] font-semibold uppercase tracking-[.08em] text-[#4055b5]">Draft only</span>
+        </div>
+        <label className="mt-4 block">
+          <span className="text-[9.5px] font-semibold text-[#4f5866]">Policy instruction</span>
+          <textarea
+            value={instruction}
+            onChange={(event) => setInstruction(event.target.value)}
+            rows={3}
+            maxLength={2000}
+            placeholder="Require approval for bulk messages over 20 recipients and all production deploys, but let status updates run automatically."
+            className="mt-1.5 w-full resize-y border border-[#c8cfdc] bg-white px-3 py-2.5 text-[11px] leading-5 text-[#151922] outline-none placeholder:text-[#8a929f] focus:border-[#4967f2]"
+          />
+          <span className="mt-1.5 block text-[9px] leading-4 text-[#7b8491]">Do not paste secrets or customer data. Redaction is a safety layer, not a reason to include them.</span>
+        </label>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button onClick={() => void interpret()} disabled={interpreting || instruction.trim().length < 10} className="inline-flex h-9 items-center border border-[#2e49c8] bg-[#2e49c8] px-4 text-[10px] font-semibold text-white transition hover:bg-[#253da9] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45">
+            {interpreting ? "Building draft…" : "Build policy draft"}
+          </button>
+          {["Every write needs approval", "Bulk sends over 50 need approval", "Only high-risk actions need approval"].map((example) => (
+            <button key={example} type="button" onClick={() => setInstruction(example)} className="h-8 border border-[#d9ddea] bg-white px-2.5 text-[9px] text-[#596273] transition hover:border-[#8796d6] hover:text-[#2e49c8]">{example}</button>
+          ))}
+        </div>
+        {interpreting && <div className="mt-4 grid gap-2" aria-live="polite"><div className="h-3 w-2/3 animate-pulse bg-[#e3e7f7]" /><div className="h-3 w-1/2 animate-pulse bg-[#e8ebf8]" /></div>}
+        {interpretation && (
+          <div className="mt-4 border-l-[3px] border-[#4967f2] bg-white px-4 py-3" aria-live="polite">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="max-w-[650px]">
+                <p className="text-[10.5px] font-semibold text-[#151922]">Review the generated draft</p>
+                <p className="mt-1 text-[10px] leading-5 text-[#596273]">{interpretation.summary}</p>
+              </div>
+              <span className="font-mono text-[8px] text-[#7b8491]">{interpretation.source === "claude" ? "CLAUDE + SCHEMA VALIDATION" : "SAFE FALLBACK PARSER"}</span>
+            </div>
+            <ul className="mt-2 grid gap-1 text-[9.5px] text-[#4f5866] sm:grid-cols-2">
+              {interpretation.changes.map((change) => <li key={change} className="border-t border-[#eceef4] pt-1.5">{change}</li>)}
+            </ul>
+            {interpretation.assumptions.length > 0 && <div className="mt-3 border border-[#ead9ba] bg-[#fff9ed] px-3 py-2 text-[9.5px] leading-4 text-[#77551d]"><span className="font-semibold">Check these limits:</span> {interpretation.assumptions.join(" ")}</div>}
+            <div className="mt-3 flex items-center gap-3">
+              <button type="button" onClick={applyInterpretation} className="h-8 border border-[#151922] bg-[#151922] px-3 text-[9.5px] font-semibold text-white transition hover:bg-[#2a2f3a] active:translate-y-px">Use this draft</button>
+              <button type="button" onClick={() => setInterpretation(null)} className="text-[9.5px] font-semibold text-[#687180] hover:text-[#151922]">Discard</button>
+              <span className="text-[9px] text-[#828b97]">Nothing is active until you save below.</span>
+            </div>
+          </div>
+        )}
+      </section>
+
       <div className="grid gap-2 sm:grid-cols-2">
         {MODES.map((option) => {
           const active = policy.mode === option.value;
@@ -209,7 +309,7 @@ export function ApprovalPolicyEditor() {
           disabled={saving}
           className="inline-flex h-9 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2a2f3a] disabled:opacity-50"
         >
-          {saving ? "Saving…" : "Save policy"}
+          {saving ? "Activating…" : "Activate policy"}
         </button>
         {status && <span className="font-mono text-[9.5px] text-[#18724e]">{status}</span>}
         {error && <span className="font-mono text-[9.5px] text-[#af4039]">{error}</span>}

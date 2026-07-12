@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  // This repository lives below another lockfile on the developer machine.
+  // Pin tracing to Revive so Next never guesses a parent workspace root.
+  outputFileTracingRoot: process.cwd(),
   // Keep `next build` from invalidating chunks used by a running dev server.
   // This prevents intermittent MODULE_NOT_FOUND / internal-server errors while
   // validating production builds during local development.

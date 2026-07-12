@@ -4,7 +4,10 @@
 .venv
 .revive
 node_modules
-deck
+decks
 video
 *.pptx
 *.mp4
+Revive-alpha-customers.xlsx
+build_alpha_list.py
+outreach-monday-2026-07-13.md

@@ -6,10 +6,8 @@ import { AttentionQueue } from "@/components/app/AttentionQueue";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 import { listActions, listCases } from "@/lib/control-plane";
-import { listDeadJobs, listWorkspaceConnections } from "@/lib/hosted";
-import { getApprovalPolicy } from "@/lib/workspace-config";
-import { getResumeEndpoint } from "@/lib/workspace-secrets";
-import { buildAttentionQueue, buildReadiness } from "@/lib/attention";
+import { listDeadJobs } from "@/lib/hosted";
+import { buildAttentionQueue } from "@/lib/attention";
 import { listOutcomeTransactions } from "@/lib/outcome-transactions";
 import { listUserActionRequests } from "@/lib/action-requests";
 import { getDeadRunStats, listDeadRuns } from "@/lib/dead-runs";
@@ -22,12 +20,9 @@ export default async function OverviewPage() {
   const jar = await cookies();
   const auth = verifySession(jar.get(SESSION_COOKIE)?.value)!;
   const workspace = await selectedWorkspace(auth.email, jar.get(WORKSPACE_COOKIE)?.value);
-  const [actions, cases, connections, policy, resumeEndpoint, deadJobs, transactions, actionRequests, deadRunStats, deadRuns] = await Promise.all([
+  const [actions, cases, deadJobs, transactions, actionRequests, deadRunStats, deadRuns] = await Promise.all([
     listActions(workspace.id).catch(() => []),
     listCases(workspace.id).catch(() => []),
-    listWorkspaceConnections(workspace.id).catch(() => []),
-    getApprovalPolicy(workspace.id).catch(() => null),
-    getResumeEndpoint(workspace.id).catch(() => null),
     listDeadJobs(workspace.id).catch(() => []),
     listOutcomeTransactions(workspace.id).catch(() => []),
     listUserActionRequests(workspace.id).catch(() => []),
@@ -35,17 +30,7 @@ export default async function OverviewPage() {
     listDeadRuns(workspace.id).catch(() => []),
   ]);
 
-  const safePolicy = policy ?? { mode: "high_risk" as const, requirePatterns: [], allowPatterns: [], guardrails: { outboundMessages: "bulk" as const, bulkRecipientThreshold: 25, monetaryActions: true, destructiveActions: true, productionChanges: true } };
   const attention = buildAttentionQueue({ actions, cases, deadJobs, transactions, actionRequests, deadRuns });
-  const readiness = buildReadiness({
-    activeApiKeys: workspace.apiKeys.filter((key) => !key.revokedAt && (!key.expiresAt || key.expiresAt > Date.now())).length,
-    actions,
-    connections,
-    policy: safePolicy,
-    resumeEndpointConfigured: Boolean(resumeEndpoint),
-    actionRequests,
-    deadRuns,
-  });
   const openCases = cases.filter((item) => !TERMINAL_CASES.has(item.state)).length;
   const completedRequests = actionRequests.filter((item) => item.status === "completed").length;
   const waitingRequests = actionRequests.filter((item) => item.status === "pending").length;
@@ -91,28 +76,27 @@ export default async function OverviewPage() {
       href: `/app/runs/${recovery.id}`,
       at: recovery.updatedAt,
     })),
-  ].sort((a, b) => b.at - a.at).slice(0, 6);
+  ].sort((a, b) => b.at - a.at).slice(0, 5);
 
   return (
     <div className="mx-auto max-w-[1180px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
       <PageHeader
-        eyebrow="Detect · resolve · resume"
+        eyebrow="Operations"
         title="Keep blocked agents moving"
-        description="See who an agent is waiting on, which response arrived, and whether the exact paused run resumed."
+        description="Start with the work that needs a person. Everything else stays out of the way."
         actions={<Link href={deadRunStats.totalRunsLost ? "/app/detector" : "/app/quickstart"} className="inline-flex h-9 items-center gap-2 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2a2f3a] active:translate-y-px">{deadRunStats.totalRunsLost ? "Review dead runs" : "Install detector"} <ArrowRight size={12} /></Link>}
       />
 
       <div className="mt-5">
         <SummaryStrip items={[
-          { label: "Runs lost · 7d", value: String(deadRunStats.totalRunsLost), detail: deadRunStats.totalRunsLost ? `${Math.round(deadRunStats.recoverableRate * 100)}% human-recoverable` : "install free detector", tone: deadRunStats.totalRunsLost ? "warn" : undefined },
-          { label: "Waiting on people", value: String(waitingRequests), detail: waitingRequests ? "user actions still open" : "no blocked runs", tone: waitingRequests ? "warn" : "ok" },
-          { label: "Responses received", value: String(completedRequests), detail: "structured and validated", tone: completedRequests ? "cobalt" : undefined },
-          { label: "Runs resumed", value: String(resumedRequests), detail: "runtime acknowledged", tone: resumedRequests ? "ok" : undefined },
+          { label: "Needs attention", value: String(attention.length), detail: attention.length ? "decisions and retries" : "all clear", tone: attention.length ? "warn" : "ok" },
+          { label: "Waiting on people", value: String(waitingRequests), detail: waitingRequests ? "secure requests still open" : "nobody is blocking a run", tone: waitingRequests ? "warn" : "ok" },
+          { label: "Runs resumed", value: String(resumedRequests), detail: `${completedRequests} responses validated`, tone: resumedRequests ? "ok" : undefined },
         ]} />
       </div>
 
       <div className="mt-5">
-        <AttentionQueue initialItems={attention} readiness={readiness} />
+        <AttentionQueue initialItems={attention} />
       </div>
 
       <section className="instrument-panel mt-5 overflow-hidden" aria-labelledby="activity-title">

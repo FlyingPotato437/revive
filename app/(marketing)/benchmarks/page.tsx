@@ -365,7 +365,7 @@ export default function BenchmarkWhitepaperPage() {
             <div className="mt-7 flex flex-wrap gap-3">
               <a href="/api/evidence/revivebench?download=1" className="inline-flex h-10 items-center border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">Download raw JSON</a>
               <a href="https://github.com/FlyingPotato437/revive/blob/main/sidecar/benchmarks/revivebench.py" className="inline-flex h-10 items-center border border-[#151922] bg-transparent px-4 text-[10.5px] font-semibold text-[#151922] transition hover:bg-white active:translate-y-px">Read the runner</a>
-              <Link href="/app/quickstart" className="inline-flex h-10 items-center px-2 text-[10.5px] font-semibold text-[#2e49c8]">Integration guide</Link>
+              <Link href="/signup?next=%2Fapp%2Fquickstart" className="inline-flex h-10 items-center px-2 text-[10.5px] font-semibold text-[#2e49c8]">Integration guide</Link>
             </div>
           </ReportSection>
         </div>

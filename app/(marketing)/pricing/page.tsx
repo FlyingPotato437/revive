@@ -6,7 +6,7 @@ const plans = [
   {
     name: "Detector",
     price: "$0",
-    cadence: "free",
+    cadence: "forever",
     description: "For builders measuring how many agent runs die at human-dependent blockers.",
     features: [
       "Dead-run ingestion and classification",
@@ -14,6 +14,7 @@ const plans = [
       "Wasted token and cost metadata",
       "LangGraph, Temporal and MCP adapters",
       "Paste-a-trace analyzer",
+      "No card required",
     ],
     cta: "Install free detector",
     href: "/signup?next=%2Fapp%2Fquickstart",
@@ -22,7 +23,7 @@ const plans = [
   {
     name: "Resolve",
     price: "$20",
-    cadence: "base + resolved actions",
+    cadence: "per workspace / month",
     description: "For teams recovering measured blockers with secure customer-facing actions.",
     features: [
       "Everything in Detector",
@@ -31,6 +32,7 @@ const plans = [
       "Secure email delivery and Slack status",
       "Signed resume-or-replan callbacks",
       "Inference cost included in resolved action",
+      "Up to 1,000 completed resolutions / month",
     ],
     cta: "Start resolving",
     href: "/signup?next=%2Fapp%2Fusage",
@@ -39,13 +41,13 @@ const plans = [
   {
     name: "Scale",
     price: "$99",
-    cadence: "base + volume pricing",
+    cadence: "per workspace / month",
     description: "For production agent teams with higher blocker volume and identity requirements.",
     features: [
       "Everything in Resolve",
       "25 credential connections",
       "SSO and authenticated recipient mode",
-      "Volume resolution pricing",
+      "Up to 10,000 completed resolutions / month",
       "Security and retention controls",
     ],
     cta: "Start Scale",
@@ -59,8 +61,8 @@ export default function Pricing() {
     <div className="mx-auto max-w-[1260px] px-5 py-20 sm:px-7 lg:py-28">
       <Reveal className="border-b border-[#151922] pb-12">
         <div className="font-mono text-[9px] tracking-[.14em] text-[#2e49c8]">WORKSPACE PRICING</div>
-        <h1 className="mt-6 max-w-[820px] text-[clamp(42px,6.4vw,78px)] font-semibold leading-[.92] tracking-[-.065em] text-[#151922]">Detection free. Pay when a run gets resolved.</h1>
-        <p className="mt-6 max-w-[580px] text-[13px] leading-6 text-[#66707e]">No seats. Detector shows loss at no cost. Resolution usage counts completed human actions; Claude inference is included.</p>
+        <h1 className="mt-6 max-w-[820px] text-[clamp(42px,6.4vw,78px)] font-semibold leading-[.92] tracking-[-.065em] text-[#151922]">Detection free. Fixed plans for recovery.</h1>
+        <p className="mt-6 max-w-[620px] text-[13px] leading-6 text-[#66707e]">No seats and no surprise overages. A resolution counts only when Revive receives and validates a completed human response. Failed, rejected, cancelled and expired requests do not count.</p>
       </Reveal>
 
       <Stagger className="mt-12 grid items-stretch gap-3 lg:grid-cols-[.82fr_1.05fr_.92fr] lg:gap-0">
@@ -82,8 +84,8 @@ export default function Pricing() {
         ))}
       </Stagger>
 
-      <Reveal className="mt-10 max-w-[720px] text-[10.5px] leading-5 text-[#687180]">
-        All paid plans use Stripe subscriptions. Upgrade, cancellation, invoices, and payment methods stay in Stripe&apos;s billing portal.
+      <Reveal className="mt-10 max-w-[760px] text-[10.5px] leading-5 text-[#687180]">
+        Additional-resolution price: $0—Revive does not automatically bill overages. When a workspace reaches its included monthly allowance, upgrade before creating more recovery requests. All paid plans use Stripe subscriptions; cancellation, invoices, and payment methods stay in Stripe&apos;s billing portal.
       </Reveal>
     </div>
   );

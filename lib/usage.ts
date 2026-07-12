@@ -50,8 +50,8 @@ export async function getMonthlyUsage(workspaceId: string): Promise<MonthlyUsage
   });
 }
 
-/** User-action requests use the existing monthly intervention allowance. This
- * keeps billing stable while recovery cases become one request type. */
+/** User-action requests count only completed human resolutions. Failed,
+ * rejected, cancelled, and expired requests never consume the allowance. */
 export async function checkActionRequestQuota(workspaceId: string): Promise<QuotaCheck> {
   if (workspaceId === "ws_revive_local") return { allowed: true, plan: "free", used: 0, limit: null };
   try {
@@ -60,7 +60,7 @@ export async function checkActionRequestQuota(workspaceId: string): Promise<Quot
     const limit = PLAN_LIMITS[billing.plan].casesPerMonth;
     if (limit === null) return { allowed: true, plan: billing.plan, used: 0, limit: null };
     const usage = await getMonthlyUsage(workspaceId);
-    const used = usage.actionRequests + usage.recoveryCases;
+    const used = usage.resolvedActions;
     return { allowed: used < limit, plan: billing.plan, used, limit };
   } catch {
     return { allowed: true, plan: "free", used: 0, limit: null };
