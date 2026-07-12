@@ -53,6 +53,13 @@ const missing = await deadRuns.recordDeadRun("ws_test", {
 });
 ok(missing.category === "missing_input" && missing.suggestedActionType === "clarification", "missing input classified");
 
+const onboarding = await deadRuns.recordDeadRun("ws_onboarding", {
+  projectId: "project_onboarding", runId: "onboarding_run", checkpointId: "confirm_contact", generation: 1,
+  idempotencyKey: "onboarding:test", runtime: "onboarding",
+  failureMessage: "Missing input: a human must confirm the required billing contact email before this agent can continue.",
+}, { deterministic: true });
+ok(onboarding.recoverable && onboarding.category === "missing_input", "onboarding test blocker is deterministically recoverable");
+
 const stats = await deadRuns.getDeadRunStats("ws_test", 7, "project_test");
 ok(stats.totalRunsLost === 2 && stats.recoverableRuns === 2, "dead-run totals counted");
 ok(stats.wastedTokens === 24_000 && stats.estimatedCostUsd === 2, "token and cost loss counted");
@@ -74,4 +81,4 @@ const stale = await intelligence.assessResumeSafety({ ...result.request, created
 ok(stale.decision === "manual_review", "very stale run holds for review");
 
 fs.rmSync(stateDir, { recursive: true, force: true });
-console.log(`dead runs: ${passed}/15 assertions passed`);
+console.log(`dead runs: ${passed}/16 assertions passed`);

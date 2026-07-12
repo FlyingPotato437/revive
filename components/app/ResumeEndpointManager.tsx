@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle, PaperPlaneTilt, Trash, WarningCircle } from "@phosphor-icons/react";
+import { Check, CheckCircle, Copy, PaperPlaneTilt, Trash, WarningCircle } from "@phosphor-icons/react";
 import { StatusBadge } from "@/components/app/ConsolePrimitives";
 
 interface EndpointState {
@@ -21,6 +21,7 @@ export function ResumeEndpointManager() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [test, setTest] = useState<TestResult | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/workspaces/resume-endpoint");
@@ -84,6 +85,20 @@ export function ResumeEndpointManager() {
   // re-saving the same URL still requires re-entering the secret (write-only).
   const canSave = url.trim().length > 0 && secret.length > 0 && !busy;
 
+  function generateSecret() {
+    const bytes = new Uint8Array(24);
+    window.crypto.getRandomValues(bytes);
+    setSecret(Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join(""));
+    setCopied(false);
+  }
+
+  async function copySecret() {
+    if (!secret) return;
+    await navigator.clipboard.writeText(secret);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1400);
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -133,10 +148,9 @@ export function ResumeEndpointManager() {
             autoComplete="off"
             className="h-10 border border-[#d5d8d2] bg-white px-3 font-mono text-[11px] text-[#151922] outline-none transition focus:border-[#4967f2] disabled:opacity-60"
           />
-          <span className="font-mono text-[8.5px] text-[#9aa1aa]">
-            Write-only. Read never returns it. {configured ? "leave blank to keep, or type a new value to rotate." : "store it now; you can rotate but not view it later."}
-          </span>
+          <span className="font-mono text-[8.5px] text-[#9aa1aa]">Write-only. {configured ? "The stored secret stays active until you submit a replacement." : "Generate one here, copy it into your receiver, then register the endpoint."}</span>
         </label>
+        <div className="-mt-2 flex flex-wrap gap-2"><button type="button" onClick={generateSecret} disabled={busy} className="h-8 border border-[#c8cdd2] bg-white px-3 text-[9px] font-semibold text-[#596273] transition hover:border-[#151922]">Generate secure secret</button><button type="button" onClick={() => void copySecret()} disabled={!secret || busy} className="inline-flex h-8 items-center gap-1.5 border border-transparent px-2 text-[9px] font-semibold text-[#2e49c8] disabled:opacity-40">{copied ? <Check size={11} /> : <Copy size={11} />}{copied ? "Copied" : "Copy secret"}</button></div>
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">

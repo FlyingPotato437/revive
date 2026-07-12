@@ -194,14 +194,18 @@ async function defaultProject(sql: Sql, workspaceId: string, requested?: string)
 export async function recordDeadRun(workspaceId: string, input: {
   projectId?: string; runId: string; checkpointId?: string; generation?: number; idempotencyKey: string; runtime?: string; failureMessage: string; trace?: unknown;
   inputTokens?: number; outputTokens?: number; estimatedCostUsd?: number;
-}): Promise<DeadRunRecord> {
+}, options: { deterministic?: boolean } = {}): Promise<DeadRunRecord> {
   const runId = bounded(input.runId, 200); const idempotencyKey = bounded(input.idempotencyKey, 200);
   if (!runId || !idempotencyKey) throw new TransitionError("runId and idempotencyKey are required", 400);
-  const analysis = await analyzeDeadRun({ failureMessage: input.failureMessage, trace: input.trace });
+  const safeFailure = redactDeadRunTrace(bounded(input.failureMessage, 2_000));
+  const safeTrace = redactDeadRunTrace(input.trace);
+  const analysis = options.deterministic
+    ? { ...deterministicClassification(safeFailure.excerpt, safeTrace.excerpt), traceExcerpt: safeTrace.excerpt, traceHash: safeTrace.hash }
+    : await analyzeDeadRun({ failureMessage: input.failureMessage, trace: input.trace });
   const runtime = bounded(input.runtime, 60) || "custom";
   const checkpointId = bounded(input.checkpointId, 200) || undefined;
   const generation = Number.isInteger(input.generation) && Number(input.generation) >= 0 ? Number(input.generation) : 1;
-  const failureMessage = redactDeadRunTrace(input.failureMessage).excerpt;
+  const failureMessage = safeFailure.excerpt;
   const inputTokens = Math.floor(finite(input.inputTokens, 1e12)); const outputTokens = Math.floor(finite(input.outputTokens, 1e12));
   const estimatedCostUsd = finite(input.estimatedCostUsd, 1e9);
   const now = Date.now(); const id = `dr_${crypto.randomBytes(9).toString("base64url")}`;

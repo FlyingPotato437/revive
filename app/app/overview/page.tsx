@@ -35,6 +35,8 @@ export default async function OverviewPage() {
   const completedRequests = actionRequests.filter((item) => item.status === "completed").length;
   const waitingRequests = actionRequests.filter((item) => item.status === "pending").length;
   const resumedRequests = actionRequests.filter((item) => item.resumeStatus === "acknowledged").length;
+  const activeKey = workspace.apiKeys.some((key) => !key.revokedAt && (!key.expiresAt || key.expiresAt > Date.now()) && key.role !== "viewer");
+  const setupProgress = [activeKey, deadRunStats.totalRunsLost > 0, completedRequests > 0].filter(Boolean).length;
   const activity = [
     ...deadRuns.map((run) => ({
       id: `dead-run:${run.id}`,
@@ -86,6 +88,8 @@ export default async function OverviewPage() {
         description="Start with the work that needs a person. Everything else stays out of the way."
         actions={<Link href={deadRunStats.totalRunsLost ? "/app/detector" : "/app/quickstart"} className="inline-flex h-9 items-center gap-2 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#2a2f3a] active:translate-y-px">{deadRunStats.totalRunsLost ? "Review dead runs" : "Install detector"} <ArrowRight size={12} /></Link>}
       />
+
+      {setupProgress < 3 && <Link href="/app/quickstart" className="group mt-5 grid gap-3 border border-[#4967f2] bg-[#edf0ff] px-4 py-3.5 transition hover:bg-[#e4e8ff] sm:grid-cols-[auto_1fr_auto] sm:items-center"><span className="flex h-8 w-8 items-center justify-center border border-[#4967f2] bg-white font-mono text-[9px] font-semibold text-[#2e49c8]">{setupProgress}/3</span><span><span className="block text-[11px] font-semibold text-[#151922]">Finish the first recovery</span><span className="mt-0.5 block text-[9.5px] text-[#596273]">Revive fills the test run, checkpoint, generation, recipient, and response field for you.</span></span><span className="inline-flex items-center gap-1 text-[9.5px] font-semibold text-[#2e49c8]">Continue setup <ArrowRight size={11} className="transition group-hover:translate-x-0.5" /></span></Link>}
 
       <div className="mt-5">
         <SummaryStrip items={[

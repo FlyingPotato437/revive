@@ -8,7 +8,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const params = useSearchParams();
   const requestedNext = params.get("next");
-  const next = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/app/overview";
+  const next = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : mode === "signup" ? "/app/quickstart" : "/app/overview";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
