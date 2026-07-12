@@ -118,7 +118,7 @@ export function QuickstartFlow({ initial }: { initial: QuickstartInitialState })
     if (initial.latestRequest && initial.latestRequest.status !== request?.status) setRequest(initial.latestRequest);
   }, [initial, keyReady, deadRunReady, deadRunId, request?.status]);
 
-  const requestReady = Boolean(request);
+  const requestReady = request?.status === "pending" || request?.status === "completed";
   const responseReady = request?.status === "completed";
   const progress = [keyReady, deadRunReady, requestReady, responseReady].filter(Boolean).length;
   const option = PATHS[active];
@@ -168,7 +168,19 @@ export function QuickstartFlow({ initial }: { initial: QuickstartInitialState })
     try {
       const response = await fetch(`/api/workspaces/dead-runs/${encodeURIComponent(deadRunId)}/revive`, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ recipient: { email: initial.email, subjectId: initial.email, role: "workspace owner" } }),
+        body: JSON.stringify({
+          recipient: { email: initial.email, subjectId: initial.email, role: "workspace owner" },
+          title: "Enter the billing contact email",
+          description: "The example agent is paused before continuing its billing workflow. Enter the email address it should use for billing questions.",
+          fields: [{
+            key: "billing_contact_email",
+            type: "email",
+            label: "Billing contact email",
+            description: "The address the example agent should use for future billing questions.",
+            placeholder: "billing@company.com",
+            required: true,
+          }],
+        }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "Could not create the secure request");
@@ -179,8 +191,8 @@ export function QuickstartFlow({ initial }: { initial: QuickstartInitialState })
 
   const nextAction = !keyReady
     ? "key"
-    : request
-      ? request.status === "pending" ? "respond" : "complete"
+    : requestReady
+      ? request?.status === "pending" ? "respond" : "complete"
       : !deadRunId ? "run" : "request";
 
   return <div className="space-y-5">
@@ -216,7 +228,7 @@ export function QuickstartFlow({ initial }: { initial: QuickstartInitialState })
             <PrimaryButton onClick={sendRequest} busy={busy === "request"} label="Send secure request to me" icon={PaperPlaneTilt} />
           </ActionBlock>}
 
-          {nextAction === "respond" && request && <ActionBlock eyebrow="Next · respond" title="Complete the request as the recipient" body="Open the one-use page, enter a billing contact, and submit it. Return here afterward and refresh the status.">
+          {nextAction === "respond" && request && <ActionBlock eyebrow="Next · respond" title="Complete the request as the recipient" body="Open the one-use page, enter the billing contact email the example agent asks for, and send the response. Return here afterward and refresh the status.">
             <div className="flex flex-wrap gap-2">{request.url && <a href={request.url} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 border border-[#151922] bg-[#151922] px-4 text-[10.5px] font-semibold text-white">Open secure request <ArrowRight size={12} /></a>}<Link href={`/app/requests/${request.id}`} className="inline-flex h-10 items-center border border-[#c8cdd2] bg-white px-4 text-[10.5px] font-semibold">Open request record</Link><button onClick={() => router.refresh()} className="h-10 px-3 text-[10px] font-semibold text-[#2e49c8]">Refresh status</button></div>
           </ActionBlock>}
 

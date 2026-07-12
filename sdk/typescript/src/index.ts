@@ -738,7 +738,7 @@ export class MemoryReviveTransport implements ReviveTransport {
     if (existing) return existing;
     const defaults: Partial<Record<UserActionType, UserActionField[]>> = {
       approval: [{ key: "decision", type: "select", label: "Decision", required: true, options: [{ value: "approve", label: "Approve" }, { value: "reject", label: "Reject" }] }],
-      clarification: [{ key: "answer", type: "textarea", label: "Your answer", required: true }],
+      clarification: [{ key: "answer", type: "textarea", label: "Information needed to continue", description: "Provide the specific detail requested by the workflow.", placeholder: "Enter the requested information", required: true }],
       verification: [{ key: "result", type: "select", label: "What happened?", required: true, options: [{ value: "confirmed", label: "It happened" }, { value: "not_happened", label: "It did not happen" }] }],
     };
     const record: UserActionRequest = {

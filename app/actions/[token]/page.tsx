@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { Clock, FingerprintSimple, Path } from "@phosphor-icons/react/dist/ssr";
 import { UserActionForm } from "@/components/actions/UserActionForm";
-import { getUserActionRequestByToken, toPublicUserAction } from "@/lib/action-requests";
+import { getUserActionRequestByToken, toPublicUserAction, type PublicUserActionRequest } from "@/lib/action-requests";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export default async function UserActionPage({ params }: { params: Promise<{ tok
     const session = verifySession((await cookies()).get(SESSION_COOKIE)?.value);
     if (session?.email.toLowerCase() !== request.recipient.email) redirect(`/login?next=${encodeURIComponent(`/actions/${token}`)}`);
   }
-  const publicRequest = toPublicUserAction(request);
+  const publicRequest = clarifyLegacyOnboardingRequest(toPublicUserAction(request));
   const context = Object.entries(publicRequest.context).slice(0, 8);
   return <main className="min-h-[100dvh] bg-[#eef0eb] text-[#151922]">
     <div className="mx-auto flex min-h-[100dvh] max-w-[1180px] flex-col px-5 py-6 sm:px-8 sm:py-9">
@@ -46,4 +46,26 @@ export default async function UserActionPage({ params }: { params: Promise<{ tok
 
 function Fact({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
   return <div className="grid grid-cols-[18px_120px_1fr] items-start gap-2 py-2"><Icon size={14} className="mt-0.5 text-[#4967f2]" /><span className="text-[10px] text-[#7b8491]">{label}</span><span className="break-all font-mono text-[9px] text-[#333943]">{value}</span></div>;
+}
+
+/** Requests created by the first onboarding release used a generic title and
+ * textarea. Make those already-issued links as explicit as newly-created ones
+ * without rewriting their signed request records. */
+function clarifyLegacyOnboardingRequest(request: PublicUserActionRequest): PublicUserActionRequest {
+  const onboardingBillingContact = request.context.runtime === "onboarding"
+    && request.checkpointId === "confirm-billing-contact"
+    && request.actionType === "clarification";
+  if (!onboardingBillingContact) return request;
+  return {
+    ...request,
+    title: "Enter the billing contact email",
+    description: "The example agent is paused before continuing its billing workflow. Enter the email address it should use for billing questions.",
+    fields: request.fields.map((field, index) => index === 0 ? {
+      ...field,
+      type: "email",
+      label: "Billing contact email",
+      description: "The address the example agent should use for future billing questions.",
+      placeholder: "billing@company.com",
+    } : field),
+  };
 }

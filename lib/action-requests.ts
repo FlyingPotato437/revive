@@ -115,7 +115,7 @@ const DEFAULT_FIELDS: Record<Exclude<UserActionType, "structured_input">, UserAc
     ] },
     { key: "instructions", type: "textarea", label: "Changes or instructions", required: false, requiredWhen: { field: "decision", equals: "modify" } },
   ],
-  clarification: [{ key: "answer", type: "textarea", label: "Your answer", required: true }],
+  clarification: [{ key: "answer", type: "textarea", label: "Information needed to continue", description: "Provide the specific detail requested by the workflow.", placeholder: "Enter the requested information", required: true }],
   reauthorization: [{ key: "completed", type: "boolean", label: "I restored access", required: true }],
   verification: [{ key: "result", type: "select", label: "What happened?", required: true, options: [
     { value: "confirmed", label: "The action happened" }, { value: "not_happened", label: "The action did not happen" }, { value: "unsure", label: "I cannot confirm" },

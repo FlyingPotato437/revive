@@ -44,6 +44,11 @@ export function UserActionForm({ token, initial }: { token: string; initial: Pub
   }
 
   return <form onSubmit={submit} className="overflow-hidden border border-[#151922] bg-[#fbfcf8] shadow-[10px_10px_0_#d9ddd6]">
+    <div className="border-b border-[#151922] bg-[#f7f8f5] p-5 sm:p-6">
+      <div className="font-mono text-[8px] tracking-[.1em] text-[#4967f2]">WHAT THE AGENT NEEDS FROM YOU</div>
+      <h2 className="mt-2 text-[18px] font-semibold leading-tight tracking-[-.03em] text-[#151922]">{request.title}</h2>
+      <p className="mt-2 max-w-[560px] text-[10.5px] leading-5 text-[#687180]">Complete the field{request.fields.length === 1 ? "" : "s"} below. Revive accepts only these declared values and binds them to this one paused run.</p>
+    </div>
     {request.destinationUrl && <div className="border-b border-[#d9ddd6] bg-[#edf0ff] p-5 sm:p-6"><div className="text-[10px] font-semibold text-[#2e49c8]">COMPLETE THE EXTERNAL STEP FIRST</div><a href={request.destinationUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex h-10 items-center gap-2 bg-[#151922] px-4 text-[11px] font-semibold text-white transition hover:bg-[#2b3340] active:translate-y-px">Open secure provider flow <ArrowSquareOut size={13} /></a></div>}
     <div className="divide-y divide-[#e1e4de]">
       {request.fields.map((field) => <Field key={field.key} field={field} value={values[field.key]} values={values} onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))} />)}
@@ -51,8 +56,8 @@ export function UserActionForm({ token, initial }: { token: string; initial: Pub
     <div className="border-t border-[#151922] p-5 sm:p-6">
       {error && <p role="alert" className="mb-4 border-l-[3px] border-[#af4039] bg-[#fff0ee] px-3 py-2 text-[11px] leading-5 text-[#8f342f]">{error}</p>}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 font-mono text-[8.5px] text-[#7b8491]"><LockKey size={12} />ONE USE · EXPIRES {expires.toUpperCase()}</div>
-        <button disabled={submitting} className="inline-flex h-11 items-center justify-center gap-2 bg-[#4967f2] px-5 text-[12px] font-semibold text-white transition hover:bg-[#3b55d9] active:translate-y-px disabled:cursor-wait disabled:opacity-60">{submitting ? <CircleNotch size={15} className="animate-spin" /> : <PaperPlaneTilt size={15} />}Submit and resume</button>
+        <div><div className="flex items-center gap-2 font-mono text-[8.5px] text-[#7b8491]"><LockKey size={12} />ONE USE · EXPIRES {expires.toUpperCase()}</div><div className="mt-1 text-[9px] text-[#8a929d]">Revive validates and returns this response to the workflow owner.</div></div>
+        <button disabled={submitting} className="inline-flex h-11 items-center justify-center gap-2 bg-[#4967f2] px-5 text-[12px] font-semibold text-white transition hover:bg-[#3b55d9] active:translate-y-px disabled:cursor-wait disabled:opacity-60">{submitting ? <CircleNotch size={15} className="animate-spin" /> : <PaperPlaneTilt size={15} />}Send response</button>
       </div>
     </div>
   </form>;

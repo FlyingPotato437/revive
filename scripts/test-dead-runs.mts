@@ -73,6 +73,11 @@ ok(result.request.actionType === "reauthorization" && result.request.validation?
 ok(result.request.runId === oauth.runId && result.request.checkpointId === oauth.checkpointId && result.request.generation === oauth.generation, "resolution binds exact suspended run");
 ok(result.deadRun.status === "resolution_requested" && result.deadRun.actionRequestId === result.request.id, "detector links resolution request");
 
+const clarified = await revive.reviveDeadRun("ws_test", missing.id, {
+  recipient: { subjectId: "request-owner", email: "request-owner@example.com" }, requestedBy: "test",
+});
+ok(clarified.request.fields[0]?.label === "Information needed to continue", "fallback clarification field explains what belongs in the response");
+
 const validation = await intelligence.validateResolution({ request: result.request, response: { completed: true } });
 ok(validation.valid && validation.classifier === "schema", "safe deterministic validation works without Claude");
 const recent = await intelligence.assessResumeSafety({ ...result.request, completedAt: Date.now() });
@@ -81,4 +86,4 @@ const stale = await intelligence.assessResumeSafety({ ...result.request, created
 ok(stale.decision === "manual_review", "very stale run holds for review");
 
 fs.rmSync(stateDir, { recursive: true, force: true });
-console.log(`dead runs: ${passed}/16 assertions passed`);
+console.log(`dead runs: ${passed}/17 assertions passed`);
