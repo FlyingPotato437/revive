@@ -78,6 +78,22 @@ const clarified = await revive.reviveDeadRun("ws_test", missing.id, {
 });
 ok(clarified.request.fields[0]?.label === "Information needed to continue", "fallback clarification field explains what belongs in the response");
 
+const legacyOnboardingEmail = await intelligence.validateResolution({
+  request: {
+    ...clarified.request,
+    checkpointId: "confirm-billing-contact",
+    context: { ...clarified.request.context, runtime: "onboarding" },
+  },
+  response: { answer: "billing@example.com" },
+});
+ok(legacyOnboardingEmail.valid && legacyOnboardingEmail.classifier === "schema", "legacy onboarding email bypasses redacted semantic validation");
+
+const typedEmail = await intelligence.validateResolution({
+  request: { ...clarified.request, fields: [{ key: "billing_email", type: "email", label: "Billing email", required: true }] },
+  response: { billing_email: "billing@example.com" },
+});
+ok(typedEmail.valid && typedEmail.classifier === "schema", "typed email is validated without Claude");
+
 const validation = await intelligence.validateResolution({ request: result.request, response: { completed: true } });
 ok(validation.valid && validation.classifier === "schema", "safe deterministic validation works without Claude");
 const recent = await intelligence.assessResumeSafety({ ...result.request, completedAt: Date.now() });
@@ -86,4 +102,4 @@ const stale = await intelligence.assessResumeSafety({ ...result.request, created
 ok(stale.decision === "manual_review", "very stale run holds for review");
 
 fs.rmSync(stateDir, { recursive: true, force: true });
-console.log(`dead runs: ${passed}/17 assertions passed`);
+console.log(`dead runs: ${passed}/19 assertions passed`);
