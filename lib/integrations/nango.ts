@@ -30,6 +30,12 @@ export interface NangoConnectSession {
   expiresAt: string;
 }
 
+export interface NangoIntegration {
+  id: string;
+  provider: string;
+  displayName?: string;
+}
+
 function config() {
   if (!process.env.NANGO_SECRET_KEY) throw new Error("NANGO_SECRET_KEY is not configured");
   return { secret: process.env.NANGO_SECRET_KEY, baseUrl: (process.env.NANGO_BASE_URL || DEFAULT_NANGO_URL).replace(/\/$/, "") };
@@ -64,6 +70,34 @@ async function nangoFetch(path: string, init: RequestInit): Promise<Response> {
     cache: "no-store",
   });
   return response;
+}
+
+/** The integration ids that really exist in the configured Nango environment.
+ *  This is the source of truth for what the console may offer to users. */
+export async function listNangoIntegrations(): Promise<NangoIntegration[]> {
+  const response = await nangoFetch("/integrations", { method: "GET" });
+  const payload = await response.json() as {
+    data?: Array<{
+      unique_key?: unknown;
+      provider?: unknown;
+      display_name?: unknown;
+    }>;
+    error?: { message?: string } | string;
+    message?: string;
+  };
+  if (!response.ok || !Array.isArray(payload.data)) {
+    const detail = typeof payload.error === "string" ? payload.error : payload.error?.message;
+    throw new Error(payload.message || detail || `Nango integration registry failed (${response.status})`);
+  }
+  return payload.data.flatMap((integration) => {
+    if (typeof integration.unique_key !== "string" || typeof integration.provider !== "string") return [];
+    if (!/^[a-zA-Z0-9_-]+$/.test(integration.unique_key) || !/^[a-zA-Z0-9_-]+$/.test(integration.provider)) return [];
+    return [{
+      id: integration.unique_key,
+      provider: integration.provider,
+      displayName: typeof integration.display_name === "string" ? integration.display_name : undefined,
+    }];
+  });
 }
 
 export async function createNangoConnectSession(input: NangoConnectSessionInput): Promise<NangoConnectSession> {

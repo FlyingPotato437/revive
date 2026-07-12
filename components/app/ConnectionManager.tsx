@@ -26,7 +26,13 @@ interface IntegrationOption { id: string; provider: string; label: string; provi
 /** API errors should always be strings, but a nested provider payload must
  *  never surface as "[object Object]" in the UI. */
 function errorText(value: unknown, fallback: string): string {
-  if (typeof value === "string" && value.trim()) return value;
+  const raw = typeof value === "string"
+    ? value
+    : value && typeof value === "object" && "message" in value && typeof (value as { message?: unknown }).message === "string"
+      ? (value as { message: string }).message
+      : "";
+  if (/integration does not exist/i.test(raw)) return "This provider is not configured for Revive yet. Refresh the page or ask a workspace admin to configure it.";
+  if (raw.trim()) return raw;
   if (value && typeof value === "object" && "message" in value && typeof (value as { message?: unknown }).message === "string") {
     return (value as { message: string }).message;
   }
@@ -35,7 +41,7 @@ function errorText(value: unknown, fallback: string): string {
 
 export function ConnectionManager() {
   const [connections, setConnections] = useState<ConnectionSummary[] | null>(null);
-  const [integrations, setIntegrations] = useState<IntegrationOption[]>([]);
+  const [integrations, setIntegrations] = useState<IntegrationOption[] | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null);
   const [customOpen, setCustomOpen] = useState(false);
@@ -51,9 +57,12 @@ export function ConnectionManager() {
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => {
     const load = () => void fetch("/api/integrations/nango/integrations")
-      .then((response) => response.json())
-      .then((payload) => setIntegrations(payload.integrations ?? []))
-      .catch(() => setIntegrations([]));
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(errorText(payload.error, "Could not verify the available connection providers"));
+        setIntegrations(payload.integrations ?? []);
+      })
+      .catch(() => { setIntegrations([]); setError("Could not verify the available connection providers. Refresh and try again."); });
     load();
     window.addEventListener("revive:connectors-changed", load);
     return () => window.removeEventListener("revive:connectors-changed", load);
@@ -107,7 +116,7 @@ export function ConnectionManager() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[10.5px] leading-5 text-[#687180]">Connect an account used by an agent.</p>
         <div className="flex flex-wrap gap-2">
-          {(integrations.length ? integrations : [{ id: "", provider: "microsoft", label: "Microsoft" }]).map((integration) => {
+          {integrations?.map((integration) => {
             const busy = phase !== "idle" && (activeIntegration ?? "") === integration.id;
             return (
               <button
@@ -131,6 +140,13 @@ export function ConnectionManager() {
         </div>
       </div>
 
+      {integrations === null && <div className="mt-4 font-mono text-[9px] text-[#8a93a0]">Checking configured providers…</div>}
+      {integrations?.length === 0 && (
+        <div className="mt-4 border-l-[3px] border-[#c28a35] bg-[#fff8e8] px-4 py-3 text-[11px] leading-5 text-[#72551f]">
+          No verified connection providers are configured. A workspace admin must configure one before users can connect it.
+        </div>
+      )}
+
       {error && <div role="alert" className="mt-4 border-l-[3px] border-[#c2413a] bg-[#fcedeb] px-4 py-3 text-[11px] leading-5 text-[#8b3e38]">{error}</div>}
 
       {customOpen && (
@@ -153,7 +169,7 @@ export function ConnectionManager() {
                 <span className="text-[12px] font-semibold text-[#151922]">{connection.displayName || connection.accountId || connection.id}</span>
                 <StatusBadge tone={connection.status === "active" || !connection.status ? "ok" : "warn"}>{connection.status || "bound"}</StatusBadge>
                 {connection.vault && <StatusBadge tone="cobalt">{connection.vault} custody</StatusBadge>}
-                {integrations.find((item) => item.id === connection.integrationId)?.provisional && <StatusBadge tone="warn">provisional connector</StatusBadge>}
+                {integrations?.find((item) => item.id === connection.integrationId)?.provisional && <StatusBadge tone="warn">provisional connector</StatusBadge>}
               </div>
               <div className="mt-1 truncate font-mono text-[9px] text-[#7b8491]">{connection.provider}</div>
               <details className="mt-2">

@@ -9,7 +9,9 @@ import {
   MICROSOFT_GRAPH_USER_SCOPES,
   allowedNangoIntegrations,
   fetchNangoMicrosoftIdentity,
+  listNangoIntegrations,
   nangoProxy,
+  type NangoIntegration,
   type NangoConnectSessionInput,
 } from "./nango";
 import {
@@ -196,6 +198,9 @@ function customProvider(connector: CustomConnectorDefinition): ProviderSpec {
 export async function providerForIntegration(integrationId: string, workspaceId?: string): Promise<ProviderSpec | null> {
   const builtIn = builtInProviderForIntegration(integrationId);
   if (builtIn) return builtIn;
+  const registered = (await listNangoIntegrations()).find((integration) => integration.id === integrationId);
+  const registeredBuiltIn = registered ? builtInProviderForIntegration(registered.provider) : null;
+  if (registeredBuiltIn) return registeredBuiltIn;
   if (!workspaceId) return null;
   const connector = await getCustomConnector(workspaceId, integrationId);
   return connector ? customProvider(connector) : null;
@@ -214,9 +219,8 @@ export interface NangoIntegrationOption {
   provisional: boolean;
 }
 
-/** Popular providers every workspace can offer out of the box. The env
- *  allowlist EXTENDS this catalog; workspace custom connectors extend both.
- *  Connecting one still requires the integration to exist in the Nango project. */
+/** Labels for conventional integration ids. Availability is always determined
+ *  from Nango's live integration registry, never from this catalog alone. */
 export const BUILT_IN_CATALOG: { id: string; label: string }[] = [
   { id: "microsoft-tenant-specific", label: "Microsoft 365" },
   { id: "google-mail", label: "Gmail" },
@@ -226,15 +230,35 @@ export const BUILT_IN_CATALOG: { id: string; label: string }[] = [
 
 const CATALOG_LABELS = new Map(BUILT_IN_CATALOG.map((item) => [item.id, item.label]));
 
+export function availableBuiltInNangoIntegrations(
+  registered: NangoIntegration[],
+  allowed: string[],
+): NangoIntegrationOption[] {
+  const allowlist = new Set(allowed);
+  return registered.flatMap((integration) => {
+    if (!allowlist.has(integration.id)) return [];
+    const provider = builtInProviderForIntegration(integration.id)
+      || builtInProviderForIntegration(integration.provider);
+    if (!provider) return [];
+    return [{
+      id: integration.id,
+      provider: provider.key,
+      label: CATALOG_LABELS.get(integration.id) || provider.label,
+      provisional: false,
+    }];
+  });
+}
+
 export async function nangoIntegrationsForWorkspace(workspaceId: string): Promise<NangoIntegrationOption[]> {
   const options = new Map<string, NangoIntegrationOption>();
-  for (const id of [...BUILT_IN_CATALOG.map((item) => item.id), ...allowedNangoIntegrations()]) {
-    if (options.has(id)) continue;
-    const provider = builtInProviderForIntegration(id);
-    if (provider) options.set(id, { id, provider: provider.key, label: CATALOG_LABELS.get(id) || provider.label, provisional: false });
+  const registered = await listNangoIntegrations();
+  const registeredIds = new Set(registered.map((integration) => integration.id));
+  for (const integration of availableBuiltInNangoIntegrations(registered, allowedNangoIntegrations())) {
+    options.set(integration.id, integration);
   }
   for (const connector of await listCustomConnectors(workspaceId)) {
     // A custom definition cannot shadow a built-in adapter.
+    if (!registeredIds.has(connector.integrationId)) continue;
     if (builtInProviderForIntegration(connector.integrationId) || options.has(connector.integrationId)) continue;
     options.set(connector.integrationId, {
       id: connector.integrationId,
