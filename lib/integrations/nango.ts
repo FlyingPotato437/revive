@@ -52,6 +52,14 @@ export function allowedNangoIntegrations(): string[] {
     .filter((item) => /^[a-zA-Z0-9_-]+$/.test(item));
 }
 
+/** Optional operator restriction on offered integrations. `null` means the
+ *  Nango project registry itself is the boundary: every integration registered
+ *  there may be offered, subject to an identity adapter existing. */
+export function nangoIntegrationRestriction(): string[] | null {
+  if (!process.env.NANGO_ALLOWED_INTEGRATIONS?.trim()) return null;
+  return allowedNangoIntegrations();
+}
+
 function serializeDefaults(input: NangoConnectSessionInput["integrationDefaults"]) {
   if (!input) return undefined;
   return Object.fromEntries(Object.entries(input).map(([key, value]) => [key, {
@@ -98,6 +106,112 @@ export async function listNangoIntegrations(): Promise<NangoIntegration[]> {
       displayName: typeof integration.display_name === "string" ? integration.display_name : undefined,
     }];
   });
+}
+
+export interface NangoProviderTemplate {
+  /** Provider template key in Nango's catalog, e.g. "salesforce". */
+  name: string;
+  displayName: string;
+  authMode: string;
+  categories: string[];
+  docsUrl?: string;
+  logoUrl?: string;
+  /** Connection-config keys the provider requires at connect time. */
+  connectionConfig: string[];
+}
+
+const PROVIDER_CACHE_TTL_MS = 60 * 60 * 1000;
+let providerCatalogCache: { at: number; data: NangoProviderTemplate[] } | null = null;
+
+/** Nango's full provider-template catalog (~hundreds of APIs). Cached in
+ *  process memory; this is display metadata, not an availability decision. */
+export async function listNangoProviders(): Promise<NangoProviderTemplate[]> {
+  if (providerCatalogCache && Date.now() - providerCatalogCache.at < PROVIDER_CACHE_TTL_MS) {
+    return providerCatalogCache.data;
+  }
+  const response = await nangoFetch("/providers", { method: "GET" });
+  const payload = await response.json() as {
+    data?: Array<{
+      name?: unknown;
+      display_name?: unknown;
+      auth_mode?: unknown;
+      categories?: unknown;
+      docs?: unknown;
+      logo_url?: unknown;
+      connection_configuration?: unknown;
+    }>;
+    error?: { message?: string } | string;
+    message?: string;
+  };
+  if (!response.ok || !Array.isArray(payload.data)) {
+    const detail = typeof payload.error === "string" ? payload.error : payload.error?.message;
+    throw new Error(payload.message || detail || `Nango provider catalog failed (${response.status})`);
+  }
+  const data = payload.data.flatMap((provider) => {
+    if (typeof provider.name !== "string" || !/^[a-zA-Z0-9_-]+$/.test(provider.name)) return [];
+    return [{
+      name: provider.name,
+      displayName: typeof provider.display_name === "string" && provider.display_name.trim()
+        ? provider.display_name
+        : provider.name,
+      authMode: typeof provider.auth_mode === "string" ? provider.auth_mode : "OAUTH2",
+      categories: Array.isArray(provider.categories)
+        ? provider.categories.filter((category): category is string => typeof category === "string")
+        : [],
+      docsUrl: typeof provider.docs === "string" ? provider.docs : undefined,
+      logoUrl: typeof provider.logo_url === "string" ? provider.logo_url : undefined,
+      connectionConfig: Array.isArray(provider.connection_configuration)
+        ? provider.connection_configuration.filter((key): key is string => typeof key === "string")
+        : [],
+    }];
+  });
+  providerCatalogCache = { at: Date.now(), data };
+  return data;
+}
+
+export interface CreateNangoIntegrationInput {
+  provider: string;
+  uniqueKey: string;
+  displayName?: string;
+  /** Required for OAuth-style providers; API-key providers need none. */
+  credentials?: { type: "OAUTH1" | "OAUTH2" | "TBA"; clientId: string; clientSecret: string; scopes?: string };
+}
+
+/** Register a provider integration in the configured Nango project so users
+ *  can connect it. Credentials go straight to Nango; Revive never stores them. */
+export async function createNangoIntegration(input: CreateNangoIntegrationInput): Promise<NangoIntegration> {
+  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(input.uniqueKey)) throw new Error("integration unique key must be 1-100 letters, numbers, underscores, or hyphens");
+  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(input.provider)) throw new Error("provider key must be 1-100 letters, numbers, underscores, or hyphens");
+  const response = await nangoFetch("/integrations", {
+    method: "POST",
+    body: JSON.stringify({
+      unique_key: input.uniqueKey,
+      provider: input.provider,
+      display_name: input.displayName,
+      credentials: input.credentials
+        ? {
+          type: input.credentials.type,
+          client_id: input.credentials.clientId,
+          client_secret: input.credentials.clientSecret,
+          scopes: input.credentials.scopes,
+        }
+        : undefined,
+    }),
+  });
+  const payload = await response.json() as {
+    data?: { unique_key?: string; provider?: string; display_name?: string };
+    error?: { message?: string; code?: string } | string;
+    message?: string;
+  };
+  if (!response.ok || !payload.data?.unique_key || !payload.data.provider) {
+    const detail = typeof payload.error === "string" ? payload.error : payload.error?.message || payload.error?.code;
+    throw new Error(payload.message || detail || `Nango integration creation failed (${response.status})`);
+  }
+  return {
+    id: payload.data.unique_key,
+    provider: payload.data.provider,
+    displayName: payload.data.display_name,
+  };
 }
 
 export async function createNangoConnectSession(input: NangoConnectSessionInput): Promise<NangoConnectSession> {

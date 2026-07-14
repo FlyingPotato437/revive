@@ -6,8 +6,9 @@ import liveCertification from "@/benchmarks/results/revive-certification-live.js
 import { EvidenceReveal } from "@/components/marketing/EvidenceReveal";
 
 export const metadata: Metadata = {
-  title: "ReviveBench | Recovery correctness report",
+  title: "Revive recovery whitepaper | Correctness evidence",
   description: "Methodology, raw runs, and limitations for Revive's executable credential recovery benchmark.",
+  alternates: { canonical: "/resources/whitepaper" },
 };
 
 type ObservationValue = string | number | boolean | string[] | null | undefined;

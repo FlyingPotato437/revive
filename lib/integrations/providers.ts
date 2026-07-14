@@ -1,24 +1,28 @@
 // Connector registry: maps Nango integration ids to a provider adapter that
 // knows how to (a) fetch the account identity used for creation-time binding
 // and recovery verification, (b) declare the nominal recovery scope set, and
-// (c) contribute connect-session defaults. Adding a connector means adding an
-// entry here plus the integration in the Nango project + NANGO_ALLOWED_INTEGRATIONS.
+// (c) contribute connect-session defaults. An integration is offered when it
+// is registered in the Nango project and an identity adapter resolves for it:
+// a built-in spec here, a workspace custom connector, or the curated probe
+// pack. NANGO_ALLOWED_INTEGRATIONS optionally restricts the offered set.
 
 import {
   MICROSOFT_GRAPH_RECOVERY_SCOPES,
   MICROSOFT_GRAPH_USER_SCOPES,
-  allowedNangoIntegrations,
   fetchNangoMicrosoftIdentity,
   listNangoIntegrations,
+  nangoIntegrationRestriction,
   nangoProxy,
   type NangoIntegration,
   type NangoConnectSessionInput,
 } from "./nango";
+import { curatedIdentityProbe } from "./identity-probes";
 import {
   getCustomConnector,
   listCustomConnectors,
   safeDotPathGet,
   type CustomConnectorDefinition,
+  type IdentityProbeDefinition,
 } from "@/lib/custom-connectors";
 
 export interface ProviderIdentity {
@@ -163,14 +167,14 @@ export function builtInProviderForIntegration(integrationId: string): ProviderSp
   return null;
 }
 
-function requiredIdentityValue(value: unknown, field: "subject" | "tenant", connector: CustomConnectorDefinition): string {
+function requiredIdentityValue(value: unknown, field: "subject" | "tenant", connector: { label: string }): string {
   if ((typeof value !== "string" && typeof value !== "number") || String(value).trim().length === 0) {
     throw new Error(`${connector.label} identity probe returned no ${field}; connection was not bound`);
   }
   return String(value).trim();
 }
 
-export function identityFromCustomProbe(payload: unknown, connector: CustomConnectorDefinition): ProviderIdentity {
+export function identityFromCustomProbe(payload: unknown, connector: { label: string; identityProbe: IdentityProbeDefinition }): ProviderIdentity {
   const subject = requiredIdentityValue(safeDotPathGet(payload, connector.identityProbe.subjectField), "subject", connector);
   const tenant = requiredIdentityValue(safeDotPathGet(payload, connector.identityProbe.tenantField), "tenant", connector);
   const accountValue = safeDotPathGet(payload, connector.identityProbe.accountField);
@@ -180,30 +184,38 @@ export function identityFromCustomProbe(payload: unknown, connector: CustomConne
   return { subject, tenant, accountId };
 }
 
-function customProvider(connector: CustomConnectorDefinition): ProviderSpec {
+function probeProvider(key: string, label: string, identityProbe: IdentityProbeDefinition): ProviderSpec {
   return {
-    key: connector.integrationId,
-    label: connector.label,
-    issuer: (identity) => `nango://${connector.integrationId}/${encodeURIComponent(identity.tenant)}`,
+    key,
+    label,
+    issuer: (identity) => `nango://${key}/${encodeURIComponent(identity.tenant)}`,
     recoveryScopes: [],
     provisional: true,
     fetchIdentity: async (input) => {
-      const payload = await proxyJson<unknown>({ ...input, path: connector.identityProbe.path });
-      return identityFromCustomProbe(payload, connector);
+      const payload = await proxyJson<unknown>({ ...input, path: identityProbe.path });
+      return identityFromCustomProbe(payload, { label, identityProbe });
     },
   };
 }
 
-/** Built-ins take precedence; workspace definitions fill the remaining ids. */
+function customProvider(connector: CustomConnectorDefinition): ProviderSpec {
+  return probeProvider(connector.integrationId, connector.label, connector.identityProbe);
+}
+
+/** Built-ins take precedence, then workspace definitions, then the curated
+ *  probe pack keyed by the integration's provider template. */
 export async function providerForIntegration(integrationId: string, workspaceId?: string): Promise<ProviderSpec | null> {
   const builtIn = builtInProviderForIntegration(integrationId);
   if (builtIn) return builtIn;
   const registered = (await listNangoIntegrations()).find((integration) => integration.id === integrationId);
   const registeredBuiltIn = registered ? builtInProviderForIntegration(registered.provider) : null;
   if (registeredBuiltIn) return registeredBuiltIn;
-  if (!workspaceId) return null;
-  const connector = await getCustomConnector(workspaceId, integrationId);
-  return connector ? customProvider(connector) : null;
+  if (workspaceId) {
+    const connector = await getCustomConnector(workspaceId, integrationId);
+    if (connector) return customProvider(connector);
+  }
+  const curated = registered ? curatedIdentityProbe(registered.provider) : null;
+  return curated ? probeProvider(integrationId, curated.label, curated.probe) : null;
 }
 
 export async function fetchNangoIdentity(input: { integrationId: string; connectionId: string; workspaceId?: string }): Promise<ProviderIdentity> {
@@ -230,44 +242,54 @@ export const BUILT_IN_CATALOG: { id: string; label: string }[] = [
 
 const CATALOG_LABELS = new Map(BUILT_IN_CATALOG.map((item) => [item.id, item.label]));
 
-export function availableBuiltInNangoIntegrations(
+/** Every integration registered in the Nango project that Revive can bind an
+ *  identity for: built-in adapters (certified), workspace custom connectors,
+ *  then the curated probe pack (both provisional). `restriction` is the
+ *  optional NANGO_ALLOWED_INTEGRATIONS override; `null` means unrestricted. */
+export function resolveNangoIntegrationOptions(
   registered: NangoIntegration[],
-  allowed: string[],
+  restriction: string[] | null,
+  customConnectors: CustomConnectorDefinition[],
 ): NangoIntegrationOption[] {
-  const allowlist = new Set(allowed);
-  return registered.flatMap((integration) => {
-    if (!allowlist.has(integration.id)) return [];
-    const provider = builtInProviderForIntegration(integration.id)
+  const allowlist = restriction ? new Set(restriction) : null;
+  const custom = new Map(customConnectors.map((connector) => [connector.integrationId, connector]));
+  const options = registered.flatMap((integration) => {
+    if (allowlist && !allowlist.has(integration.id)) return [];
+    const builtIn = builtInProviderForIntegration(integration.id)
       || builtInProviderForIntegration(integration.provider);
-    if (!provider) return [];
-    return [{
-      id: integration.id,
-      provider: provider.key,
-      label: CATALOG_LABELS.get(integration.id) || provider.label,
-      provisional: false,
-    }];
+    if (builtIn) {
+      return [{
+        id: integration.id,
+        provider: builtIn.key,
+        label: CATALOG_LABELS.get(integration.id) || builtIn.label,
+        provisional: false,
+      }];
+    }
+    // A custom definition cannot shadow a built-in adapter.
+    const connector = custom.get(integration.id);
+    if (connector) {
+      return [{ id: integration.id, provider: integration.provider, label: connector.label, provisional: true }];
+    }
+    const curated = curatedIdentityProbe(integration.provider);
+    if (curated) {
+      return [{
+        id: integration.id,
+        provider: integration.provider,
+        label: integration.displayName || curated.label,
+        provisional: true,
+      }];
+    }
+    return [];
   });
+  return options.sort((a, b) => Number(a.provisional) - Number(b.provisional) || a.label.localeCompare(b.label));
 }
 
 export async function nangoIntegrationsForWorkspace(workspaceId: string): Promise<NangoIntegrationOption[]> {
-  const options = new Map<string, NangoIntegrationOption>();
-  const registered = await listNangoIntegrations();
-  const registeredIds = new Set(registered.map((integration) => integration.id));
-  for (const integration of availableBuiltInNangoIntegrations(registered, allowedNangoIntegrations())) {
-    options.set(integration.id, integration);
-  }
-  for (const connector of await listCustomConnectors(workspaceId)) {
-    // A custom definition cannot shadow a built-in adapter.
-    if (!registeredIds.has(connector.integrationId)) continue;
-    if (builtInProviderForIntegration(connector.integrationId) || options.has(connector.integrationId)) continue;
-    options.set(connector.integrationId, {
-      id: connector.integrationId,
-      provider: connector.integrationId,
-      label: connector.label,
-      provisional: true,
-    });
-  }
-  return [...options.values()];
+  return resolveNangoIntegrationOptions(
+    await listNangoIntegrations(),
+    nangoIntegrationRestriction(),
+    await listCustomConnectors(workspaceId),
+  );
 }
 
 export async function nangoIntegrationAvailable(workspaceId: string, integrationId: string): Promise<boolean> {

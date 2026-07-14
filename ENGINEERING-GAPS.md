@@ -25,6 +25,9 @@ but it is not yet an enterprise-ready general-availability service. Updated
   identities, with atomic credential-generation rotation at verification time.
 - Nango connector registry with certified Microsoft identity handling and
   provisional Google, GitHub, Slack, and workspace-defined connector support.
+- Full Nango provider-catalog browsing with in-console enablement, a curated
+  identity-probe pack (~25 providers, provisional), and optional
+  NANGO_ALLOWED_INTEGRATIONS restriction instead of a default allowlist.
 - TypeScript SDK, Python reporter/sidecar, MCP gateway, email delivery, Slack
   operational alerts, Stripe subscriptions, usage reporting, and billing portal.
 - Public correctness evidence covering worker replacement, duplicate delivery,

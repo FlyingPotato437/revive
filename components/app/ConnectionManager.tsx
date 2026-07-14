@@ -2,9 +2,13 @@
 
 import Nango from "@nangohq/frontend";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowsClockwise, LinkSimple, Plus, X } from "@phosphor-icons/react";
+import { ArrowsClockwise, LinkSimple, Plus, SquaresFour, X } from "@phosphor-icons/react";
 import { StatusBadge } from "@/components/app/ConsolePrimitives";
 import { CustomConnectorManager } from "@/components/app/CustomConnectorManager";
+import { ProviderCatalog } from "@/components/app/ProviderCatalog";
+
+/** Connect buttons shown inline; everything else lives in the catalog dialog. */
+const FEATURED_LIMIT = 5;
 
 interface ConnectionSummary {
   id: string;
@@ -45,6 +49,7 @@ export function ConnectionManager() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [activeIntegration, setActiveIntegration] = useState<string | null>(null);
   const [customOpen, setCustomOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -116,7 +121,7 @@ export function ConnectionManager() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[10.5px] leading-5 text-[#687180]">Connect an account used by an agent.</p>
         <div className="flex flex-wrap gap-2">
-          {integrations?.map((integration) => {
+          {integrations?.slice(0, FEATURED_LIMIT).map((integration) => {
             const busy = phase !== "idle" && (activeIntegration ?? "") === integration.id;
             return (
               <button
@@ -131,6 +136,13 @@ export function ConnectionManager() {
               </button>
             );
           })}
+          <button
+            onClick={() => setCatalogOpen(true)}
+            disabled={phase !== "idle"}
+            className="inline-flex h-9 items-center gap-2 border border-[#c9cec7] bg-transparent px-4 text-[10.5px] font-semibold text-[#151922] transition hover:border-[#151922] active:translate-y-px disabled:opacity-60"
+          >
+            <SquaresFour size={13} weight="bold" /> Browse all providers{integrations && integrations.length > FEATURED_LIMIT ? ` (${integrations.length})` : ""}
+          </button>
           <button
             onClick={() => setCustomOpen((value) => !value)}
             className="inline-flex h-9 items-center gap-2 border border-[#c9cec7] bg-transparent px-4 text-[10.5px] font-semibold text-[#151922] transition hover:border-[#151922] active:translate-y-px"
@@ -153,6 +165,13 @@ export function ConnectionManager() {
         <div className="mt-5 border border-[#e2e3df] bg-[#fbfcf8] p-4 sm:p-5">
           <CustomConnectorManager />
         </div>
+      )}
+
+      {catalogOpen && (
+        <ProviderCatalog
+          onClose={() => setCatalogOpen(false)}
+          onConnect={(integrationId) => { setCatalogOpen(false); void connect(integrationId); }}
+        />
       )}
 
       <div className="mt-5 border-t border-[#e2e3df]">

@@ -3,7 +3,8 @@ import Link from "next/link";
 const links = [
   { label: "Product", href: "/#product" },
   { label: "Why Revive", href: "/compare" },
-  { label: "Evidence", href: "/benchmarks" },
+  { label: "Whitepaper", href: "/resources/whitepaper" },
+  { label: "Documentation", href: "/resources/documentation" },
   { label: "Dead-run detector", href: "/signup?next=%2Fapp%2Fdetector" },
   { label: "Terms", href: "/terms" },
   { label: "Privacy", href: "/privacy" },

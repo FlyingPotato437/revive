@@ -202,6 +202,25 @@ reconnect session reauthorizes the existing connection, Microsoft Graph `/me`
 verifies the provider subject, and the control plane advances the credential
 lease before a runtime can resume.
 
+### The full Nango provider catalog
+
+**Connections → Browse all providers** lists every provider template in the
+configured Nango project's catalog (hundreds of APIs). A workspace admin can
+enable one in place: OAuth-style providers ask for the provider app's client
+id and secret (stored by Nango, never by Revive); API-key providers need no
+registration. Enabled providers become connectable immediately when Revive can
+bind an identity for them:
+
+- **Certified adapters** (Microsoft, Google, Gmail, GitHub, Slack) verify
+  identity with Revive-maintained logic.
+- **Curated probes** cover common providers (Salesforce, Jira, Zendesk,
+  HubSpot, Stripe, Notion, Zoom, and more) and are marked **Provisional**.
+- Everything else needs a workspace-defined custom connector (below).
+
+`NANGO_ALLOWED_INTEGRATIONS` is now an optional restriction: leave it unset to
+offer everything registered in the Nango project, or set a comma-separated id
+list to pin exactly what users may connect.
+
 ### Workspace-defined Nango connectors
 
 Workspace operators can register a Nango integration that does not have a
