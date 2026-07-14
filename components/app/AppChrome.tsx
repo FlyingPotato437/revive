@@ -10,6 +10,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { WelcomeTour } from "@/components/app/WelcomeTour";
+import { ThemeControl } from "@/components/app/ThemeControl";
 
 type WorkspaceOption = { id: string; name: string; organization: string };
 
@@ -157,6 +158,7 @@ export function AppChrome({
           <Link href="/app/overview" className="flex items-center gap-2.5 text-[14px] font-semibold md:hidden"><span className="revive-mark" aria-hidden><span className="revive-mark-ring" /><span className="revive-mark-core" /></span>Revive</Link>
           <div className="hidden min-w-0 items-center gap-2 text-[10.5px] md:flex"><span className="font-mono text-[8px] tracking-[.1em] text-[#8a929d]">{currentWorkspace.name.toUpperCase()}</span><span className="text-[#b2b8bf]">/</span><span className="truncate font-semibold text-[#333943]">{title}</span></div>
           <div className="ml-auto flex items-center gap-2">
+            <ThemeControl />
             <button onClick={() => setCommands(true)} className="hidden h-9 min-w-[230px] items-center gap-2 border border-[#c8cdd2] bg-[#fbfcf8] px-3 text-left text-[10px] text-[#818a96] transition hover:border-[#151922] sm:flex"><MagnifyingGlass size={13} /><span className="flex-1">Search or jump to</span><kbd className="flex items-center gap-0.5 border border-[#d1d6db] bg-[#eef0eb] px-1.5 py-0.5 font-mono text-[8px]"><Command size={9} />K</kbd></button>
           </div>
         </div>

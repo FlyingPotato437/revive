@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
@@ -28,6 +29,20 @@ export const metadata: Metadata = {
     "Detect agent runs lost to human-dependent blockers, get the right person to resolve them, and safely resume the exact suspended run.",
 };
 
+const dashboardThemeScript = `
+  try {
+    if (location.pathname === "/app" || location.pathname.startsWith("/app/")) {
+      var preference = localStorage.getItem("revive-theme") || "system";
+      var resolved = preference === "system"
+        ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+        : preference;
+      document.documentElement.dataset.theme = resolved;
+      document.documentElement.dataset.themePreference = preference;
+      document.documentElement.style.colorScheme = resolved;
+    }
+  } catch (error) {}
+`;
+
 export default function RootLayout({
   children,
 }: {
@@ -51,8 +66,14 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
       className={`${inter.variable} ${jetbrains.variable} ${spaceGrotesk.variable}`}
     >
+      <head suppressHydrationWarning>
+        <Script id="revive-dashboard-theme" strategy="beforeInteractive">
+          {dashboardThemeScript}
+        </Script>
+      </head>
       <body className="min-h-screen antialiased">{content}</body>
     </html>
   );
