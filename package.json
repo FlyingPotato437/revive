@@ -17,6 +17,7 @@
     "bench:resilience": "python3 sidecar/benchmarks/resilience_campaign.py --runs 1000",
     "demo:golden": "node --import tsx scripts/golden-run.mts",
     "test:golden": "node --import tsx scripts/golden-run.mts --auto",
+    "test:sdk-package": "node --import tsx scripts/test-sdk-package.mts",
     "certify:live": ".venv/bin/python sidecar/benchmarks/live_langgraph_nango.py",
     "demo:killer": "node scripts/killer-demo.mjs",
     "worker": "node scripts/worker.mjs",

@@ -13,6 +13,7 @@ const contents = [
   ["resume", "Resume the runtime"],
   ["protect", "Protect external writes"],
   ["verify", "Verify the integration"],
+  ["limits", "Supported path and limits"],
 ] as const;
 
 function CodeBlock({ children }: { children: string }) {
@@ -68,20 +69,28 @@ await revive.detectDeadRun({
   },
 });`}</CodeBlock></Section>
 
-        <Section id="resume" title="Resume the runtime"><p>Register one HTTPS endpoint and shared signing secret per workspace. Verify the raw request before parsing it, deduplicate the webhook ID, then acknowledge the same run, checkpoint, and generation.</p><CodeBlock>{`from revive.receiver import ResumeReceiver, serve
+        <Section id="resume" title="Resume the runtime"><p>Use the SDK receiver for both <code>recovery.resume_requested</code> and <code>action_request.completed</code>. It verifies the exact raw request before parsing, suppresses concurrent retries, and returns the run/checkpoint/generation acknowledgement the control plane requires.</p><CodeBlock>{`import express from "express";
+import { createResumeWebhookHandler } from "revive-sdk";
 
-def resume(data):
-    runtime.resume(
-        run_id=data["runId"],
-        checkpoint_id=data["checkpointId"],
-        generation=data["generation"],
-    )
+const receive = createResumeWebhookHandler({
+  secret: process.env.REVIVE_RESUME_SECRET,
+  receipts: durableReceiptStore,
+  async resume(data, context) {
+    await runtime.resume({
+      runId: data.runId,
+      checkpointId: data.checkpointId,
+      generation: data.generation,
+      input: context.eventType === "action_request.completed"
+        ? data.response
+        : { connectionId: data.connectionId },
+    });
+  },
+});
 
-serve(ResumeReceiver(
-    secret=os.environ["REVIVE_RESUME_SECRET"],
-    resume=resume,
-    dedupe_path=".revive/resume-receipts.db",
-), port=8752)`}</CodeBlock></Section>
+app.post("/hooks/revive", express.raw({ type: "application/json" }), async (req, res) => {
+  const result = await receive({ headers: req.headers, rawBody: req.body });
+  res.status(result.status).json(result.body);
+});`}</CodeBlock><p className="mt-5">Use a database-backed receipt store in production and make the checkpoint resume operation idempotent. An in-memory receipt cannot cover a process restart.</p></Section>
 
         <Section id="protect" title="Protect external writes"><p>Wrap mutations that cannot safely run twice. A replay with an uncertain result must reconcile against the provider before Revive permits another execution.</p><CodeBlock>{`const result = await revive.protectAction({
   runId: state.runId,
@@ -94,7 +103,14 @@ serve(ResumeReceiver(
   reconcile: findRefundByIdempotencyKey,
 });`}</CodeBlock></Section>
 
-        <Section id="verify" title="Verify the integration"><p>Use Quickstart to create a scoped key and run a safe human handoff. The final check should prove that the runtime received one signed continuation for the exact test run.</p><div className="mt-7 border border-[#151922] bg-[#fbfcf8] p-5"><h3 className="text-[13px] font-semibold">Integration acceptance</h3><ul className="mt-4 grid gap-3 text-[11px] leading-5 text-[#596273] sm:grid-cols-2"><li>One dead run recorded</li><li>One intended recipient bound</li><li>Stale generation rejected</li><li>Signed callback acknowledged</li><li>Duplicate delivery suppressed</li><li>Final outcome verified</li></ul></div></Section>
+        <Section id="verify" title="Verify the integration"><p>Registering a URL does not activate automatic continuation. Quickstart sends a signed probe and marks the endpoint Verified only when it returns the expected acknowledgement. It also requires a real, non-onboarding failure event before setup can complete.</p><CodeBlock>{`curl -X POST https://revivelabs.app/api/v1/workspace/resume-endpoint/test \\
+  -H "Authorization: Bearer $REVIVE_API_KEY"
+
+# Repository acceptance tests
+npm run test:sdk-package
+npm run test:golden`}</CodeBlock><div className="mt-7 border border-[#151922] bg-[#fbfcf8] p-5"><h3 className="text-[13px] font-semibold">Integration acceptance</h3><ul className="mt-4 grid gap-3 text-[11px] leading-5 text-[#596273] sm:grid-cols-2"><li>Clean package install succeeds</li><li>Real failure boundary received</li><li>Signed callback verified</li><li>Duplicate delivery suppressed</li><li>Kill/restart resume passes</li><li>Ambiguous write reconciles once</li></ul></div></Section>
+
+        <Section id="limits" title="Supported path and limits"><p>The mechanically tested alpha path is Node.js 20+, <code>revive-sdk</code> 0.2.x, the hosted control plane, an existing durable checkpointer, an HTTPS callback using the SDK receiver, and a database-backed receipt store. Microsoft is currently the only certified hosted credential-recovery provider; other provider connectors are provisional.</p><p className="mt-5">Revive cannot reconstruct state your runtime discarded, and it cannot make an arbitrary provider write exactly-once without provider idempotency or a reliable reconciliation read. A signed probe proves callback reachability and protocol correctness; every design partner must still run the kill/restart check against its real runtime before production traffic.</p><p className="mt-5"><a className="font-semibold text-[#2e49c8] underline underline-offset-4" href="https://github.com/FlyingPotato437/revive/blob/main/docs/supported-integration.md">Read the complete supported integration guide</a>.</p></Section>
       </div>
     </div>
   </article>;

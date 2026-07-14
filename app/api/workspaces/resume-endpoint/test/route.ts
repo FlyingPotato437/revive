@@ -4,8 +4,8 @@ import { sessionFromCookies } from "@/lib/auth";
 import { selectedWorkspace, WORKSPACE_COOKIE } from "@/lib/workspaces";
 import { requireWorkspaceRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
-import { safeWebhookEndpoint, signWebhook, type WebhookEvent } from "@/lib/webhooks";
-import { getResumeEndpoint } from "@/lib/workspace-secrets";
+import { enqueuePendingWorkspaceContinuations, safeWebhookEndpoint, signWebhook, type WebhookEvent } from "@/lib/webhooks";
+import { getResumeEndpoint, markResumeEndpointVerified } from "@/lib/workspace-secrets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,9 +60,22 @@ export async function POST(req: NextRequest) {
       signal: AbortSignal.timeout(8_000),
     });
     status = response.status;
+    const acknowledgement = await response.json().catch(() => ({})) as { ok?: boolean; test?: boolean };
     if (!response.ok) error = `endpoint returned ${response.status}`;
+    else if (acknowledgement.ok !== true || acknowledgement.test !== true) {
+      error = "endpoint did not acknowledge the signed Revive test event";
+    }
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "delivery failed";
+  }
+  let queued = { recoveryCases: 0, actionRequests: 0 };
+  if (!error) {
+    try {
+      await markResumeEndpointVerified(workspaceId, config.url);
+      queued = await enqueuePendingWorkspaceContinuations(workspaceId);
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : "could not activate automatic resume";
+    }
   }
   await audit({
     workspaceId,
@@ -70,8 +83,8 @@ export async function POST(req: NextRequest) {
     subjectKind: "connection",
     subjectId: workspaceId,
     event: "resume_endpoint_tested",
-    detail: { url: config.url, status, error },
+    detail: { url: config.url, status, error, queued },
   });
   if (error) return NextResponse.json({ ok: false, status, error }, { status: 502 });
-  return NextResponse.json({ ok: true, status, eventId: event.id });
+  return NextResponse.json({ ok: true, verified: true, status, eventId: event.id, queued });
 }

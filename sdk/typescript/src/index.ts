@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 export type RecoveryPolicy =
   | "interactive_reauth"
   | "step_up"
@@ -788,6 +788,186 @@ export class MemoryReviveTransport implements ReviveTransport {
     const request = await this.requestUserAction({ runId: deadRun.runId, checkpointId: deadRun.checkpointId, generation: deadRun.generation, idempotencyKey: `dead-run:${deadRun.id}`, actionType: deadRun.suggestedActionType, title: deadRun.suggestedQuestion, recipient: input.recipient, destinationUrl: input.destinationUrl, expiresIn: input.expiresIn });
     deadRun.status = "resolution_requested"; deadRun.actionRequestId = request.id; return { deadRun, request };
   }
+}
+
+export type ReviveResumeEventType =
+  | "recovery.resume_test"
+  | "recovery.resume_requested"
+  | "action_request.completed";
+
+export interface ReviveResumeEvent {
+  id: string;
+  type: ReviveResumeEventType | string;
+  createdAt: string;
+  data: Record<string, unknown>;
+}
+
+export interface ResumeAcknowledgement extends Record<string, unknown> {
+  ok: true;
+  resumed: true;
+  runId: string;
+  checkpointId?: string;
+  generation: number;
+}
+
+export interface ResumeReceiptStore {
+  get(webhookId: string): ResumeAcknowledgement | undefined | Promise<ResumeAcknowledgement | undefined>;
+  put(webhookId: string, acknowledgement: ResumeAcknowledgement): void | Promise<void>;
+}
+
+/** Process-local retry receipts. Use a durable implementation in production so
+ * a successful acknowledgement survives a runtime restart. */
+export class MemoryResumeReceiptStore implements ResumeReceiptStore {
+  private receipts = new Map<string, ResumeAcknowledgement>();
+
+  get(webhookId: string): ResumeAcknowledgement | undefined {
+    const receipt = this.receipts.get(webhookId);
+    return receipt ? { ...receipt } : undefined;
+  }
+
+  put(webhookId: string, acknowledgement: ResumeAcknowledgement): void {
+    this.receipts.set(webhookId, { ...acknowledgement });
+  }
+}
+
+export interface VerifyReviveWebhookSignatureInput {
+  secret: string;
+  signature: string;
+  webhookId: string;
+  timestamp: string;
+  rawBody: string | Uint8Array;
+  toleranceSeconds?: number;
+  now?: number;
+}
+
+/** Verify the exact request bytes before parsing JSON. */
+export function verifyReviveWebhookSignature(input: VerifyReviveWebhookSignatureInput): boolean {
+  const seconds = Number(input.timestamp);
+  const now = input.now ?? Date.now() / 1000;
+  if (!Number.isFinite(seconds) || Math.abs(now - seconds) > (input.toleranceSeconds ?? 300)) return false;
+  const rawBody = typeof input.rawBody === "string" ? Buffer.from(input.rawBody) : Buffer.from(input.rawBody);
+  const expected = `v1,${createHmac("sha256", input.secret)
+    .update(Buffer.concat([Buffer.from(`${input.webhookId}.${input.timestamp}.`), rawBody]))
+    .digest("hex")}`;
+  const receivedBytes = Buffer.from(input.signature || "");
+  const expectedBytes = Buffer.from(expected);
+  return receivedBytes.length === expectedBytes.length && timingSafeEqual(receivedBytes, expectedBytes);
+}
+
+export interface ResumeWebhookRequest {
+  headers: Headers | Record<string, string | string[] | undefined>;
+  rawBody: string | Uint8Array;
+}
+
+export interface ResumeWebhookResponse {
+  status: number;
+  body: Record<string, unknown>;
+}
+
+export interface CreateResumeWebhookHandlerOptions {
+  secret: string;
+  /** Return only after the checkpoint has been durably accepted for resume.
+   * Throw on failure so Revive retries the same signed event. */
+  resume: (
+    data: Record<string, unknown>,
+    context: { eventId: string; eventType: "recovery.resume_requested" | "action_request.completed" },
+  ) => void | Record<string, unknown> | Promise<void | Record<string, unknown>>;
+  receipts?: ResumeReceiptStore;
+  toleranceSeconds?: number;
+}
+
+/** Create the receiver for both credential recovery and completed human-action
+ * continuations. The returned handler is framework-neutral and requires the
+ * raw request body because signatures cover the exact bytes on the wire. */
+export function createResumeWebhookHandler(options: CreateResumeWebhookHandlerOptions) {
+  if (!options.secret) throw new Error("REVIVE_RESUME_SECRET is required");
+  const receipts = options.receipts ?? new MemoryResumeReceiptStore();
+  const inFlight = new Map<string, Promise<ResumeWebhookResponse>>();
+
+  return async (request: ResumeWebhookRequest): Promise<ResumeWebhookResponse> => {
+    const webhookId = resumeHeader(request.headers, "webhook-id");
+    const timestamp = resumeHeader(request.headers, "webhook-timestamp");
+    const signature = resumeHeader(request.headers, "webhook-signature");
+    if (!verifyReviveWebhookSignature({
+      secret: options.secret,
+      signature,
+      webhookId,
+      timestamp,
+      rawBody: request.rawBody,
+      toleranceSeconds: options.toleranceSeconds,
+    })) {
+      return { status: 401, body: { ok: false, error: "invalid signature" } };
+    }
+
+    let event: ReviveResumeEvent;
+    try {
+      const raw = typeof request.rawBody === "string"
+        ? request.rawBody
+        : new TextDecoder().decode(request.rawBody);
+      event = JSON.parse(raw) as ReviveResumeEvent;
+    } catch {
+      return { status: 400, body: { ok: false, error: "invalid JSON" } };
+    }
+    if (!event || event.id !== webhookId || typeof event.type !== "string" || !isRecord(event.data)) {
+      return { status: 400, body: { ok: false, error: "invalid Revive event" } };
+    }
+    if (event.type === "recovery.resume_test") {
+      return { status: 200, body: { ok: true, test: true } };
+    }
+    if (event.type !== "recovery.resume_requested" && event.type !== "action_request.completed") {
+      return { status: 200, body: { ok: true, ignored: event.type } };
+    }
+    const eventType = event.type;
+
+    const cached = await receipts.get(webhookId);
+    if (cached) return { status: 200, body: cached };
+    const existing = inFlight.get(webhookId);
+    if (existing) return existing;
+
+    const delivery = (async (): Promise<ResumeWebhookResponse> => {
+      const runId = typeof event.data.runId === "string" ? event.data.runId : "";
+      const checkpointId = typeof event.data.checkpointId === "string" ? event.data.checkpointId : undefined;
+      const generation = typeof event.data.generation === "number" ? event.data.generation : Number.NaN;
+      if (!runId || !Number.isFinite(generation)) {
+        return { status: 400, body: { ok: false, error: "resume event is missing runId or generation" } };
+      }
+      try {
+        const extra = await options.resume(event.data, {
+          eventId: event.id,
+          eventType,
+        });
+        const acknowledgement: ResumeAcknowledgement = {
+          ...(extra || {}),
+          ok: true,
+          resumed: true,
+          runId,
+          ...(checkpointId ? { checkpointId } : {}),
+          generation,
+        };
+        await receipts.put(webhookId, acknowledgement);
+        return { status: 200, body: acknowledgement };
+      } catch (error) {
+        return {
+          status: 500,
+          body: { ok: false, error: error instanceof Error ? error.message : String(error) },
+        };
+      }
+    })();
+    inFlight.set(webhookId, delivery);
+    try {
+      return await delivery;
+    } finally {
+      inFlight.delete(webhookId);
+    }
+  };
+}
+
+function resumeHeader(headers: ResumeWebhookRequest["headers"], name: string): string {
+  if (typeof Headers !== "undefined" && headers instanceof Headers) return headers.get(name) || "";
+  const record = headers as Record<string, string | string[] | undefined>;
+  const key = Object.keys(record).find((candidate) => candidate.toLowerCase() === name);
+  const value = key ? record[key] : undefined;
+  return Array.isArray(value) ? value[0] || "" : value || "";
 }
 
 export interface InterruptFailure {

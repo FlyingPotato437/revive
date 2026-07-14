@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 export class ReviveClient {
     transport;
     constructor(options = {}) {
@@ -444,6 +444,127 @@ export class MemoryReviveTransport {
         deadRun.actionRequestId = request.id;
         return { deadRun, request };
     }
+}
+/** Process-local retry receipts. Use a durable implementation in production so
+ * a successful acknowledgement survives a runtime restart. */
+export class MemoryResumeReceiptStore {
+    receipts = new Map();
+    get(webhookId) {
+        const receipt = this.receipts.get(webhookId);
+        return receipt ? { ...receipt } : undefined;
+    }
+    put(webhookId, acknowledgement) {
+        this.receipts.set(webhookId, { ...acknowledgement });
+    }
+}
+/** Verify the exact request bytes before parsing JSON. */
+export function verifyReviveWebhookSignature(input) {
+    const seconds = Number(input.timestamp);
+    const now = input.now ?? Date.now() / 1000;
+    if (!Number.isFinite(seconds) || Math.abs(now - seconds) > (input.toleranceSeconds ?? 300))
+        return false;
+    const rawBody = typeof input.rawBody === "string" ? Buffer.from(input.rawBody) : Buffer.from(input.rawBody);
+    const expected = `v1,${createHmac("sha256", input.secret)
+        .update(Buffer.concat([Buffer.from(`${input.webhookId}.${input.timestamp}.`), rawBody]))
+        .digest("hex")}`;
+    const receivedBytes = Buffer.from(input.signature || "");
+    const expectedBytes = Buffer.from(expected);
+    return receivedBytes.length === expectedBytes.length && timingSafeEqual(receivedBytes, expectedBytes);
+}
+/** Create the receiver for both credential recovery and completed human-action
+ * continuations. The returned handler is framework-neutral and requires the
+ * raw request body because signatures cover the exact bytes on the wire. */
+export function createResumeWebhookHandler(options) {
+    if (!options.secret)
+        throw new Error("REVIVE_RESUME_SECRET is required");
+    const receipts = options.receipts ?? new MemoryResumeReceiptStore();
+    const inFlight = new Map();
+    return async (request) => {
+        const webhookId = resumeHeader(request.headers, "webhook-id");
+        const timestamp = resumeHeader(request.headers, "webhook-timestamp");
+        const signature = resumeHeader(request.headers, "webhook-signature");
+        if (!verifyReviveWebhookSignature({
+            secret: options.secret,
+            signature,
+            webhookId,
+            timestamp,
+            rawBody: request.rawBody,
+            toleranceSeconds: options.toleranceSeconds,
+        })) {
+            return { status: 401, body: { ok: false, error: "invalid signature" } };
+        }
+        let event;
+        try {
+            const raw = typeof request.rawBody === "string"
+                ? request.rawBody
+                : new TextDecoder().decode(request.rawBody);
+            event = JSON.parse(raw);
+        }
+        catch {
+            return { status: 400, body: { ok: false, error: "invalid JSON" } };
+        }
+        if (!event || event.id !== webhookId || typeof event.type !== "string" || !isRecord(event.data)) {
+            return { status: 400, body: { ok: false, error: "invalid Revive event" } };
+        }
+        if (event.type === "recovery.resume_test") {
+            return { status: 200, body: { ok: true, test: true } };
+        }
+        if (event.type !== "recovery.resume_requested" && event.type !== "action_request.completed") {
+            return { status: 200, body: { ok: true, ignored: event.type } };
+        }
+        const eventType = event.type;
+        const cached = await receipts.get(webhookId);
+        if (cached)
+            return { status: 200, body: cached };
+        const existing = inFlight.get(webhookId);
+        if (existing)
+            return existing;
+        const delivery = (async () => {
+            const runId = typeof event.data.runId === "string" ? event.data.runId : "";
+            const checkpointId = typeof event.data.checkpointId === "string" ? event.data.checkpointId : undefined;
+            const generation = typeof event.data.generation === "number" ? event.data.generation : Number.NaN;
+            if (!runId || !Number.isFinite(generation)) {
+                return { status: 400, body: { ok: false, error: "resume event is missing runId or generation" } };
+            }
+            try {
+                const extra = await options.resume(event.data, {
+                    eventId: event.id,
+                    eventType,
+                });
+                const acknowledgement = {
+                    ...(extra || {}),
+                    ok: true,
+                    resumed: true,
+                    runId,
+                    ...(checkpointId ? { checkpointId } : {}),
+                    generation,
+                };
+                await receipts.put(webhookId, acknowledgement);
+                return { status: 200, body: acknowledgement };
+            }
+            catch (error) {
+                return {
+                    status: 500,
+                    body: { ok: false, error: error instanceof Error ? error.message : String(error) },
+                };
+            }
+        })();
+        inFlight.set(webhookId, delivery);
+        try {
+            return await delivery;
+        }
+        finally {
+            inFlight.delete(webhookId);
+        }
+    };
+}
+function resumeHeader(headers, name) {
+    if (typeof Headers !== "undefined" && headers instanceof Headers)
+        return headers.get(name) || "";
+    const record = headers;
+    const key = Object.keys(record).find((candidate) => candidate.toLowerCase() === name);
+    const value = key ? record[key] : undefined;
+    return Array.isArray(value) ? value[0] || "" : value || "";
 }
 function interruptAdapter(client, runtime) {
     return (failure) => client.detectDeadRun({

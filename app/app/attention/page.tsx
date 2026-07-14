@@ -38,7 +38,7 @@ export default async function AttentionPage() {
     actions,
     connections,
     policy: safePolicy,
-    resumeEndpointConfigured: Boolean(resumeEndpoint),
+    resumeEndpointConfigured: Boolean(resumeEndpoint?.verifiedAt),
     actionRequests,
     deadRuns,
   });

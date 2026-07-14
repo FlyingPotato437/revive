@@ -23,7 +23,12 @@ export async function GET(req: NextRequest) {
     const workspace = await selectedWorkspace(session.email, req.cookies.get(WORKSPACE_COOKIE)?.value);
     await requireWorkspaceRole(session.email, workspace, "viewer");
     const config = await getResumeEndpoint(workspace.id);
-    return NextResponse.json(config ? { configured: true, url: config.url } : { configured: false });
+    return NextResponse.json(config ? {
+      configured: true,
+      verified: Boolean(config.verifiedAt),
+      verifiedAt: config.verifiedAt,
+      url: config.url,
+    } : { configured: false, verified: false });
   } catch (error) {
     const status = error instanceof Error && error.message === "forbidden" ? 403 : 400;
     return NextResponse.json({ error: error instanceof Error ? error.message : "workspace unavailable" }, { status });
@@ -71,7 +76,7 @@ export async function POST(req: NextRequest) {
       event: "resume_endpoint_registered",
       detail: { url },
     });
-    return NextResponse.json({ configured: true, url });
+    return NextResponse.json({ configured: true, verified: false, url });
   } catch (error) {
     const status = error instanceof Error && error.message === "forbidden" ? 403 : 400;
     return NextResponse.json({ error: error instanceof Error ? error.message : "workspace unavailable" }, { status });

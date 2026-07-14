@@ -1,6 +1,6 @@
 {
   "name": "revive-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Detect AI-agent runs lost to human blockers, resolve them securely, and resume the exact suspended run.",
   "license": "Apache-2.0",
   "author": "Revive Labs",
@@ -49,6 +49,7 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "typescript": "^5.7.3"
   }
 }

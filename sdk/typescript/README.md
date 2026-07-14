@@ -60,6 +60,40 @@ resume, replan, or enter manual review, then emits a signed continuation.
 reconciliation, and credential recovery. This prevents a resumed run from
 duplicating a side effect that may already have committed.
 
+## Receive the signed continuation
+
+Both credential recovery and completed human actions return through the same
+framework-neutral raw-body handler:
+
+```ts
+import { createResumeWebhookHandler } from "revive-sdk";
+
+const receive = createResumeWebhookHandler({
+  secret: process.env.REVIVE_RESUME_SECRET,
+  receipts: durableReceiptStore,
+  async resume(data, context) {
+    await runtime.resume({
+      runId: data.runId,
+      checkpointId: data.checkpointId,
+      generation: data.generation,
+      input: context.eventType === "action_request.completed" ? data.response : data.connectionId,
+    });
+  },
+});
+```
+
+Pass the exact request bytes and headers to `receive`. It verifies the HMAC
+before parsing, supports `recovery.resume_requested` and
+`action_request.completed`, serializes concurrent redeliveries, and returns the
+run/checkpoint/generation acknowledgement required by the control plane.
+`MemoryResumeReceiptStore` is for tests; production runtimes should implement
+`ResumeReceiptStore` in a durable database and make checkpoint resume
+idempotent across a crash between resume and receipt commit.
+
+The complete runnable contract, registration commands, acceptance checklist,
+and honest support limits live in
+[the supported integration guide](https://github.com/FlyingPotato437/revive/blob/main/docs/supported-integration.md).
+
 ## Action contracts
 
 `riskContext` lets a workspace evaluate policies against a compact action

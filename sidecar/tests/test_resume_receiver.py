@@ -35,6 +35,15 @@ def resume_event(webhook_id: str = "job_1") -> dict:
                      "generation": 2}}
 
 
+def action_event(webhook_id: str = "action_job_1") -> dict:
+    return {"id": webhook_id, "type": "action_request.completed",
+            "createdAt": "2026-07-05T00:00:00Z",
+            "data": {"actionRequestId": "uar_1", "workspaceId": "ws_1",
+                     "runId": "run_1", "checkpointId": "cp_4",
+                     "actionType": "clarification", "generation": 2,
+                     "response": {"billing_contact_email": "billing@example.com"}}}
+
+
 class TestVerifySignature(unittest.TestCase):
     def test_round_trips_with_control_plane_format(self):
         headers, body = signed_delivery(resume_event())
@@ -69,6 +78,16 @@ class TestResumeReceiver(unittest.TestCase):
                                     "checkpointId": "cp_4", "generation": 2,
                                     "steps": 8})
         self.assertEqual(calls[0]["connectionId"], "conn_1")
+
+    def test_completed_action_resumes_and_acknowledges(self):
+        calls = []
+        receiver = ResumeReceiver(SECRET, resume=lambda data: calls.append(data))
+        status, response = receiver.handle(*signed_delivery(action_event()))
+        self.assertEqual(status, 200)
+        self.assertEqual(response, {"ok": True, "resumed": True, "runId": "run_1",
+                                    "checkpointId": "cp_4", "generation": 2})
+        self.assertEqual(calls[0]["response"]["billing_contact_email"],
+                         "billing@example.com")
 
     def test_unsigned_delivery_is_rejected_before_parsing(self):
         receiver = ResumeReceiver(SECRET, resume=lambda data: self.fail("must not resume"))

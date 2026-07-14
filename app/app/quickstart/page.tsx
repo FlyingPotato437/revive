@@ -39,6 +39,7 @@ export default async function QuickstartPage() {
       availableDeadRunId: availableRun?.id,
       latestRequest: latestRequest ? { id: latestRequest.id, status: latestRequest.status, resumeStatus: latestRequest.resumeStatus, url: latestRequest.url } : undefined,
       endpointConfigured: Boolean(endpoint),
+      endpointVerified: Boolean(endpoint?.verifiedAt),
       channels,
     }} />;
 }

@@ -47,4 +47,4 @@ __all__ = [
     "create_langgraph_interrupt_handler", "create_temporal_failure_signal",
     "create_mcp_elicitation_handler",
 ]
-__version__ = "0.1.0"
+__version__ = "0.2.0"

@@ -440,6 +440,65 @@ export declare class MemoryReviveTransport implements ReviveTransport {
         request: UserActionRequest;
     }>;
 }
+export type ReviveResumeEventType = "recovery.resume_test" | "recovery.resume_requested" | "action_request.completed";
+export interface ReviveResumeEvent {
+    id: string;
+    type: ReviveResumeEventType | string;
+    createdAt: string;
+    data: Record<string, unknown>;
+}
+export interface ResumeAcknowledgement extends Record<string, unknown> {
+    ok: true;
+    resumed: true;
+    runId: string;
+    checkpointId?: string;
+    generation: number;
+}
+export interface ResumeReceiptStore {
+    get(webhookId: string): ResumeAcknowledgement | undefined | Promise<ResumeAcknowledgement | undefined>;
+    put(webhookId: string, acknowledgement: ResumeAcknowledgement): void | Promise<void>;
+}
+/** Process-local retry receipts. Use a durable implementation in production so
+ * a successful acknowledgement survives a runtime restart. */
+export declare class MemoryResumeReceiptStore implements ResumeReceiptStore {
+    private receipts;
+    get(webhookId: string): ResumeAcknowledgement | undefined;
+    put(webhookId: string, acknowledgement: ResumeAcknowledgement): void;
+}
+export interface VerifyReviveWebhookSignatureInput {
+    secret: string;
+    signature: string;
+    webhookId: string;
+    timestamp: string;
+    rawBody: string | Uint8Array;
+    toleranceSeconds?: number;
+    now?: number;
+}
+/** Verify the exact request bytes before parsing JSON. */
+export declare function verifyReviveWebhookSignature(input: VerifyReviveWebhookSignatureInput): boolean;
+export interface ResumeWebhookRequest {
+    headers: Headers | Record<string, string | string[] | undefined>;
+    rawBody: string | Uint8Array;
+}
+export interface ResumeWebhookResponse {
+    status: number;
+    body: Record<string, unknown>;
+}
+export interface CreateResumeWebhookHandlerOptions {
+    secret: string;
+    /** Return only after the checkpoint has been durably accepted for resume.
+     * Throw on failure so Revive retries the same signed event. */
+    resume: (data: Record<string, unknown>, context: {
+        eventId: string;
+        eventType: "recovery.resume_requested" | "action_request.completed";
+    }) => void | Record<string, unknown> | Promise<void | Record<string, unknown>>;
+    receipts?: ResumeReceiptStore;
+    toleranceSeconds?: number;
+}
+/** Create the receiver for both credential recovery and completed human-action
+ * continuations. The returned handler is framework-neutral and requires the
+ * raw request body because signatures cover the exact bytes on the wire. */
+export declare function createResumeWebhookHandler(options: CreateResumeWebhookHandlerOptions): (request: ResumeWebhookRequest) => Promise<ResumeWebhookResponse>;
 export interface InterruptFailure {
     runId: string;
     checkpointId?: string;

@@ -26,6 +26,7 @@ export interface QuickstartInitialState {
   availableDeadRunId?: string;
   latestRequest?: RequestState;
   endpointConfigured: boolean;
+  endpointVerified: boolean;
   channels: { email: boolean; slack: boolean };
 }
 
@@ -113,6 +114,7 @@ export function QuickstartFlow({ initial }: { initial: QuickstartInitialState })
   const [deadRunId, setDeadRunId] = useState(initial.availableDeadRunId || "");
   const [request, setRequest] = useState<RequestState | undefined>(initial.latestRequest);
   const [boundaryConfirmed, setBoundaryConfirmed] = useState(initial.hasRuntimeRun);
+  const [endpointVerified, setEndpointVerified] = useState(initial.endpointVerified);
   const [busy, setBusy] = useState<"key" | "run" | "request" | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
@@ -122,13 +124,14 @@ export function QuickstartFlow({ initial }: { initial: QuickstartInitialState })
     if (initial.availableDeadRunId && !deadRunId) setDeadRunId(initial.availableDeadRunId);
     if (initial.latestRequest && initial.latestRequest.status !== request?.status) setRequest(initial.latestRequest);
     if (initial.hasRuntimeRun) setBoundaryConfirmed(true);
+    if (initial.endpointVerified) setEndpointVerified(true);
   }, [initial, deadRunId, request?.status]);
 
   const deadRunReady = Boolean(deadRunId);
   const requestReady = request?.status === "pending" || request?.status === "completed";
   const responseReady = request?.status === "completed";
   const handoffProgress = [keyReady, deadRunReady, requestReady, responseReady].filter(Boolean).length;
-  const unlockedStage = boundaryConfirmed && responseReady ? 3 : responseReady ? 2 : stage > 0 ? 1 : 0;
+  const unlockedStage = boundaryConfirmed && endpointVerified && responseReady ? 3 : responseReady ? 2 : stage > 0 ? 1 : 0;
   const option = PATHS[active];
   const setupBundle = useMemo(() => [
     active === "custom" ? "# No SDK required for the custom API" : "npm install revive-sdk",
@@ -225,13 +228,14 @@ export function QuickstartFlow({ initial }: { initial: QuickstartInitialState })
       {stage === 2 && <StageFrame key="integration" reduceMotion={Boolean(reduceMotion)}>
         <IntegrationStage
           active={active} onActive={setActive} option={option} setupBundle={setupBundle}
-          copied={copied} copy={copy} error={error}
-          onContinue={() => { setBoundaryConfirmed(true); go(3); }}
+          copied={copied} copy={copy} error={error} boundaryDetected={boundaryConfirmed}
+          endpointVerified={endpointVerified} onRefresh={() => router.refresh()}
+          onVerified={() => setEndpointVerified(true)} onContinue={() => go(3)}
         />
       </StageFrame>}
 
       {stage === 3 && <StageFrame key="complete" reduceMotion={Boolean(reduceMotion)}>
-        <CompleteStage initial={initial} request={request} onBack={() => go(2)} />
+        <CompleteStage onBack={() => go(2)} />
       </StageFrame>}
     </AnimatePresence>
   </div>;
@@ -317,26 +321,27 @@ function HandoffStage({
   </section>;
 }
 
-function IntegrationStage({ active, onActive, option, setupBundle, copied, copy, error, onContinue }: {
+function IntegrationStage({ active, onActive, option, setupBundle, copied, copy, error, boundaryDetected, endpointVerified, onRefresh, onVerified, onContinue }: {
   active: SetupPath; onActive: (path: SetupPath) => void; option: (typeof PATHS)[SetupPath];
-  setupBundle: string; copied: string; copy: (value: string, id: string) => Promise<void>; error: string; onContinue: () => void;
+  setupBundle: string; copied: string; copy: (value: string, id: string) => Promise<void>; error: string;
+  boundaryDetected: boolean; endpointVerified: boolean; onRefresh: () => void; onVerified: () => void; onContinue: () => void;
 }) {
   return <section className="min-h-[calc(100dvh-112px)]">
     <div className="mx-auto min-h-[calc(100dvh-112px)] max-w-[1220px] border-x border-[#151922] bg-[#fbfcf8]">
       <header className="grid border-b border-[#151922] lg:grid-cols-[.72fr_1.28fr]"><div className="p-6 sm:p-8"><p className="font-mono text-[9px] tracking-[.12em] text-[#4967f2]">YOUR REAL RUNTIME</p><h1 className="mt-4 max-w-[480px] text-[clamp(32px,4vw,52px)] font-semibold leading-[1] tracking-[-.055em]">One package. One existing failure boundary.</h1><p className="mt-4 max-w-[500px] text-[12px] leading-6 text-[#687180]">Keep your current runtime and checkpointer. Revive needs only the stable run, checkpoint, and generation identifiers.</p></div><div className="grid grid-cols-2 border-t border-[#151922] sm:grid-cols-4 lg:border-l lg:border-t-0">{(Object.keys(PATHS) as SetupPath[]).map((key) => { const item = PATHS[key]; const Icon = item.icon; const selected = active === key; return <button key={key} onClick={() => onActive(key)} className={`border-b border-r border-[#e1e2de] p-4 text-left transition last:border-r-0 sm:border-b-0 ${selected ? "bg-[#edf0ff] text-[#2e49c8]" : "bg-[#fbfcf8] text-[#596273] hover:bg-[#f7f8f5]"}`}><Icon size={15} /><span className="mt-3 block text-[10.5px] font-semibold">{item.label}</span><span className="mt-1 block text-[8.5px] leading-4">{item.detail}</span></button>; })}</div></header>
       {error && <div role="alert" className="border-b border-[#c2413a] bg-[#fcedeb] px-6 py-3 text-[10.5px] text-[#8b3e38]">{error}</div>}
       <div className="grid lg:grid-cols-[.72fr_1.28fr]"><div className="border-b border-[#151922] p-6 lg:border-b-0 lg:border-r"><h2 className="text-[13px] font-semibold">Install and authenticate</h2><pre className="mt-4 overflow-x-auto border border-[#d8dde3] bg-[#f7f8f5] p-4 font-mono text-[10px] leading-5">{setupBundle}</pre><button onClick={() => copy(setupBundle, "setup")} className="mt-3 inline-flex h-9 items-center gap-2 border border-[#c8cdd2] bg-white px-3 text-[9.5px] font-semibold"><Copy size={11} />{copied === "setup" ? "Copied" : "Copy setup"}</button><div className="mt-8 border-l-[3px] border-[#4967f2] pl-4"><h3 className="text-[11px] font-semibold">Detector first</h3><p className="mt-2 text-[9.5px] leading-5 text-[#687180]">The detector records redacted terminal failures. It does not contact users until your team chooses to revive a run.</p></div></div><div className="min-w-0 bg-[#f7f8f5]"><div className="flex items-center justify-between border-b border-[#d8dde3] px-5 py-3"><span className="font-mono text-[8.5px] text-[#7b8491]">ADD AT THE FAILURE BOUNDARY: {option.filename}</span><CopyButton onClick={() => copy(option.code, "code")} copied={copied === "code"} /></div><pre className="min-h-[330px] overflow-x-auto p-5 font-mono text-[10px] leading-5 text-[#252b35] sm:p-6"><code>{option.code}</code></pre></div></div>
-      <div className="flex flex-col gap-4 border-t border-[#151922] bg-[#eef0eb] px-6 py-5 sm:flex-row sm:items-center sm:justify-between"><p className="max-w-[620px] text-[10.5px] leading-5 text-[#596273]">After this handler reports one real failure, it appears in Dead-run detector with the runtime and checkpoint you supplied.</p><button onClick={onContinue} className="inline-flex h-11 shrink-0 items-center justify-center gap-3 border border-[#151922] bg-[#151922] px-5 text-[11px] font-semibold text-white hover:bg-[#2b3340] active:translate-y-px">I added this boundary <ArrowRight size={13} /></button></div>
+      <div className="border-t border-[#151922] p-6 sm:p-8"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="font-mono text-[9px] tracking-[.12em] text-[#4967f2]">SIGNED CONTINUATION</p><h2 className="mt-2 text-[18px] font-semibold tracking-[-.025em]">Register the callback that resumes your checkpoint</h2><p className="mt-2 max-w-[720px] text-[10.5px] leading-5 text-[#687180]">Saving a URL is not enough. Revive sends a signed probe and enables continuation only when your receiver verifies it and returns the expected acknowledgement.</p></div></div><ResumeEndpointManager onVerified={onVerified} /></div>
+      <div className="flex flex-col gap-4 border-t border-[#151922] bg-[#eef0eb] px-6 py-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="max-w-[650px] text-[10.5px] leading-5 text-[#596273]">Trigger one real, non-onboarding failure through this handler, then check setup. Completion unlocks only after Revive sees that boundary and verifies the signed callback.</p><div className="mt-2 flex gap-4 font-mono text-[8.5px]"><span className={boundaryDetected ? "text-[#18724e]" : "text-[#8b5f1d]"}>{boundaryDetected ? "✓ real boundary received" : "○ waiting for real boundary"}</span><span className={endpointVerified ? "text-[#18724e]" : "text-[#8b5f1d]"}>{endpointVerified ? "✓ callback verified" : "○ callback test required"}</span></div></div>{boundaryDetected && endpointVerified ? <button onClick={onContinue} className="inline-flex h-11 shrink-0 items-center justify-center gap-3 border border-[#151922] bg-[#151922] px-5 text-[11px] font-semibold text-white hover:bg-[#2b3340] active:translate-y-px">Finish verified setup <ArrowRight size={13} /></button> : <button onClick={onRefresh} className="inline-flex h-11 shrink-0 items-center justify-center gap-3 border border-[#151922] bg-white px-5 text-[11px] font-semibold text-[#151922] hover:bg-[#f7f8f5] active:translate-y-px">Check setup status <Pulse size={13} /></button>}</div>
     </div>
   </section>;
 }
 
-function CompleteStage({ initial, request, onBack }: { initial: QuickstartInitialState; request?: RequestState; onBack: () => void }) {
+function CompleteStage({ onBack }: { onBack: () => void }) {
   return <section className="flex min-h-[calc(100dvh-112px)] flex-col items-center justify-center px-5 py-12 sm:px-8">
     <div className="w-full max-w-[900px] border border-[#151922] bg-[#fbfcf8] shadow-[10px_10px_0_#d9ddd6]">
       <div className="grid md:grid-cols-[.72fr_1.28fr]"><div className="flex min-h-[300px] items-center justify-center border-b border-[#151922] bg-[#edf0ff] md:border-b-0 md:border-r"><motion.div initial={{ scale: .82, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 180, damping: 18 }} className="flex h-36 w-36 items-center justify-center border border-[#151922] bg-[#fbfcf8] text-[#18724e] shadow-[7px_7px_0_#cbd4f5]"><CheckCircle size={78} weight="thin" /></motion.div></div><div className="p-7 sm:p-10"><p className="font-mono text-[9px] tracking-[.12em] text-[#18724e]">QUICKSTART COMPLETE</p><h1 className="mt-5 text-[clamp(36px,5vw,58px)] font-semibold leading-[.98] tracking-[-.06em]">You are set to recover the first real blocker.</h1><p className="mt-5 max-w-[560px] text-[12px] leading-6 text-[#687180]">The workspace has a scoped credential, the human handoff is proven, and your runtime boundary has the code it needs to report a dead run.</p><div className="mt-8 flex flex-wrap gap-3"><Link href="/app/detector" className="inline-flex h-11 items-center gap-3 border border-[#151922] bg-[#151922] px-5 text-[11px] font-semibold text-white hover:bg-[#2b3340]">Open detector <ArrowRight size={13} /></Link><button onClick={onBack} className="inline-flex h-11 items-center border border-[#c8cdd2] bg-white px-4 text-[10.5px] font-semibold">Review integration</button></div></div></div>
-      <div className="grid border-t border-[#151922] sm:grid-cols-4"><Readiness title="Scoped key" done detail="Operator role" /><Readiness title="Human handoff" done detail="Safe test passed" /><Readiness title="Failure boundary" done detail="Integration confirmed" /><Readiness title="Automatic resume" done={initial.endpointConfigured && request?.resumeStatus === "acknowledged"} detail={initial.endpointConfigured ? "Endpoint configured" : "Optional next step"} /></div>
-      {!initial.endpointConfigured && <details className="group border-t border-[#151922]"><summary className="flex cursor-pointer list-none items-center justify-between px-6 py-4"><span><span className="text-[11px] font-semibold">Turn on automatic resume</span><span className="ml-2 text-[9.5px] text-[#7b8491]">optional after detection works</span></span><span className="font-mono text-[10px] transition group-open:rotate-45">+</span></summary><div className="border-t border-[#e1e2de] p-6"><ResumeEndpointManager /></div></details>}
+      <div className="grid border-t border-[#151922] sm:grid-cols-4"><Readiness title="Scoped key" done detail="Operator role" /><Readiness title="Human handoff" done detail="Safe test passed" /><Readiness title="Failure boundary" done detail="Real event received" /><Readiness title="Automatic resume" done detail="Signed callback verified" /></div>
     </div>
   </section>;
 }

@@ -1,9 +1,9 @@
 /**
  * Express resume receiver — production shape for Node runtimes.
  *
- * Receives signed `recovery.resume_requested` callbacks from the Revive control
- * plane, verifies the HMAC, resumes the parked run from its checkpoint, and
- * acks so the case transitions identity_verified -> resumed -> completed.
+ * Receives signed `recovery.resume_requested` and `action_request.completed`
+ * callbacks from the Revive control plane, verifies the HMAC, resumes the
+ * parked run from its checkpoint, and returns the exact required ack.
  *
  * Register the deployed URL once per workspace:
  *
@@ -74,7 +74,9 @@ app.post("/revive/resume", express.raw({ type: "*/*" }), async (req, res) => {
     return res.status(400).json({ ok: false, error: "invalid JSON" });
   }
   if (event.type === "recovery.resume_test") return res.json({ ok: true, test: true });
-  if (event.type !== "recovery.resume_requested") return res.json({ ok: true, ignored: event.type });
+  if (event.type !== "recovery.resume_requested" && event.type !== "action_request.completed") {
+    return res.json({ ok: true, ignored: event.type });
+  }
   if (acked.has(webhookId)) return res.json(acked.get(webhookId)); // idempotent retry
 
   try {

@@ -50,6 +50,8 @@ export async function deleteWorkspaceSecret(workspaceId: string, name: Workspace
 export interface ResumeEndpointConfig {
   url: string;
   secret: string;
+  /** Set only after the endpoint accepts a signed Revive test event. */
+  verifiedAt?: number;
 }
 
 export async function setResumeEndpoint(workspaceId: string, config: ResumeEndpointConfig): Promise<void> {
@@ -66,6 +68,14 @@ export async function getResumeEndpoint(workspaceId: string): Promise<ResumeEndp
   } catch {
     return null;
   }
+}
+
+export async function markResumeEndpointVerified(workspaceId: string, expectedUrl: string): Promise<ResumeEndpointConfig> {
+  const config = await getResumeEndpoint(workspaceId);
+  if (!config || config.url !== expectedUrl) throw new Error("resume endpoint changed during verification");
+  const verified = { ...config, verifiedAt: Date.now() };
+  await setResumeEndpoint(workspaceId, verified);
+  return verified;
 }
 
 export async function clearResumeEndpoint(workspaceId: string): Promise<void> {

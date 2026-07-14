@@ -6,14 +6,16 @@ import { StatusBadge } from "@/components/app/ConsolePrimitives";
 
 interface EndpointState {
   configured: boolean;
+  verified: boolean;
+  verifiedAt?: number;
   url?: string;
 }
 
 type Phase = "idle" | "saving" | "clearing" | "testing";
 
-type TestResult = { ok: true; status: number; eventId: string } | { ok: false; status: number; error: string };
+type TestResult = { ok: true; verified: true; status: number; eventId: string; queued?: { recoveryCases: number; actionRequests: number } } | { ok: false; status: number; error: string };
 
-export function ResumeEndpointManager() {
+export function ResumeEndpointManager({ onVerified }: { onVerified?: () => void } = {}) {
   const [state, setState] = useState<EndpointState | null>(null);
   const [url, setUrl] = useState("");
   const [secret, setSecret] = useState("");
@@ -27,7 +29,7 @@ export function ResumeEndpointManager() {
     const response = await fetch("/api/workspaces/resume-endpoint");
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) { setError(payload.error || "Could not load the resume endpoint"); return; }
-    setState({ configured: Boolean(payload.configured), url: payload.url });
+    setState({ configured: Boolean(payload.configured), verified: Boolean(payload.verified), verifiedAt: payload.verifiedAt, url: payload.url });
     setUrl(payload.url || "");
   }, []);
 
@@ -44,7 +46,7 @@ export function ResumeEndpointManager() {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) { setError(payload.error || "Could not save the resume endpoint"); return; }
       setSecret("");
-      setNotice("Resume endpoint saved. The shared secret is now write-only.");
+      setNotice("Endpoint saved. Send the signed test before Revive enables automatic resume.");
       await refresh();
     } finally {
       setPhase("idle");
@@ -72,6 +74,10 @@ export function ResumeEndpointManager() {
       const payload = await response.json().catch(() => ({}));
       if (response.status === 404) { setError(payload.error || "No resume endpoint is registered yet."); return; }
       setTest(payload as TestResult);
+      if (response.ok && payload.ok) {
+        await refresh();
+        onVerified?.();
+      }
     } catch {
       setError("Test delivery failed to start");
     } finally {
@@ -81,6 +87,7 @@ export function ResumeEndpointManager() {
 
   const busy = phase !== "idle";
   const configured = state?.configured ?? false;
+  const verified = state?.verified ?? false;
   // A save needs both fields; a configured endpoint keeps its stored secret, so
   // re-saving the same URL still requires re-entering the secret (write-only).
   const canSave = url.trim().length > 0 && secret.length > 0 && !busy;
@@ -103,12 +110,11 @@ export function ResumeEndpointManager() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-[56ch] text-[10.5px] leading-5 text-[#687180]">
-          Where your agent runtime receives signed <span className="font-mono text-[10px] text-[#4f5866]">recovery.resume_requested</span>{" "}
-          callbacks. Once registered, an identity-verified case walks{" "}
-          <span className="font-mono text-[10px] text-[#4f5866]">identity_verified → resumed → completed</span> when the runtime acks.
+          Where your runtime receives signed <span className="font-mono text-[10px] text-[#4f5866]">recovery.resume_requested</span> and{" "}
+          <span className="font-mono text-[10px] text-[#4f5866]">action_request.completed</span> callbacks. Revive enables delivery only after this endpoint proves it can verify a signed test.
         </p>
-        <StatusBadge tone={state === null ? "neutral" : configured ? "ok" : "warn"}>
-          {state === null ? "loading" : configured ? "registered" : "not set"}
+        <StatusBadge tone={state === null ? "neutral" : verified ? "ok" : "warn"}>
+          {state === null ? "loading" : verified ? "verified" : configured ? "test required" : "not set"}
         </StatusBadge>
       </div>
 
@@ -183,10 +189,10 @@ export function ResumeEndpointManager() {
         >
           <div className="flex items-center gap-2 font-semibold">
             {test.ok ? <CheckCircle size={15} /> : <WarningCircle size={15} />}
-            {test.ok ? `Test delivered. Endpoint replied ${test.status}` : `Test failed${test.status ? `: HTTP ${test.status}` : ""}`}
+            {test.ok ? `Verified. Endpoint replied ${test.status}` : `Test failed${test.status ? `: HTTP ${test.status}` : ""}`}
           </div>
           <div className="mt-1 font-mono text-[9px] text-[#7b8491]">
-            {test.ok ? `signed recovery.resume_test · ${test.eventId}` : test.error}
+            {test.ok ? `signed recovery.resume_test · ${test.eventId}${test.queued ? ` · queued ${test.queued.recoveryCases + test.queued.actionRequests} waiting continuation(s)` : ""}` : test.error}
           </div>
         </div>
       )}

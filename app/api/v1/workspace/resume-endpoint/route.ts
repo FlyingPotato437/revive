@@ -19,7 +19,12 @@ export async function GET(req: NextRequest) {
   const auth = await authenticateApiKey(req, "viewer");
   if (!auth.ok) return auth.response;
   const config = await getResumeEndpoint(auth.workspace.id);
-  return NextResponse.json(config ? { configured: true, url: config.url } : { configured: false });
+  return NextResponse.json(config ? {
+    configured: true,
+    verified: Boolean(config.verifiedAt),
+    verifiedAt: config.verifiedAt,
+    url: config.url,
+  } : { configured: false, verified: false });
 }
 
 export async function POST(req: NextRequest) {
@@ -60,7 +65,7 @@ export async function POST(req: NextRequest) {
     event: "resume_endpoint_registered",
     detail: { url },
   });
-  return NextResponse.json({ configured: true, url });
+  return NextResponse.json({ configured: true, verified: false, url });
 }
 
 export async function DELETE(req: NextRequest) {

@@ -1,12 +1,12 @@
 """Resume receiver — the runtime side of dead-reauth-resume.
 
 When a workspace registers a resume endpoint (POST /v1/workspace/resume-endpoint),
-the control plane delivers a signed ``recovery.resume_requested`` event there the
-moment a recovery case reaches ``identity_verified``. This module is the
-reference implementation of that endpoint: it verifies the HMAC signature,
-deduplicates retries, invokes your resume handler exactly once per event, and
-returns the acknowledgement the control plane requires before it transitions
-the case to ``resumed``.
+the control plane delivers a signed ``recovery.resume_requested`` event for a
+credential recovery or ``action_request.completed`` after a person supplies an
+approval or missing value. This module is the reference implementation of that
+endpoint: it verifies the HMAC signature, deduplicates retries, invokes your
+resume handler once per successful event receipt, and returns the exact
+acknowledgement the control plane requires.
 
 Stdlib-only, like the rest of the core SDK. Use it three ways:
 
@@ -34,13 +34,15 @@ Wire protocol (mirrors lib/webhooks.ts on the control plane):
 - headers: ``webhook-id``, ``webhook-timestamp`` (unix seconds),
   ``webhook-signature`` (``v1,<hmac-sha256-hex>``), ``idempotency-key``
 - signed message: ``{webhook-id}.{webhook-timestamp}.{raw-body}``
-- required acknowledgement for ``recovery.resume_requested``::
+- required acknowledgement for either continuation event::
 
       {"ok": true, "resumed": true, "runId": ..., "checkpointId": ...,
        "generation": ...}
 
-The control plane retries delivery (up to 8 attempts) until it receives that
-acknowledgement, then transitions the case identity_verified -> resumed.
+The control plane retries delivery until it receives that acknowledgement.
+Use ``dedupe_path`` in production and make the underlying checkpoint resume
+idempotent; that runtime boundary is what covers a process crash between the
+external resume and the local receipt commit.
 """
 from __future__ import annotations
 
@@ -169,7 +171,7 @@ class ResumeReceiver:
         kind = event.get("type")
         if kind == "recovery.resume_test":
             return 200, {"ok": True, "test": True}
-        if kind != "recovery.resume_requested":
+        if kind not in ("recovery.resume_requested", "action_request.completed"):
             # Acknowledge receipt without acting so unknown event types added
             # later never wedge the delivery queue.
             return 200, {"ok": True, "ignored": kind}

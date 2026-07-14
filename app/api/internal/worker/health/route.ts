@@ -13,5 +13,6 @@ export async function GET(req: NextRequest) {
   const health = await queueHealth();
   const latest = health.workers[0];
   const stale = !latest || Date.now() - new Date(latest.lastSeenAt).getTime() > Number(process.env.REVIVE_WORKER_STALE_MS || 120_000);
-  return NextResponse.json({ status: stale || health.dead > 0 ? "degraded" : "ok", stale, ...health }, { status: stale ? 503 : 200 });
+  const degraded = stale || health.dead > 0;
+  return NextResponse.json({ status: degraded ? "degraded" : "ok", stale, ...health }, { status: degraded ? 503 : 200 });
 }

@@ -50,6 +50,15 @@ explicitly excludes production performance and provider-compatibility claims.
 
 ## Install the free detector
 
+The current supported alpha path is documented end to end in
+[docs/supported-integration.md](docs/supported-integration.md). It includes the
+raw-body callback receiver, endpoint verification, durable retry receipts, the
+acceptance checklist, and current provider limits.
+
+```bash
+npm install revive-sdk@^0.2.0
+```
+
 ```ts
 import { ReviveClient, createLangGraphInterruptHandler } from "revive-sdk";
 
@@ -211,10 +220,11 @@ id and secret (stored by Nango, never by Revive); API-key providers need no
 registration. Enabled providers become connectable immediately when Revive can
 bind an identity for them:
 
-- **Certified adapters** (Microsoft, Google, Gmail, GitHub, Slack) verify
-  identity with Revive-maintained logic.
-- **Curated probes** cover common providers (Salesforce, Jira, Zendesk,
-  HubSpot, Stripe, Notion, Zoom, and more) and are marked **Provisional**.
+- **Certified adapter:** Microsoft currently has the live-tested hosted
+  identity and reconnect path.
+- **Provisional adapters and probes** include Google/Gmail, GitHub, Slack,
+  Salesforce, Jira, Zendesk, HubSpot, Stripe, Notion, Zoom, and more. They stay
+  provisional until a live provider certification run passes.
 - Everything else needs a workspace-defined custom connector (below).
 
 `NANGO_ALLOWED_INTEGRATIONS` is now an optional restriction: leave it unset to
@@ -257,6 +267,12 @@ the same Postgres transaction as their state transition. The worker expands
 those events into signed callbacks after reconciliation. Deterministic job IDs
 make replay safe, and the Python receiver persists successful callback receipts
 with `dedupe_path` or `REVIVE_RECEIVER_DB`.
+
+The TypeScript 0.2 receiver handles both `recovery.resume_requested` and
+`action_request.completed`. A workspace callback is inactive until it accepts a
+signed `recovery.resume_test` with the exact expected acknowledgement; verified
+endpoints then pick up continuations that were parked while no callback was
+available.
 
 ### Encryption-key rotation
 

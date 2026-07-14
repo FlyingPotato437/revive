@@ -2,9 +2,9 @@ import crypto from "node:crypto";
 import { completeJob, enqueueJob, failJob, loadConnectionBinding, type QueueJob } from "./hosted";
 import { hmacHex } from "./secure-envelope";
 import { audit } from "./audit";
-import { getCase, transition, type ControlCase } from "./control-plane";
+import { getCase, listCases, transition, type ControlCase } from "./control-plane";
 import { getResumeEndpoint } from "./workspace-secrets";
-import { getUserActionRequest, markUserActionResume, markUserActionResumeAssessment, type UserActionRequest } from "./action-requests";
+import { getUserActionRequest, listUserActionRequests, markUserActionResume, markUserActionResumeAssessment, type UserActionRequest } from "./action-requests";
 import { assessResumeSafety } from "./resolution-intelligence";
 import { markDeadRunResolved } from "./dead-runs";
 import { autoReconcileRun } from "./auto-reconcile";
@@ -38,15 +38,16 @@ export async function enqueueWebhookEvent(type: string, data: Record<string, unk
 
 // Workspace-registered endpoint wins; the platform-level env pair remains as a
 // fallback for single-tenant deployments.
-async function resolveRuntimeResumeConfig(workspaceId: string): Promise<{ url: string; secret: string; source: "workspace" | "env" } | null> {
+async function resolveRuntimeResumeConfig(workspaceId: string): Promise<{ url: string; secret: string; source: "workspace" | "env"; verificationVersion: number } | null> {
   try {
     const scoped = await getResumeEndpoint(workspaceId);
-    if (scoped) return { ...scoped, source: "workspace" };
+    if (scoped?.verifiedAt) return { ...scoped, source: "workspace", verificationVersion: scoped.verifiedAt };
+    if (scoped) return null;
   } catch {
     // fall through to the platform default
   }
   if (process.env.REVIVE_RUNTIME_RESUME_URL && process.env.REVIVE_RUNTIME_RESUME_SECRET) {
-    return { url: process.env.REVIVE_RUNTIME_RESUME_URL, secret: process.env.REVIVE_RUNTIME_RESUME_SECRET, source: "env" };
+    return { url: process.env.REVIVE_RUNTIME_RESUME_URL, secret: process.env.REVIVE_RUNTIME_RESUME_SECRET, source: "env", verificationVersion: 0 };
   }
   return null;
 }
@@ -66,7 +67,7 @@ export async function enqueueRuntimeResume(record: ControlCase, generation: numb
     idempotencyKey: record.idempotencyKey,
     generation,
   }, {
-    id: `resume_${record.id}_v${record.version}`,
+    id: `resume_${record.id}_v${record.version}_e${config.verificationVersion}`,
     maxAttempts: 8,
     workspaceId: record.workspaceId,
   });
@@ -92,7 +93,7 @@ export async function enqueueUserActionResume(record: UserActionRequest): Promis
     resumeDecision: record.resumeAssessment?.decision || "resume",
     resumeReason: record.resumeAssessment?.reason || "",
   }, {
-    id: `action_resume_${record.id}_g${record.generation}`,
+    id: `action_resume_${record.id}_g${record.generation}_e${config.verificationVersion}`,
     maxAttempts: 8,
     workspaceId: record.workspaceId,
   });
@@ -276,6 +277,9 @@ export async function processCompletedUserAction(workspaceId: string, actionRequ
   if (!request) throw new Error("completed action request no longer exists");
   if (request.status !== "completed") return request;
   if (request.validation?.deadRunId) await markDeadRunResolved(workspaceId, request.id);
+  // The onboarding handoff proves recipient binding and validation, but no
+  // customer runtime owns its synthetic run. Never send it to a real receiver.
+  if (request.runId.startsWith("onboarding_")) return request;
   if (!request.resumeAssessment) {
     const assessment = await assessResumeSafety(request);
     await markUserActionResumeAssessment(workspaceId, request.id, assessment);
@@ -293,10 +297,10 @@ export async function processCompletedUserAction(workspaceId: string, actionRequ
 
 /** Expand an atomic identity-verification outbox event. Reconciliation always
  * precedes callback enqueue, including when the original HTTP request crashed. */
-export async function processVerifiedRecovery(workspaceId: string, caseId: string): Promise<void> {
+export async function processVerifiedRecovery(workspaceId: string, caseId: string): Promise<string | null> {
   const record = await getCase(workspaceId, caseId);
   if (!record) throw new Error("verified recovery case no longer exists");
-  if (["resumed", "reconciled", "completed"].includes(record.state)) return;
+  if (["resumed", "reconciled", "completed"].includes(record.state)) return null;
   if (record.state !== "identity_verified") throw new Error(`recovery case cannot continue from ${record.state}`);
   const binding = await loadConnectionBinding(record.connectionId, workspaceId);
   await autoReconcileRun({
@@ -307,8 +311,28 @@ export async function processVerifiedRecovery(workspaceId: string, caseId: strin
     integrationId: binding?.integrationId || "microsoft-tenant-specific",
     actor: "transactional-outbox",
   });
-  const jobId = await enqueueRuntimeResume(record, record.leaseGeneration ?? 1);
-  if (!jobId) throw new Error("no runtime resume endpoint is configured for this workspace");
+  return enqueueRuntimeResume(record, record.leaseGeneration ?? 1);
+}
+
+/** Re-queue continuations that were safely parked before an endpoint passed
+ * verification. Called after the signed endpoint test succeeds. */
+export async function enqueuePendingWorkspaceContinuations(workspaceId: string): Promise<{ recoveryCases: number; actionRequests: number }> {
+  const [cases, requests] = await Promise.all([
+    listCases(workspaceId, { open: true }),
+    listUserActionRequests(workspaceId),
+  ]);
+  let recoveryCases = 0;
+  for (const record of cases) {
+    if (record.state !== "identity_verified") continue;
+    if (await processVerifiedRecovery(workspaceId, record.id)) recoveryCases += 1;
+  }
+  let actionRequests = 0;
+  for (const request of requests) {
+    if (request.runId.startsWith("onboarding_") || request.status !== "completed" || request.resumeStatus === "acknowledged" || request.resumeStatus === "held_for_review") continue;
+    const processed = await processCompletedUserAction(workspaceId, request.id);
+    if (processed.resumeStatus === "queued") actionRequests += 1;
+  }
+  return { recoveryCases, actionRequests };
 }
 
 export async function processJob(job: QueueJob): Promise<void> {
