@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { audit } from "@/lib/audit";
-import { advanceLease, transition, TransitionError } from "@/lib/control-plane";
+import { transition, TransitionError } from "@/lib/control-plane";
 import { loadConnectionBinding, saveExternalVaultConnection } from "@/lib/hosted";
 import { fetchNangoIdentity, nangoIntegrationAvailable, providerForIntegration } from "@/lib/integrations/providers";
 import { resolveRecoveryTarget } from "@/lib/recovery-target";
@@ -91,7 +91,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
       actor: "nango-connect",
       note: `${provider.label} subject ${identity.subject}`,
     });
-    const generation = await advanceLease(record.workspaceId, record.connectionId);
+    const generation = record.leaseGeneration;
+    if (!generation) throw new Error("identity verification did not rotate the credential lease");
     // Auto-reconciliation BEFORE resume: settle every unknown-outcome action of
     // this run against the provider, so the runtime resumes into a ledger of
     // known verdicts — never a blind retry of something that already committed.

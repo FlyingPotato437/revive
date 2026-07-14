@@ -1,10 +1,14 @@
 import crypto from "node:crypto";
-import { completeJob, enqueueJob, failJob, type QueueJob } from "./hosted";
+import { completeJob, enqueueJob, failJob, loadConnectionBinding, type QueueJob } from "./hosted";
 import { hmacHex } from "./secure-envelope";
 import { audit } from "./audit";
 import { getCase, transition, type ControlCase } from "./control-plane";
 import { getResumeEndpoint } from "./workspace-secrets";
-import { markUserActionResume, type UserActionRequest } from "./action-requests";
+import { getUserActionRequest, markUserActionResume, markUserActionResumeAssessment, type UserActionRequest } from "./action-requests";
+import { assessResumeSafety } from "./resolution-intelligence";
+import { markDeadRunResolved } from "./dead-runs";
+import { autoReconcileRun } from "./auto-reconcile";
+import { emitSpan } from "./telemetry";
 
 export interface WebhookEvent {
   id: string;
@@ -185,6 +189,9 @@ export async function deliverRuntimeResumeJob(job: QueueJob): Promise<void> {
   if (data.checkpointId && acknowledgement.checkpointId !== data.checkpointId) {
     throw new Error("runtime adapter acknowledged the wrong checkpoint");
   }
+  if (acknowledgement.generation !== data.generation) {
+    throw new Error("runtime adapter acknowledged the wrong generation");
+  }
 
   const record = await getCase(data.workspaceId, data.caseId);
   if (!record) throw new Error("recovery case no longer exists");
@@ -252,6 +259,56 @@ export async function deliverUserActionResumeJob(job: QueueJob): Promise<void> {
     workspaceId, actor: "runtime-adapter", subjectKind: "action_request", subjectId: data.actionRequestId,
     event: "resume_acknowledged", detail: { runId: data.runId, checkpointId: data.checkpointId, generation: data.generation },
   });
+  void emitSpan("revive.resume.acknowledged", {
+    "revive.workspace_id": workspaceId,
+    "revive.run_id": data.runId,
+    "revive.request_id": data.actionRequestId,
+    "revive.checkpoint_id": data.checkpointId,
+    "revive.generation": data.generation,
+    "revive.delivery_id": job.id,
+  }, { traceSeed: `${workspaceId}:${data.runId}` });
+}
+
+/** Expand the action-completion outbox event into a signed continuation job.
+ * Safe to call inline for low latency and again from the worker after a crash. */
+export async function processCompletedUserAction(workspaceId: string, actionRequestId: string): Promise<UserActionRequest> {
+  let request = await getUserActionRequest(workspaceId, actionRequestId);
+  if (!request) throw new Error("completed action request no longer exists");
+  if (request.status !== "completed") return request;
+  if (request.validation?.deadRunId) await markDeadRunResolved(workspaceId, request.id);
+  if (!request.resumeAssessment) {
+    const assessment = await assessResumeSafety(request);
+    await markUserActionResumeAssessment(workspaceId, request.id, assessment);
+    request = await getUserActionRequest(workspaceId, request.id) || { ...request, resumeAssessment: assessment };
+  }
+  if (request.resumeAssessment?.decision === "manual_review") {
+    await markUserActionResume(workspaceId, request.id, "held_for_review");
+    return await getUserActionRequest(workspaceId, request.id) || { ...request, resumeStatus: "held_for_review" };
+  }
+  if (request.resumeStatus === "acknowledged") return request;
+  const jobId = await enqueueUserActionResume(request);
+  await markUserActionResume(workspaceId, request.id, jobId ? "queued" : "not_configured", jobId || undefined);
+  return await getUserActionRequest(workspaceId, request.id) || request;
+}
+
+/** Expand an atomic identity-verification outbox event. Reconciliation always
+ * precedes callback enqueue, including when the original HTTP request crashed. */
+export async function processVerifiedRecovery(workspaceId: string, caseId: string): Promise<void> {
+  const record = await getCase(workspaceId, caseId);
+  if (!record) throw new Error("verified recovery case no longer exists");
+  if (["resumed", "reconciled", "completed"].includes(record.state)) return;
+  if (record.state !== "identity_verified") throw new Error(`recovery case cannot continue from ${record.state}`);
+  const binding = await loadConnectionBinding(record.connectionId, workspaceId);
+  await autoReconcileRun({
+    workspaceId,
+    projectId: record.projectId,
+    runId: record.runId,
+    connectionId: record.connectionId,
+    integrationId: binding?.integrationId || "microsoft-tenant-specific",
+    actor: "transactional-outbox",
+  });
+  const jobId = await enqueueRuntimeResume(record, record.leaseGeneration ?? 1);
+  if (!jobId) throw new Error("no runtime resume endpoint is configured for this workspace");
 }
 
 export async function processJob(job: QueueJob): Promise<void> {
@@ -259,6 +316,12 @@ export async function processJob(job: QueueJob): Promise<void> {
     if (job.kind === "webhook.deliver") await deliverWebhookJob(job);
     else if (job.kind === "runtime.resume") await deliverRuntimeResumeJob(job);
     else if (job.kind === "runtime.action_resume") await deliverUserActionResumeJob(job);
+    else if (job.kind === "outbox.action_request_completed") {
+      await processCompletedUserAction(String(job.payload.workspaceId), String(job.payload.actionRequestId));
+    }
+    else if (job.kind === "outbox.recovery_identity_verified") {
+      await processVerifiedRecovery(String(job.payload.workspaceId), String(job.payload.caseId));
+    }
     else throw new Error(`unknown job kind: ${job.kind}`);
     await completeJob(job.id);
   } catch (error) {

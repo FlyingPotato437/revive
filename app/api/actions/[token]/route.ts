@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { completeUserActionRequest, getUserActionRequestByToken, markUserActionResume, markUserActionResumeAssessment, toPublicUserAction, validateUserActionResponse } from "@/lib/action-requests";
+import { completeUserActionRequest, getUserActionRequestByToken, toPublicUserAction, validateUserActionResponse } from "@/lib/action-requests";
 import { sessionFromCookies } from "@/lib/auth";
 import { TransitionError } from "@/lib/control-plane";
 import { audit } from "@/lib/audit";
-import { enqueueUserActionResume } from "@/lib/webhooks";
-import { assessResumeSafety, validateResolution } from "@/lib/resolution-intelligence";
-import { markDeadRunResolved } from "@/lib/dead-runs";
+import { processCompletedUserAction } from "@/lib/webhooks";
+import { validateResolution } from "@/lib/resolution-intelligence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,21 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       generation: Number(body.generation), response: submittedResponse,
       authenticatedEmail, validationResult,
     });
-    if (request.validation?.deadRunId) await markDeadRunResolved(request.workspaceId, request.id);
-    if (!request.resumeAssessment) {
-      const assessment = await assessResumeSafety(request);
-      await markUserActionResumeAssessment(request.workspaceId, request.id, assessment);
-      request = await getUserActionRequestByToken(token) || { ...request, resumeAssessment: assessment };
-    }
-    if (request.resumeAssessment?.decision === "manual_review") {
-      await markUserActionResume(request.workspaceId, request.id, "held_for_review");
-      request = await getUserActionRequestByToken(token) || { ...request, resumeStatus: "held_for_review" };
-    }
-    if (request.resumeStatus === "not_configured" || request.resumeStatus === "failed") {
-      const jobId = await enqueueUserActionResume(request);
-      await markUserActionResume(request.workspaceId, request.id, jobId ? "queued" : "not_configured", jobId || undefined);
-      request = await getUserActionRequestByToken(token) || request;
-    }
+    request = await processCompletedUserAction(request.workspaceId, request.id);
     await audit({
       workspaceId: request.workspaceId, actor: request.completedBy?.email || "secure-link", subjectKind: "action_request", subjectId: request.id,
       event: before?.status === "completed" ? "completion_replayed" : "completed", detail: { runId: request.runId, checkpointId: request.checkpointId, generation: request.generation, responseFields: Object.keys(request.response || {}), resumeStatus: request.resumeStatus },

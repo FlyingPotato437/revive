@@ -31,8 +31,8 @@ export default async function QuickstartPage() {
   return <div className="mx-auto max-w-[1180px] px-4 pb-20 pt-7 sm:px-6 lg:px-8">
     <PageHeader
       eyebrow="Guided setup"
-      title="Complete one recovery before touching production"
-      description="Revive created the workspace and project. Connect a runtime, create a safe test blocker, and send yourself the exact request a customer would receive."
+      title="Prove recovery end to end before touching production"
+      description="Start with the self-contained golden run, then connect your real runtime and send yourself the exact request a customer would receive."
     />
     <div className="mt-5"><QuickstartFlow initial={{
       email: auth.email,

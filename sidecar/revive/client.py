@@ -130,6 +130,130 @@ class ReviveClient:
             raise RuntimeError(f"dead-run resolution failed ({status}): {response}")
         return response
 
+    def request_action(
+        self,
+        *,
+        run_id: str,
+        idem_key: str,
+        action_type: str,
+        title: str,
+        recipient: dict,
+        checkpoint_id: Optional[str] = None,
+        generation: int = 1,
+        description: str = "",
+        fields: Optional[list[dict]] = None,
+        context: Optional[dict] = None,
+        identity_mode: str = "secure_link",
+        destination_url: Optional[str] = None,
+        expires_in: str = "48h",
+    ) -> dict:
+        """Ask one identity-bound person to unblock a suspended run."""
+        payload: dict[str, Any] = {
+            "runId": run_id,
+            "idempotencyKey": idem_key,
+            "actionType": action_type,
+            "title": title,
+            "description": description,
+            "recipient": recipient,
+            "generation": generation,
+            "identityMode": identity_mode,
+            "expiresIn": expires_in,
+        }
+        if checkpoint_id:
+            payload["checkpointId"] = checkpoint_id
+        if fields is not None:
+            payload["fields"] = fields
+        if context is not None:
+            payload["context"] = context
+        if destination_url:
+            payload["destinationUrl"] = destination_url
+        status, response = self._request("POST", "/v1/action-requests", payload)
+        if status not in (200, 201):
+            raise RuntimeError(f"action request failed ({status}): {response}")
+        return dict(response.get("request") or response)
+
+    def get_action_request(self, request_id: str) -> dict:
+        status, response = self._request("GET", f"/v1/action-requests/{request_id}")
+        if status != 200:
+            raise RuntimeError(f"get action request failed ({status}): {response}")
+        return dict(response.get("request") or response)
+
+    def cancel_action_request(self, request_id: str) -> dict:
+        status, response = self._request("DELETE", f"/v1/action-requests/{request_id}")
+        if status != 200:
+            raise RuntimeError(f"cancel action request failed ({status}): {response}")
+        return dict(response.get("request") or response)
+
+    def create_transaction(
+        self,
+        *,
+        run_id: str,
+        contract_key: str,
+        idem_key: str,
+        steps: list[dict],
+        title: Optional[str] = None,
+        require_approval: bool = False,
+        trace_context: Optional[dict] = None,
+        input_ref: Optional[str] = None,
+    ) -> dict:
+        """Register one outcome spanning one or more protected actions."""
+        payload: dict[str, Any] = {
+            "runId": run_id,
+            "contractKey": contract_key,
+            "idempotencyKey": idem_key,
+            "steps": steps,
+            "requireApproval": require_approval,
+        }
+        if title:
+            payload["title"] = title
+        if trace_context:
+            payload["traceContext"] = trace_context
+        if input_ref:
+            payload["inputRef"] = input_ref
+        status, response = self._request("POST", "/v1/transactions", payload)
+        if status not in (200, 201):
+            raise RuntimeError(f"transaction registration failed ({status}): {response}")
+        return dict(response.get("transaction") or response)
+
+    def transition_transaction_step(
+        self,
+        transaction_id: str,
+        step_key: str,
+        *,
+        to: str,
+        expected_version: int,
+        action_id: Optional[str] = None,
+        remote_id: Optional[str] = None,
+        evidence: Optional[dict] = None,
+        note: Optional[str] = None,
+        result_summary: Optional[str] = None,
+    ) -> dict:
+        payload: dict[str, Any] = {"to": to, "expectedVersion": expected_version}
+        for key, value in (
+            ("actionId", action_id), ("remoteId", remote_id),
+            ("evidence", evidence), ("note", note), ("resultSummary", result_summary),
+        ):
+            if value is not None:
+                payload[key] = value
+        status, response = self._request(
+            "POST", f"/v1/transactions/{transaction_id}/steps/{step_key}", payload
+        )
+        if status != 200:
+            raise RuntimeError(f"transaction step transition failed ({status}): {response}")
+        return dict(response.get("transaction") or response)
+
+    def decide_transaction(self, transaction_id: str, decision: str,
+                           reason: Optional[str] = None) -> dict:
+        payload = {"decision": decision}
+        if reason:
+            payload["reason"] = reason
+        status, response = self._request(
+            "POST", f"/v1/transactions/{transaction_id}/approval", payload
+        )
+        if status != 200:
+            raise RuntimeError(f"transaction decision failed ({status}): {response}")
+        return dict(response.get("transaction") or response)
+
     def protect_action(
         self,
         *,
@@ -141,6 +265,9 @@ class ReviveClient:
         idem_key: Optional[str] = None,
         classify_error: Optional[Callable[[BaseException], Optional[dict]]] = None,
         lease_generation: Optional[int] = None,
+        reconcile: Optional[Callable[[dict], dict]] = None,
+        reconcile_hints: Optional[dict] = None,
+        risk_context: Optional[dict] = None,
     ) -> Any:
         """Run execute() exactly once for this idempotency key.
 
@@ -159,6 +286,10 @@ class ReviveClient:
             payload["checkpointId"] = checkpoint_id
         if lease_generation is not None:
             payload["leaseGeneration"] = lease_generation
+        if reconcile_hints:
+            payload["reconcileHints"] = reconcile_hints
+        if risk_context:
+            payload["riskContext"] = risk_context
         status, action = self._request("POST", "/v1/actions", payload)
         if status == 409 and action.get("replayVerdict") == "blocked_stale_generation":
             raise ReviveParkedError(ParkedRun(case_id="", recovery_url=None, reason="stale credential generation"))
@@ -172,13 +303,43 @@ class ReviveClient:
             except json.JSONDecodeError:
                 return result_ref
         if verdict == "reconcile_first":
-            raise AmbiguousCommitError(action.get("id", ""))
+            if reconcile is None:
+                raise AmbiguousCommitError(action.get("id", ""))
+            reconciled = reconcile({
+                "run_id": run_id, "checkpoint_id": checkpoint_id,
+                "connection_id": connection_id, "action_key": action_key,
+                "idempotency_key": key, "action_id": action.get("id", ""),
+            }) or {}
+            if reconciled.get("committed"):
+                status, response = self._request(
+                    "POST", f"/v1/actions/{action.get('id', '')}/reconciled",
+                    {"remoteId": reconciled.get("remote_id") or reconciled.get("remoteId"),
+                     "note": reconciled.get("note")},
+                )
+                if status != 200:
+                    raise RuntimeError(f"action reconciliation failed ({status}): {response}")
+                return reconciled.get("value")
 
         action_id = str(action["id"])
         self._request("POST", f"/v1/actions/{action_id}/started", {})
         try:
             result = execute()
         except BaseException as error:  # noqa: BLE001 — classification decides
+            if isinstance(error, AmbiguousCommitError) and reconcile is not None:
+                reconciled = reconcile({
+                    "run_id": run_id, "checkpoint_id": checkpoint_id,
+                    "connection_id": connection_id, "action_key": action_key,
+                    "idempotency_key": key, "action_id": action_id,
+                }) or {}
+                if reconciled.get("committed"):
+                    status, response = self._request(
+                        "POST", f"/v1/actions/{action_id}/reconciled",
+                        {"remoteId": reconciled.get("remote_id") or reconciled.get("remoteId"),
+                         "note": reconciled.get("note")},
+                    )
+                    if status != 200:
+                        raise RuntimeError(f"action reconciliation failed ({status}): {response}")
+                    return reconciled.get("value")
             failure = classify_error(error) if classify_error else None
             if failure is None:
                 failure = default_classifier(error)

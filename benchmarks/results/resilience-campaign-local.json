@@ -1,0 +1,27 @@
+{
+  "kind": "revive-local-resilience-campaign",
+  "recordedAt": "2026-07-14T01:41:04Z",
+  "seed": 7312026,
+  "elapsedMs": 29909.25,
+  "caveat": "Local SQLite/SDK correctness campaign; not production load, uptime, latency, recovery-rate, or provider-compatibility evidence.",
+  "invariants": {
+    "exactlyOneProviderWrite": true,
+    "everyStaleWakeupRejected": true,
+    "everyWrongIdentityRejected": true,
+    "everyOldLeaseFenced": true,
+    "everySuccessfulCallbackDurable": true
+  },
+  "counts": {
+    "runs": 1000,
+    "workerReplacements": 1000,
+    "postCommitLosses": 665,
+    "providerReconciliations": 665,
+    "safeReplays": 335,
+    "staleWakeupsRejected": 1000,
+    "wrongIdentitiesRejected": 1000,
+    "staleLeasesRejected": 1000,
+    "durableCallbackReplays": 1000,
+    "tamperedCallbacksRejected": 100,
+    "duplicateWrites": 0
+  }
+}

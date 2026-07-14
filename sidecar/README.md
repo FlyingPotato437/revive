@@ -66,6 +66,12 @@ except ReviveParkedError as parked:
 attempt, and opens a recovery case when the credential is rejected. Idempotency
 keys are derived from `run_id + action_key` unless you pass `idem_key`.
 
+Python now exposes the same hosted recovery surface as the TypeScript SDK:
+`request_action`, `get_action_request`, `cancel_action_request`,
+`create_transaction`, `transition_transaction_step`, and
+`decide_transaction`. `protect_action` also accepts `reconcile`,
+`reconcile_hints`, and privacy-preserving `risk_context` arguments.
+
 ## Framework adapters
 
 ```python
@@ -116,8 +122,18 @@ def resume(data):  # resume the parked run, e.g. LangGraph:
     graph.invoke(Command(resume={"connection_id": data["connectionId"],
                                  "lease_generation": data["generation"]}), config)
 
-serve(ResumeReceiver(secret=os.environ["REVIVE_RESUME_SECRET"], resume=resume), port=8752)
+serve(ResumeReceiver(
+    secret=os.environ["REVIVE_RESUME_SECRET"],
+    resume=resume,
+    dedupe_path=".revive/resume-receipts.db",
+), port=8752)
 ```
+
+`dedupe_path` persists successful callback acknowledgements across receiver
+restarts. Set `REVIVE_RECEIVER_DB` to configure the same store without changing
+code. The handler and receipt write are serialized for simultaneous retries;
+the runtime's run/checkpoint idempotency remains the crash-safety boundary if a
+process exits before a successful receipt is committed.
 
 Reference receivers and a full runnable loop live in `examples/`:
 `resume_receiver_fastapi.py`, `resume_receiver_express.js`, and

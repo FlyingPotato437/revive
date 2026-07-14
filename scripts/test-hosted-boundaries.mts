@@ -8,13 +8,14 @@ import {
   sqlClient,
   withWorkspaceTransaction,
 } from "../lib/hosted.ts";
-import { getAction, getCase, listActions, listCases, openCase, registerAction } from "../lib/control-plane.ts";
+import { getAction, getCase, listActions, listCases, openCase, registerAction, transition } from "../lib/control-plane.ts";
 import { deleteCustomConnector, getCustomConnector, setCustomConnector } from "../lib/custom-connectors.ts";
 import { workspaceForApiKey } from "../lib/workspaces.ts";
 import { GET as listActionsRoute, POST as createActionRoute } from "../app/api/v1/actions/route.ts";
 import { POST as completeActionRoute } from "../app/api/v1/actions/[id]/complete/route.ts";
 import { getDeadRun, getDeadRunStats, listDeadRuns, recordDeadRun } from "../lib/dead-runs.ts";
 import { reviveDeadRun } from "../lib/revive-dead-run.ts";
+import { completeUserActionRequest } from "../lib/action-requests.ts";
 
 if (!hostedDatabaseEnabled()) throw new Error("DATABASE_URL is required");
 const suffix = crypto.randomBytes(6).toString("hex");
@@ -66,6 +67,26 @@ try {
   });
   assert.equal(resolution.request.validation?.deadRunId, deadRun.id);
   assert.equal(resolution.request.generation, 3);
+  const actionToken = decodeURIComponent(String(resolution.request.url).split("/actions/")[1]);
+  await completeUserActionRequest(actionToken, { generation: 3, response: { completed: true } });
+  const actionOutbox = await sql<{ n: number }[]>`
+    select count(*)::int as n from revive_jobs
+    where workspace_id = ${workspaceId} and kind = 'outbox.action_request_completed'
+  `;
+  assert.equal(actionOutbox[0].n, 1, "action completion must atomically create one outbox record");
+
+  let verifiedCase = caseA;
+  for (const to of ["classified", "parked", "awaiting_authorization", "identity_verified"] as const) {
+    verifiedCase = await transition(workspaceId, verifiedCase.id, {
+      to, expectedVersion: verifiedCase.version, actor: "hosted-boundary-test",
+    }, projectA);
+  }
+  assert.equal(verifiedCase.leaseGeneration, 2, "identity verification must atomically rotate the lease");
+  const recoveryOutbox = await sql<{ n: number }[]>`
+    select count(*)::int as n from revive_jobs
+    where workspace_id = ${workspaceId} and kind = 'outbox.recovery_identity_verified'
+  `;
+  assert.equal(recoveryOutbox[0].n, 1, "identity verification must atomically create one outbox record");
 
   async function makeKey(name: string, projectId: string, role: "viewer" | "operator" | "admin") {
     const raw = `rv_live_${Buffer.from(workspaceId).toString("base64url")}.${crypto.randomBytes(24).toString("base64url")}`;
@@ -116,6 +137,7 @@ try {
   assert.equal(await getCustomConnector(workspaceId, `linear-${suffix}`), null);
   console.log("hosted project, role, detector, and connector boundary checks passed");
 } finally {
+  await sql`delete from revive_jobs where workspace_id = ${workspaceId}`;
   await withWorkspaceTransaction(workspaceId, async (tx) => {
     await tx`delete from revive_dead_runs where workspace_id = ${workspaceId}`;
     await tx`delete from revive_action_requests where workspace_id = ${workspaceId}`;
@@ -123,6 +145,7 @@ try {
     await tx`delete from revive_actions where workspace_id = ${workspaceId}`;
     await tx`delete from revive_api_keys where workspace_id = ${workspaceId}`;
     await tx`delete from revive_custom_connectors where workspace_id = ${workspaceId}`;
+    await tx`delete from revive_leases where workspace_id = ${workspaceId}`;
     await tx`delete from revive_projects where workspace_id = ${workspaceId}`;
   });
   await sql`delete from revive_workspaces where id = ${workspaceId}`;
@@ -130,4 +153,5 @@ try {
     await sql`delete from revive_memberships where organization_id = ${org[0].organization_id}`;
     await sql`delete from revive_organizations where id = ${org[0].organization_id}`;
   }
+  await sql.end();
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiKey } from "@/lib/api-auth";
-import { advanceLease, transition, TransitionError, type CaseState } from "@/lib/control-plane";
+import { transition, TransitionError, type CaseState } from "@/lib/control-plane";
 import { mirrorCaseToConsole } from "@/lib/console-mirror";
 import { audit } from "@/lib/audit";
 import { enqueueRuntimeResume } from "@/lib/webhooks";
@@ -44,7 +44,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     let resumeJobId: string | null = null;
     let reconciliation;
     if (record.state === "identity_verified") {
-      rotatedGeneration = await advanceLease(auth.workspace.id, record.connectionId);
+      rotatedGeneration = record.leaseGeneration;
+      if (!rotatedGeneration) throw new Error("identity verification did not rotate the credential lease");
       const binding = await loadConnectionBinding(record.connectionId, auth.workspace.id);
       // Settle unknown-outcome actions against the provider before the resume
       // callback fires, so the runtime never blind-retries a committed effect.

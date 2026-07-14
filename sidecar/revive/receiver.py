@@ -36,7 +36,8 @@ Wire protocol (mirrors lib/webhooks.ts on the control plane):
 - signed message: ``{webhook-id}.{webhook-timestamp}.{raw-body}``
 - required acknowledgement for ``recovery.resume_requested``::
 
-      {"ok": true, "resumed": true, "runId": ..., "checkpointId": ...}
+      {"ok": true, "resumed": true, "runId": ..., "checkpointId": ...,
+       "generation": ...}
 
 The control plane retries delivery (up to 8 attempts) until it receives that
 acknowledgement, then transitions the case identity_verified -> resumed.
@@ -46,6 +47,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
+import sqlite3
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -74,6 +77,59 @@ def verify_signature(secret: str, signature: str, webhook_id: str, timestamp: st
 ResumeHandler = Callable[[dict], Optional[dict]]
 
 
+class _ReceiptStore:
+    """Successful callback receipts, optionally durable across worker restarts.
+
+    A receipt is written only after the runtime handler returns successfully.
+    If a process dies before that point, the control plane retries and the
+    runtime's own run/checkpoint idempotency remains the final safety boundary.
+    """
+
+    def __init__(self, path: Optional[str] = None):
+        self.path = path
+        self._memory: dict[str, dict] = {}
+        self._connection: Optional[sqlite3.Connection] = None
+        if path:
+            directory = os.path.dirname(os.path.abspath(path))
+            os.makedirs(directory, mode=0o700, exist_ok=True)
+            self._connection = sqlite3.connect(path, check_same_thread=False)
+            self._connection.execute("pragma journal_mode = wal")
+            self._connection.execute("pragma synchronous = full")
+            self._connection.execute(
+                """create table if not exists resume_receipts (
+                       webhook_id text primary key,
+                       response_json text not null,
+                       acknowledged_at real not null
+                   )"""
+            )
+            self._connection.commit()
+
+    def get(self, webhook_id: str) -> Optional[dict]:
+        if self._connection is None:
+            value = self._memory.get(webhook_id)
+            return dict(value) if value else None
+        row = self._connection.execute(
+            "select response_json from resume_receipts where webhook_id = ?",
+            (webhook_id,),
+        ).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def put(self, webhook_id: str, response: dict) -> None:
+        if self._connection is None:
+            self._memory[webhook_id] = dict(response)
+            return
+        self._connection.execute(
+            "insert or ignore into resume_receipts (webhook_id, response_json, acknowledged_at) values (?, ?, ?)",
+            (webhook_id, json.dumps(response, separators=(",", ":")), time.time()),
+        )
+        self._connection.commit()
+
+    def close(self) -> None:
+        if self._connection is not None:
+            self._connection.close()
+            self._connection = None
+
+
 class ResumeReceiver:
     """Verifies, deduplicates, and dispatches control-plane resume callbacks.
 
@@ -86,13 +142,14 @@ class ResumeReceiver:
     prior success.
     """
 
-    def __init__(self, secret: str, resume: ResumeHandler, tolerance_seconds: int = 300):
+    def __init__(self, secret: str, resume: ResumeHandler, tolerance_seconds: int = 300,
+                 *, dedupe_path: Optional[str] = None):
         if not secret:
             raise ValueError("a shared secret is required")
         self.secret = secret
         self.resume = resume
         self.tolerance_seconds = tolerance_seconds
-        self._acked: dict[str, dict] = {}
+        self._receipts = _ReceiptStore(dedupe_path or os.environ.get("REVIVE_RECEIVER_DB"))
         self._lock = threading.Lock()
 
     def handle(self, headers: Mapping[str, str], body: bytes) -> Tuple[int, dict]:
@@ -117,25 +174,33 @@ class ResumeReceiver:
             # later never wedge the delivery queue.
             return 200, {"ok": True, "ignored": kind}
 
+        # Serialize the receipt check + handler + receipt write. This prevents
+        # simultaneous redeliveries from entering the runtime twice. Durable
+        # receipts then extend the same guarantee across successful restarts.
         with self._lock:
-            if webhook_id in self._acked:
-                return 200, self._acked[webhook_id]
+            cached = self._receipts.get(webhook_id)
+            if cached:
+                return 200, cached
+            data = event.get("data") or {}
+            try:
+                extra = self.resume(data) or {}
+            except Exception as error:  # noqa: BLE001 — surfaced to the retrying caller
+                return 500, {"ok": False, "error": str(error)}
+            ack = {
+                "ok": True,
+                "resumed": True,
+                "runId": data.get("runId"),
+                "checkpointId": data.get("checkpointId"),
+                "generation": data.get("generation"),
+                **extra,
+            }
+            self._receipts.put(webhook_id, ack)
+            return 200, ack
 
-        data = event.get("data") or {}
-        try:
-            extra = self.resume(data) or {}
-        except Exception as error:  # noqa: BLE001 — surfaced to the retrying caller
-            return 500, {"ok": False, "error": str(error)}
-        ack = {
-            "ok": True,
-            "resumed": True,
-            "runId": data.get("runId"),
-            "checkpointId": data.get("checkpointId"),
-            **extra,
-        }
+    def close(self) -> None:
+        """Close the optional durable receipt store."""
         with self._lock:
-            self._acked[webhook_id] = ack
-        return 200, ack
+            self._receipts.close()
 
 
 def serve(receiver: ResumeReceiver, port: int, host: str = "127.0.0.1") -> ThreadingHTTPServer:

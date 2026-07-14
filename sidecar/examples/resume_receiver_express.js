@@ -82,7 +82,13 @@ app.post("/revive/resume", express.raw({ type: "*/*" }), async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, error: String(error) });
   }
-  const ack = { ok: true, resumed: true, runId: event.data.runId, checkpointId: event.data.checkpointId };
+  const ack = {
+    ok: true,
+    resumed: true,
+    runId: event.data.runId,
+    checkpointId: event.data.checkpointId,
+    generation: event.data.generation,
+  };
   acked.set(webhookId, ack);
   return res.json(ack);
 });

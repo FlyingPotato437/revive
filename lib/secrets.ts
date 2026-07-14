@@ -41,17 +41,30 @@ export function encryptionKey(): Buffer {
   return crypto.createHash("sha256").update(`revive:credentials:${applicationSecret()}`).digest();
 }
 
-export function activeEncryptionKey(): { id: string; key: Buffer } {
-  const raw = process.env.REVIVE_ENCRYPTION_KEYS;
-  if (!raw) return { id: "legacy", key: encryptionKey() };
+function configuredKeyring(): Record<string, string> | null {
+  let raw = process.env.REVIVE_ENCRYPTION_KEYS;
+  if (!raw && process.env.REVIVE_ENCRYPTION_KEYS_FILE) {
+    const file = path.resolve(process.env.REVIVE_ENCRYPTION_KEYS_FILE);
+    raw = fs.readFileSync(file, "utf8");
+  }
+  if (!raw) return null;
   let entries: Record<string, string>;
   try {
     entries = JSON.parse(raw) as Record<string, string>;
   } catch {
-    throw new Error("REVIVE_ENCRYPTION_KEYS must be a JSON object of key IDs to base64 keys");
+    throw new Error("REVIVE_ENCRYPTION_KEYS or REVIVE_ENCRYPTION_KEYS_FILE must contain a JSON object of key IDs to base64 keys");
   }
+  if (!entries || Array.isArray(entries) || !Object.keys(entries).length) {
+    throw new Error("the encryption keyring must contain at least one key");
+  }
+  return entries;
+}
+
+export function activeEncryptionKey(): { id: string; key: Buffer } {
+  const entries = configuredKeyring();
+  if (!entries) return { id: "legacy", key: encryptionKey() };
   const id = process.env.REVIVE_ACTIVE_ENCRYPTION_KEY_ID || Object.keys(entries)[0];
-  if (!id || !entries[id]) throw new Error("REVIVE_ACTIVE_ENCRYPTION_KEY_ID is not present in REVIVE_ENCRYPTION_KEYS");
+  if (!id || !entries[id]) throw new Error("REVIVE_ACTIVE_ENCRYPTION_KEY_ID is not present in the configured keyring");
   const key = Buffer.from(entries[id], "base64");
   if (key.length !== 32) throw new Error(`encryption key ${id} must decode to 32 bytes`);
   return { id, key };
@@ -59,9 +72,8 @@ export function activeEncryptionKey(): { id: string; key: Buffer } {
 
 export function encryptionKeyById(id: string): Buffer {
   if (id === "legacy") return encryptionKey();
-  const raw = process.env.REVIVE_ENCRYPTION_KEYS;
-  if (!raw) throw new Error(`encryption key ${id} is not configured`);
-  const entries = JSON.parse(raw) as Record<string, string>;
+  const entries = configuredKeyring();
+  if (!entries) throw new Error(`encryption key ${id} is not configured`);
   const encoded = entries[id];
   if (!encoded) throw new Error(`encryption key ${id} is not configured`);
   const key = Buffer.from(encoded, "base64");

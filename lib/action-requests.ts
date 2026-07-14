@@ -6,6 +6,7 @@ import { TransitionError } from "./control-plane";
 import { hostedDatabaseEnabled, withWorkspaceTransaction } from "./hosted";
 import { openJson, sealJson, sha256Base64Url } from "./secure-envelope";
 import type { ResolutionValidationResult, ResumeAssessment } from "./resolution-intelligence";
+import { emitSpan } from "./telemetry";
 
 export type UserActionType =
   | "approval"
@@ -519,7 +520,7 @@ export async function completeUserActionRequest(token: string, input: { generati
     writeLocal(data); return stripStored(record);
   }
 
-  return withWorkspaceTransaction(workspaceId, async (sql) => {
+  const completed = await withWorkspaceTransaction(workspaceId, async (sql) => {
     const rows = await sql<DbRequest[]>`select * from revive_action_requests where workspace_id = ${workspaceId} and token_hash = ${tokenHash} for update`;
     const row = rows[0];
     if (!row) throw new TransitionError("action link is invalid", 404);
@@ -542,8 +543,30 @@ export async function completeUserActionRequest(token: string, input: { generati
       returning *
     `;
     if (!updated[0]) throw new TransitionError("action request changed before completion", 409);
+    // Transactional outbox: the human response and the durable instruction to
+    // continue it commit together. The worker expands this minimal event into
+    // a signed runtime callback. Reprocessing is safe because both job IDs are
+    // deterministic and the runtime receiver deduplicates successful receipts.
+    const outboxId = `outbox_action_${row.id}_g${Number(row.generation)}`;
+    await sql`
+      insert into revive_jobs
+        (id, workspace_id, kind, payload, status, attempts, max_attempts, run_at, created_at, updated_at)
+      values
+        (${outboxId}, ${workspaceId}, 'outbox.action_request_completed',
+         ${sql.json({ workspaceId, actionRequestId: row.id })}, 'pending', 0, 12, now(), now(), now())
+      on conflict (id) do nothing
+    `;
     return mapDb(updated[0]);
   });
+  void emitSpan("revive.action_request.completed", {
+    "revive.workspace_id": workspaceId,
+    "revive.project_id": completed.projectId,
+    "revive.run_id": completed.runId,
+    "revive.request_id": completed.id,
+    "revive.checkpoint_id": completed.checkpointId,
+    "revive.generation": completed.generation,
+  }, { traceSeed: `${workspaceId}:${completed.runId}` });
+  return completed;
 }
 
 export async function cancelUserActionRequest(workspaceId: string, id: string): Promise<UserActionRequest> {

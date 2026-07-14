@@ -1,0 +1,89 @@
+{
+  "kind": "revive-golden-run",
+  "recordedAt": "2026-07-14T01:49:00.744Z",
+  "mode": "interactive",
+  "runId": "run_golden_1783993711955",
+  "checkpointId": "approve-refund",
+  "generation": 7,
+  "assertions": {
+    "blockerDetected": true,
+    "humanActionCompleted": true,
+    "signedResumeAcknowledged": true,
+    "exactRunResumed": true,
+    "duplicateDeliveryDeduplicated": true,
+    "staleGenerationRejected": true,
+    "tamperedCallbackRejected": true,
+    "sideEffectReconciled": true,
+    "exactlyOneProviderWrite": true,
+    "outcomeVerified": true
+  },
+  "evidence": {
+    "deadRunId": "dr_mQmR-Rd3EVR8",
+    "actionRequestId": "uar_wLzUXyA6naet",
+    "protectedActionId": "act_zUzec-DVRW0E",
+    "transactionId": "txn_MB12NDUubx3v",
+    "remoteId": "refund_e0cc9bb67c23",
+    "resumeDeliveries": 2,
+    "runtimeExecutions": 1,
+    "providerWrites": 1,
+    "rejectedResumeDeliveries": 1
+  },
+  "timeline": [
+    {
+      "at": "2026-07-14T01:48:32.061Z",
+      "phase": "start",
+      "detail": "agent opened run_golden_1783993711955"
+    },
+    {
+      "at": "2026-07-14T01:48:32.062Z",
+      "phase": "step",
+      "detail": "loaded invoice invoice-4242 and prepared a $125 refund"
+    },
+    {
+      "at": "2026-07-14T01:48:32.063Z",
+      "phase": "detect",
+      "detail": "dr_mQmR-Rd3EVR8 classified approval_needed; run parked"
+    },
+    {
+      "at": "2026-07-14T01:48:32.065Z",
+      "phase": "request",
+      "detail": "uar_wLzUXyA6naet bound to finance-operator"
+    },
+    {
+      "at": "2026-07-14T01:49:00.535Z",
+      "phase": "fence",
+      "detail": "stale human response for generation 6 rejected"
+    },
+    {
+      "at": "2026-07-14T01:49:00.661Z",
+      "phase": "signature",
+      "detail": "tampered continuation rejected before runtime execution"
+    },
+    {
+      "at": "2026-07-14T01:49:00.663Z",
+      "phase": "human",
+      "detail": "identity-bound approval recorded"
+    },
+    {
+      "at": "2026-07-14T01:49:00.685Z",
+      "phase": "resume",
+      "detail": "worker B loaded run_golden_1783993711955 at checkpoint approve-refund"
+    },
+    {
+      "at": "2026-07-14T01:49:00.705Z",
+      "phase": "provider",
+      "detail": "refund_e0cc9bb67c23 committed, then the response was intentionally lost"
+    },
+    {
+      "at": "2026-07-14T01:49:00.707Z",
+      "phase": "reconcile",
+      "detail": "act_zUzec-DVRW0E linked to refund_e0cc9bb67c23; replay suppressed"
+    },
+    {
+      "at": "2026-07-14T01:49:00.716Z",
+      "phase": "verify",
+      "detail": "txn_MB12NDUubx3v settled as verified"
+    }
+  ],
+  "stateDirectory": "/var/folders/rm/6vgxvx1x2zx2628ss3w6sck80000gp/T/revive-golden-s9sRXr"
+}

@@ -23,6 +23,31 @@ Exactly-once writes, provider reconciliation, credential recovery, signed
 callbacks, and stale-worker fencing remain the execution-integrity layer under
 this flow.
 
+## Try the complete golden run
+
+The repository includes a self-contained acceptance run with no cloud account,
+provider credential, or database required:
+
+```bash
+npm install
+npm run demo:golden
+```
+
+Open the printed secure action URL and approve the test refund. The command
+keeps running while Revive resumes the exact run/checkpoint/generation on a
+replacement worker, simulates a provider commit followed by a lost response,
+reconciles that write, redelivers the signed callback, and verifies one runtime
+execution and one provider mutation. Machine-readable evidence is written to
+`benchmarks/results/golden-run-local.json`.
+
+Use `npm run test:golden` for the automatic CI version.
+
+Run the deterministic 1,000-run local fault campaign with
+`npm run bench:resilience`. It repeatedly replaces workers, injects
+post-commit response loss, rejects stale generations and wrong identities,
+rotates credential leases, and replays durable callback receipts. Its report
+explicitly excludes production performance and provider-compatibility claims.
+
 ## Install the free detector
 
 ```ts
@@ -205,6 +230,29 @@ connection ID, and integration ID. Custom definitions cannot shadow built-in
 adapters and are shown as **Provisional** because Revive cannot certify the
 provider's identity-field stability. Prototype-pollution path segments and
 absolute probe URLs are rejected.
+
+### Transactional continuation
+
+Human-action completion and identity verification write minimal outbox jobs in
+the same Postgres transaction as their state transition. The worker expands
+those events into signed callbacks after reconciliation. Deterministic job IDs
+make replay safe, and the Python receiver persists successful callback receipts
+with `dedupe_path` or `REVIVE_RECEIVER_DB`.
+
+### Encryption-key rotation
+
+Production can load a versioned keyring from `REVIVE_ENCRYPTION_KEYS` or a
+secret-manager/KMS sidecar mount at `REVIVE_ENCRYPTION_KEYS_FILE`. Set
+`REVIVE_ACTIVE_ENCRYPTION_KEY_ID`, verify every stored envelope, then rewrap
+after confirming a backup:
+
+```bash
+npm run security:verify-keys
+npm run security:rotate-keys
+```
+
+Rotation covers credential connections, workspace secrets, and single-use
+action capabilities without printing decrypted values.
 
 ### Project-scoped API keys
 

@@ -10,8 +10,13 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:backup": "sh scripts/db-backup.sh",
     "db:restore": "sh scripts/db-restore.sh",
+    "security:verify-keys": "node --env-file-if-exists=.env.local --import tsx scripts/rotate-encryption.mts",
+    "security:rotate-keys": "node --env-file-if-exists=.env.local --import tsx scripts/rotate-encryption.mts --apply",
     "sdk:build": "npm --prefix sdk/typescript run build",
     "bench:revive": "python3 sidecar/benchmarks/revivebench.py",
+    "bench:resilience": "python3 sidecar/benchmarks/resilience_campaign.py --runs 1000",
+    "demo:golden": "node --import tsx scripts/golden-run.mts",
+    "test:golden": "node --import tsx scripts/golden-run.mts --auto",
     "certify:live": ".venv/bin/python sidecar/benchmarks/live_langgraph_nango.py",
     "demo:killer": "node scripts/killer-demo.mjs",
     "worker": "node scripts/worker.mjs",
@@ -26,7 +31,9 @@
     "test:action-policy": "node --import tsx scripts/test-action-policy.mts",
     "test:outcomes": "node --import tsx scripts/test-outcome-transactions.mts",
     "test:action-requests": "node --import tsx scripts/test-action-requests.mts",
-    "test:dead-runs": "node --import tsx scripts/test-dead-runs.mts"
+    "test:dead-runs": "node --import tsx scripts/test-dead-runs.mts",
+    "test:encryption": "node --import tsx scripts/test-encryption-rotation.mts",
+    "test:telemetry": "node --import tsx scripts/test-telemetry.mts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.5.12",

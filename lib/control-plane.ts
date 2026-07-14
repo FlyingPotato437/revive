@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Sql } from "postgres";
 import { hostedDatabaseEnabled, withWorkspaceTransaction } from "./hosted";
+import { emitSpan } from "./telemetry";
 import { createRecoveryAccessUrl } from "./recovery-access";
 
 export type CaseState =
@@ -773,12 +774,23 @@ export async function transition(workspaceId: string, caseId: string, input: Tra
     record.state = input.to;
     record.version += 1;
     record.updatedAt = now;
+    if (input.to === "identity_verified") {
+      const leases = data.leases ?? (data.leases = []);
+      let lease = leases.find((item) => item.workspaceId === workspaceId && item.connectionId === record.connectionId);
+      if (!lease) {
+        lease = { workspaceId, connectionId: record.connectionId, generation: record.leaseGeneration ?? 1, updatedAt: now };
+        leases.push(lease);
+      }
+      lease.generation += 1;
+      lease.updatedAt = now;
+      record.leaseGeneration = lease.generation;
+    }
     if (TERMINAL_STATES.has(input.to)) record.resolvedAt = now;
     writeLocal(data);
     return record;
   }
 
-  return withWorkspaceTransaction(workspaceId, async (sql) => {
+  const transitioned = await withWorkspaceTransaction(workspaceId, async (sql) => {
     const rows = await sql<DbCase[]>`
       select * from revive_recovery_cases where id = ${caseId} and workspace_id = ${workspaceId}
         and (${projectId || null}::text is null or project_id = ${projectId || null}) for update
@@ -801,8 +813,47 @@ export async function transition(workspaceId: string, caseId: string, input: Tra
       returning *
     `;
     if (!updated[0]) throw new TransitionError("stale case version");
-    return mapCase(updated[0]);
+    let result = mapCase(updated[0]);
+    if (input.to === "identity_verified") {
+      await sql`
+        insert into revive_leases (workspace_id, connection_id, generation)
+        values (${workspaceId}, ${record.connectionId}, ${record.leaseGeneration ?? 1})
+        on conflict (workspace_id, connection_id) do nothing
+      `;
+      const generations = await sql<{ generation: number }[]>`
+        update revive_leases set generation = generation + 1, updated_at = now()
+        where workspace_id = ${workspaceId} and connection_id = ${record.connectionId}
+        returning generation
+      `;
+      const rotatedGeneration = generations[0].generation;
+      const cases = await sql<DbCase[]>`
+        update revive_recovery_cases set lease_generation = ${rotatedGeneration}, updated_at = now()
+        where id = ${caseId} and workspace_id = ${workspaceId}
+        returning *
+      `;
+      result = mapCase(cases[0]);
+      const outboxId = `outbox_recovery_${caseId}_v${result.version}`;
+      await sql`
+        insert into revive_jobs
+          (id, workspace_id, kind, payload, status, attempts, max_attempts, run_at, created_at, updated_at)
+        values
+          (${outboxId}, ${workspaceId}, 'outbox.recovery_identity_verified',
+           ${sql.json({ workspaceId, caseId })}, 'pending', 0, 12, now(), now(), now())
+        on conflict (id) do nothing
+      `;
+    }
+    return { result, previousState: record.state };
   });
+  void emitSpan("revive.recovery.transition", {
+    "revive.workspace_id": workspaceId,
+    "revive.project_id": transitioned.result.projectId,
+    "revive.run_id": transitioned.result.runId,
+    "revive.case_id": transitioned.result.id,
+    "revive.state_from": transitioned.previousState,
+    "revive.state_to": transitioned.result.state,
+    "revive.generation": transitioned.result.leaseGeneration,
+  }, { traceSeed: `${workspaceId}:${transitioned.result.runId}` });
+  return transitioned.result;
 }
 
 export async function getCase(workspaceId: string, caseId: string, projectId?: string): Promise<ControlCase | null> {

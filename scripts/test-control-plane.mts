@@ -238,7 +238,10 @@ async function main() {
       to, expectedVersion: runtimeCase.version, actor: "integration-test",
     });
   }
+  const runtimeGeneration = runtimeCase.leaseGeneration;
+  if (!runtimeGeneration) throw new Error("identity verification did not rotate the runtime lease");
   let signatureVerified = false;
+  let acknowledgementGeneration = runtimeGeneration - 1;
   const server = createServer((request, response) => {
     const chunks: Buffer[] = [];
     request.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
@@ -252,12 +255,43 @@ async function main() {
         body,
       );
       response.writeHead(200, { "content-type": "application/json" });
-      response.end(JSON.stringify({ ok: true, resumed: true, runId: runtimeRun, checkpointId }));
+      response.end(JSON.stringify({
+        ok: true,
+        resumed: true,
+        runId: runtimeRun,
+        checkpointId,
+        generation: acknowledgementGeneration,
+      }));
     });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   try {
+    let wrongGenerationRejected = false;
+    try {
+      await deliverRuntimeResumeJob({
+        id: `runtime-job-wrong-generation-${Date.now()}`,
+        kind: "runtime.resume",
+        attempts: 1,
+        maxAttempts: 8,
+        payload: {
+          endpoint: `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}`,
+          workspaceId: runtimeCase.workspaceId,
+          caseId: runtimeCase.id,
+          runId: runtimeRun,
+          checkpointId,
+          connectionId: connection,
+          actionKey: runtimeCase.actionKey,
+          idempotencyKey: runtimeCase.idempotencyKey,
+          generation: runtimeGeneration,
+        },
+      });
+    } catch (error) {
+      wrongGenerationRejected = error instanceof Error && /wrong generation/.test(error.message);
+    }
+    const parkedAfterMismatch = await getCase(runtimeCase.workspaceId, runtimeCase.id);
+    check("runtime: wrong generation acknowledgement is rejected", wrongGenerationRejected && parkedAfterMismatch?.state === "identity_verified", parkedAfterMismatch);
+    acknowledgementGeneration = runtimeGeneration;
     await deliverRuntimeResumeJob({
       id: `runtime-job-${Date.now()}`,
       kind: "runtime.resume",
@@ -272,7 +306,7 @@ async function main() {
         connectionId: connection,
         actionKey: runtimeCase.actionKey,
         idempotencyKey: runtimeCase.idempotencyKey,
-        generation: 2,
+        generation: runtimeGeneration,
       },
     });
   } finally {

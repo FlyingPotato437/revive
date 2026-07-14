@@ -4,6 +4,8 @@ import hmac
 import json
 import os
 import sys
+import tempfile
+import threading
 import time
 import unittest
 
@@ -64,7 +66,8 @@ class TestResumeReceiver(unittest.TestCase):
         status, response = receiver.handle(*signed_delivery(resume_event()))
         self.assertEqual(status, 200)
         self.assertEqual(response, {"ok": True, "resumed": True, "runId": "run_1",
-                                    "checkpointId": "cp_4", "steps": 8})
+                                    "checkpointId": "cp_4", "generation": 2,
+                                    "steps": 8})
         self.assertEqual(calls[0]["connectionId"], "conn_1")
 
     def test_unsigned_delivery_is_rejected_before_parsing(self):
@@ -82,6 +85,46 @@ class TestResumeReceiver(unittest.TestCase):
         second = receiver.handle(*signed_delivery(resume_event()))
         self.assertEqual(first, second)
         self.assertEqual(len(calls), 1)
+
+    def test_receipt_survives_receiver_restart(self):
+        with tempfile.TemporaryDirectory() as directory:
+            receipt_db = os.path.join(directory, "resume-receipts.db")
+            calls = []
+            first = ResumeReceiver(SECRET, resume=lambda data: calls.append(data),
+                                   dedupe_path=receipt_db)
+            expected = first.handle(*signed_delivery(resume_event("job_restart")))
+            first.close()
+
+            second = ResumeReceiver(
+                SECRET,
+                resume=lambda data: self.fail("durably acknowledged event must not resume again"),
+                dedupe_path=receipt_db,
+            )
+            replay = second.handle(*signed_delivery(resume_event("job_restart")))
+            second.close()
+            self.assertEqual(replay, expected)
+            self.assertEqual(len(calls), 1)
+
+    def test_simultaneous_redelivery_resumes_once(self):
+        calls = []
+        entered = threading.Event()
+
+        def resume(data):
+            calls.append(data)
+            entered.set()
+            time.sleep(0.03)
+
+        receiver = ResumeReceiver(SECRET, resume=resume)
+        delivery = signed_delivery(resume_event("job_concurrent"))
+        results = []
+        threads = [threading.Thread(target=lambda: results.append(receiver.handle(*delivery))) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        self.assertTrue(entered.wait(1))
+        for thread in threads:
+            thread.join()
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(results[0], results[1])
 
     def test_failed_resume_returns_500_and_retry_succeeds(self):
         attempts = []

@@ -197,6 +197,20 @@ export function QuickstartFlow({ initial }: { initial: QuickstartInitialState })
 
   return <div className="space-y-5">
     <section className="instrument-panel overflow-hidden border-[#151922]">
+      <div className="grid lg:grid-cols-[.78fr_1.22fr]">
+        <div className="bg-[#151922] p-5 text-white sm:p-6">
+          <span className="font-mono text-[8px] tracking-[.12em] text-[#aeb8ff]">LOCAL GOLDEN RUN</span>
+          <h2 className="mt-3 text-[24px] font-semibold leading-[1.05] tracking-[-.045em]">See the whole product succeed before configuring anything.</h2>
+          <p className="mt-3 max-w-[390px] text-[10.5px] leading-5 text-[#b8bec8]">No database or provider credential required. Approve one browser request while the harness proves signed resume, worker replacement, reconciliation, deduplication, and outcome verification.</p>
+        </div>
+        <div className="p-5 sm:p-6">
+          <div className="font-mono text-[8.5px] text-[#7b8491]">FROM THE REPOSITORY ROOT</div>
+          <div className="mt-3 flex gap-2"><code className="min-w-0 flex-1 overflow-x-auto border border-[#d8dde3] bg-[#f7f8f5] px-4 py-3 font-mono text-[10px]">npm run demo:golden</code><CopyButton onClick={() => copy("npm run demo:golden", "golden")} copied={copied === "golden"} /></div>
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">{["Exact checkpoint resumed", "Signed callback verified", "Lost response reconciled", "One provider write proved"].map((item) => <div key={item} className="flex items-center gap-2 border-t border-[#e1e2de] pt-2 text-[9.5px] text-[#596273]"><Check size={11} weight="bold" className="text-[#18724e]" />{item}</div>)}</div>
+        </div>
+      </div>
+    </section>
+    <section className="instrument-panel overflow-hidden border-[#151922]">
       <div className="grid border-b border-[#151922] lg:grid-cols-[.72fr_1.28fr]">
         <div className="bg-[#eef0eb] p-5 sm:p-6">
           <div className="flex items-center justify-between"><span className="font-mono text-[8px] tracking-[.12em] text-[#4967f2]">FIRST RECOVERY</span><span className="font-mono text-[9px] text-[#596273]">{progress}/4</span></div>

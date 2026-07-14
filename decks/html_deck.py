@@ -133,7 +133,7 @@ def frame(body, n, dark=False, dot=True, ghost=True, runner=True, ticks=True):
     g = f'<div class="ghost">{n:02d}</div>' if ghost else ""
     t = '<div class="tick tl"></div><div class="tick tr"></div><div class="tick bl"></div><div class="tick br"></div>' if ticks else ""
     r = '<div class="runner">REVIVE · SEED</div>' if runner else ""
-    pn = f'<div class="pageno">{n:02d} / 14</div>' if n else ""
+    pn = f'<div class="pageno">{n:02d} / 15</div>' if n else ""
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>{CSS}</style></head>
 <body class="{cls}">{g}{t}{r}{pn}{body}</body></html>"""
 
@@ -148,16 +148,16 @@ S.append(frame(f"""
   </div>
 </div>
 <div class="pad">
-  <div class="eyebrow">Agent recovery control plane</div>
+  <div class="eyebrow">Agent action control plane</div>
   <h1 style="font-size:190px;margin-top:110px;letter-spacing:-.045em">Revive<span style="color:var(--cobalt)">.</span></h1>
   <div style="margin-top:70px;max-width:980px">
     <div style="font-family:'Space Grotesk';font-weight:700;font-size:46px;line-height:1.15;letter-spacing:-.02em">AI agents are starting to act:<br>sending, buying, paying.</div>
-    <div style="margin-top:30px;font-size:27px;line-height:1.5;color:var(--muted)">When one fails, Revive picks it back up <b style="color:var(--cobalt-deep)">without doing it twice.</b></div>
+    <div style="margin-top:30px;font-size:27px;line-height:1.5;color:var(--muted)">Revive makes each action run <b style="color:var(--cobalt-deep)">once</b>, holds the risky ones for a <b style="color:var(--cobalt-deep)">human</b>, and <b style="color:var(--cobalt-deep)">recovers</b> the ones that fail.</div>
   </div>
   <div style="position:absolute;bottom:112px;left:120px;display:flex;gap:52px" class="mono">
     <span style="font-size:15px;letter-spacing:.3em;color:var(--faint)">PRE-SEED</span>
-    <span style="font-size:15px;letter-spacing:.12em;color:var(--muted)">pip install revive-sdk</span>
-    <span style="font-size:15px;letter-spacing:.12em;color:var(--muted)">certified in production</span>
+    <span style="font-size:15px;letter-spacing:.12em;color:var(--muted)">npx revive-mcp-gateway</span>
+    <span style="font-size:15px;letter-spacing:.12em;color:var(--muted)">live in production</span>
   </div>
 </div>""", 1, ghost=False, runner=False))
 
@@ -231,7 +231,35 @@ S.append(frame(f"""
   </div>
 </div>""", 3, dark=True))
 
-# ---------- 4 SOLUTION ----------
+# ---------- 4 FOUR GUARANTEES ----------
+def guarantee(label, word, desc, deep=False):
+    top = "background:linear-gradient(165deg,#1c2230,#12151d);border:none" if deep else "background:var(--panel);border:1.5px solid var(--ink)"
+    lab = "var(--lilac)" if deep else "var(--cobalt-deep)"
+    wc = "#fff" if deep else "var(--ink)"
+    dc = "var(--slate)" if deep else "var(--muted)"
+    sh = "box-shadow:0 40px 80px -30px rgba(18,21,29,.7)" if deep else "box-shadow:14px 14px 0 #e0e3da"
+    return f"""<div style="flex:1;{top};{sh};padding:48px 44px 52px">
+      <div class="mono" style="font-size:14px;letter-spacing:.3em;color:{lab};font-weight:700">{label}</div>
+      <div style="font-family:'Space Grotesk';font-weight:700;font-size:44px;color:{wc};margin-top:24px;letter-spacing:-.02em">{word}</div>
+      <div style="font-size:19px;color:{dc};line-height:1.55;margin-top:20px">{desc}</div>
+    </div>"""
+S.append(frame(f"""
+<div class="pad z">
+  <div class="eyebrow">What Revive guarantees</div>
+  <h1 class="disp">Four guarantees under every action.</h1>
+  <div style="display:flex;gap:34px;margin-top:150px">
+    {guarantee("01 · EXACTLY-ONCE","Runs once","A retry can't double-charge or double-send. The action fires one time, ever.",deep=True)}
+    {guarantee("02 · APPROVALS","Waits for you","Risky actions pause for a human. Nothing runs until someone says yes.")}
+    {guarantee("03 · RECOVERY","Comes back","A run that dies mid-task resumes from its checkpoint, not from zero.")}
+    {guarantee("04 · AUDIT","Leaves a trail","Every action, decision, and replay on an append-only record.")}
+  </div>
+  <div style="margin-top:120px;display:flex;align-items:center;gap:30px">
+    <span class="mono" style="font-size:15px;letter-spacing:.34em;color:var(--cobalt-deep);font-weight:700">ONE LINE IN FRONT OF ANY MCP SERVER</span>
+    <span style="font-size:23px;font-weight:600">Not just recovery. The whole control plane for acting agents.</span>
+  </div>
+</div>""", 4))
+
+# ---------- 5 SOLUTION ----------
 steps_html = ""
 labels = [("1","Spot","Know it failed"),("2","Hold","Freeze safely, lose nothing"),("3","Verify","Right person reconnects"),("4","Check","Did it already happen?"),("5","Continue","Picks up where it left off")]
 for i,(n,t,sub) in enumerate(labels):
@@ -254,7 +282,7 @@ S.append(frame(f"""
     <span class="mono" style="font-size:15px;letter-spacing:.34em;color:var(--cobalt-deep);font-weight:700">ONE LINE OF CODE</span>
     <span style="font-size:24px;font-weight:600">Revive owns everything after the failure.</span>
   </div>
-</div>""", 4))
+</div>""", 5))
 
 # ---------- 5 PRODUCT ----------
 S.append(frame(f"""
@@ -263,7 +291,7 @@ S.append(frame(f"""
   <div class="eyebrow">Product</div>
   <h1 class="disp">This is what a save looks like.</h1>
   <div style="max-width:1340px;margin:105px auto 0">{console_card()}</div>
-</div>""", 5, ghost=False, runner=False))
+</div>""", 6, ghost=False, runner=False))
 
 # ---------- 6 WHY ONLY US ----------
 S.append(frame(f"""
@@ -281,7 +309,7 @@ S.append(frame(f"""
     <div style="flex:1"><div style="font-size:25px;font-weight:700">We never hold keys</div>
       <div style="font-size:19px;color:var(--muted);margin-top:12px;line-height:1.55">Logins stay in your vault. We store nothing.</div></div>
   </div>
-</div>""", 6))
+</div>""", 7))
 
 # ---------- 7 COMPETITION ----------
 S.append(frame(f"""
@@ -304,7 +332,7 @@ S.append(frame(f"""
     </div>
   </div>
   <div style="margin-top:88px;font-size:23px"><b>These two sides don't talk to each other.</b> <span class="muted">Teams hand-roll half-fixes today. Revive is the real one.</span></div>
-</div>""", 7))
+</div>""", 8))
 
 # ---------- 8 MARKET ----------
 S.append(frame(f"""
@@ -330,7 +358,7 @@ S.append(frame(f"""
       <div style="font-size:19px;color:var(--muted);line-height:1.5">Gartner puts agents in a third of enterprise software by 2028.<br><b style="color:var(--ink)">Every new acting agent lands in our SAM.</b></div>
     </div>
   </div>
-</div>""", 8))
+</div>""", 9))
 
 # ---------- 9 BUSINESS MODEL ----------
 S.append(frame(f"""
@@ -356,7 +384,7 @@ S.append(frame(f"""
     </div>
   </div>
   <div style="text-align:center;margin-top:84px;font-size:21px;color:var(--muted)">More agents means more saves means a bigger plan. Upgrades happen on their own. Software margins.</div>
-</div>""", 9))
+</div>""", 10))
 
 # ---------- 10 GTM ----------
 S.append(frame(f"""
@@ -394,7 +422,7 @@ S.append(frame(f"""
     <span class="mono" style="font-size:15px;letter-spacing:.32em;color:var(--cobalt-deep);font-weight:700">12-MONTH TARGET</span>
     <span style="font-size:22px;color:var(--muted)">40 paying teams and a first enterprise logo, about <b style="color:var(--ink)">$50k ARR</b>. Pre-revenue today.</span>
   </div>
-</div>""", 10))
+</div>""", 11))
 
 # ---------- 11 TEAM ----------
 def founder(ini, name, title, school, blurb):
@@ -442,7 +470,7 @@ S.append(frame(f"""
       </div>
     </div>
   </div>
-</div>""", 11))
+</div>""", 12))
 
 # ---------- 12 VALIDATION ----------
 S.append(frame(f"""
@@ -450,9 +478,10 @@ S.append(frame(f"""
   <div style="padding:110px 90px">
     <div class="mono" style="font-size:15px;letter-spacing:.42em;color:var(--lilac)">ALREADY DONE</div>
     <div style="margin-top:70px;display:flex;flex-direction:column;gap:42px">
-      <div style="font-size:29px;font-weight:700;color:#fff"><span style="color:var(--green-br)">✓</span>&nbsp;&nbsp;Live product</div>
-      <div style="font-size:29px;font-weight:700;color:#fff"><span style="color:var(--green-br)">✓</span>&nbsp;&nbsp;Works in production</div>
-      <div style="font-size:29px;font-weight:700;color:#fff"><span style="color:var(--green-br)">✓</span>&nbsp;&nbsp;Developer tools shipped</div>
+      <div style="font-size:29px;font-weight:700;color:#fff"><span style="color:var(--green-br)">✓</span>&nbsp;&nbsp;Live in production</div>
+      <div style="font-size:29px;font-weight:700;color:#fff"><span style="color:var(--green-br)">✓</span>&nbsp;&nbsp;One-line install on npm</div>
+      <div style="font-size:29px;font-weight:700;color:#fff"><span style="color:var(--green-br)">✓</span>&nbsp;&nbsp;All four guarantees shipped</div>
+      <div style="font-size:29px;font-weight:700;color:#fff"><span style="color:var(--green-br)">✓</span>&nbsp;&nbsp;Billing live at $20 / $99</div>
     </div>
     <div style="position:absolute;bottom:110px;left:90px;right:90px;font-size:21px;line-height:1.6;color:var(--slate)">
       <b style="color:#fff">Honest: no customers yet.</b><br>This is the 60-day plan to change that.</div>
@@ -478,7 +507,7 @@ S.append(frame(f"""
       <span style="font-size:27px;font-weight:700;margin-left:16px">publish the first pilot</span>
       <div style="font-size:19px;color:var(--muted);margin-top:8px">the first real numbers</div></div>
   </div>
-</div>""", 12, ghost=False, runner=False, ticks=False))
+</div>""", 13, ghost=False, runner=False, ticks=False))
 
 # ---------- 13 ASK ----------
 S.append(frame(f"""
@@ -504,7 +533,7 @@ S.append(frame(f"""
 </div>
 <div class="kicker"><span class="k">The money buys</span>
   <span style="font-size:23px;color:#fff">runway for the team · first sales hire · two more integrations · security groundwork</span>
-</div>""", 13))
+</div>""", 14))
 
 # ---------- 14 CLOSE ----------
 S.append(frame(f"""
@@ -519,7 +548,7 @@ S.append(frame(f"""
 <div style="position:absolute;bottom:104px;left:120px;font-size:25px;z-index:5">
   <b style="color:#fff">srikanth@revivelabs.app</b>
   <span style="color:var(--slate)">&nbsp;&nbsp;·&nbsp;&nbsp;revivelabs.app&nbsp;&nbsp;·&nbsp;&nbsp;deck and data room on request</span>
-</div>""", 14, dark=True, ghost=False, runner=False))
+</div>""", 15, dark=True, ghost=False, runner=False))
 
 # ---- write html, screenshot, assemble ----
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
@@ -560,7 +589,7 @@ blank = prs.slide_layouts[6]
 for i in range(1, len(S)+1):
     s = prs.slides.add_slide(blank)
     s.shapes.add_picture(os.path.join(PNG_DIR, f"s{i:02d}.png"), 0, 0, prs.slide_width, prs.slide_height)
-    if i == 11:
+    if i == 12:
         s.notes_slide.notes_text_frame.text = ("TO FINISH: drop headshots into decks/photos/ss.png, rg.png, ap.png and rerun "
             "python3 html_deck.py. Add one real credential per founder line. Titles: Srikanth CEO, Revanth CTO, Aarush Eng.")
 out = os.path.join(HERE, "revive-seed-deck.pptx")
